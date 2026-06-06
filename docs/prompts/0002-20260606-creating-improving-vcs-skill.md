@@ -1,7 +1,7 @@
-# Kick-start prompt: testing-vcs-skill
+# Kick-start prompt: improving-vcs-skill
 
 You are working in the `coding-agent-skills` repo. Your job has two parts,
-in order: first author a brand-new skill called `testing-vcs-skill`, then
+in order: first author a brand-new skill called `improving-vcs-skill`, then
 use that skill to validate and harden the existing `vcs` skill, iterating
 until it measurably works. Treat building the harness as the means and
 hardening `vcs` as the end.
@@ -45,7 +45,7 @@ Mode detection must be automatic and correct: an agent in a Git-only
 checkout must never reach for `jj`, and an agent where `jj` is present must
 use the `jj` workflow. Verify both branches actually hold under test.
 
-What to build — `testing-vcs-skill`:
+What to build — `improving-vcs-skill`:
 
 - Scope it tightly as a meta / authoring harness: it is used ONLY while
   authoring or changing the `vcs` skill, never during normal development.
@@ -123,7 +123,7 @@ Repo conventions and guardrails:
 - A skill's canonical home is `skills/<name>/SKILL.md`, symlinked into
   `.agents/skills/<name>` (e.g. `.agents/skills/<name> -> ../../skills/<name>`);
   `.claude/skills` already symlinks to `.agents/skills`. Add
-  `testing-vcs-skill` this way — it must land under `.agents/skills/`, not
+  `improving-vcs-skill` this way — it must land under `.agents/skills/`, not
   `.claude/skills`.
 - The `vcs` skill under test lives at `skills/vcs/` (symlinked at
   `.agents/skills/vcs`).
@@ -141,7 +141,7 @@ harness design, how many sub-agents and which scenarios, the simulation
 fidelity, and how to factor the `vcs` skill into referenced files — make
 those calls and justify them briefly as you go.
 
-When you're done, summarize: what `testing-vcs-skill` does and how to run
+When you're done, summarize: what `improving-vcs-skill` does and how to run
 it; what changed in `vcs` and why; the evidence that the exit condition was
 met (both modes, conflicts resolved cleanly, detection correct before and
 after), including the time and quality measurements and how they improved

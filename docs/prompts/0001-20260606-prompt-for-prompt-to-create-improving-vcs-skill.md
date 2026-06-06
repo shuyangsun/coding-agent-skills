@@ -1,4 +1,4 @@
-# Prompt: Creating testing-vcs-skill
+# Prompt: Creating improving-vcs-skill
 
 ## Original Multi-part Prompts
 
@@ -8,7 +8,7 @@ If I use Jujutsu and a vcs skill, which instructs the agent to create a new work
 
 I created a git repo `jj-setup-test` to test and iterate on this skill, and I already started a Claude session in the repo. Give me a prompt to kick start the creation and test of a skill called `vcs`, which at a high-level instructs the agents to achieve goals I created. Note that there are different coding agents - Claude Code, GPT Codex, Cursor, Antigravity, etc. There are also different environments - local-only CLI, localhost remote control, cloud remote control, GitHub copilot in cloud, etc. Make sure the skill is compact enough and reference other markdown files based on the situation. For example, I'm not sure if using `jj` is even possible or desired on a fully remote cloud session running in GitHub. Instruct the agent to strictly abide to this rule before and after starting work. In the prompt, ask agents to create scripts for common operations at the start or the end of the coding session with intuitive bookmark / branch names. Instruct the agent to create a separate markdown file just on how to write better commit messages. Basically, this skill should optimize and improve multi-agent workflows in all possible agentic-coding environments.
 
-I changed my mind. Modify the prompt to provide context, but instead of creating the VCS skill itself, I need to create a skill to test the `vcs` skill. Call it `testing-vcs-skill`. This skill should be used to instruct the agent to create sub-agents to use the `vcs` skill in these different environments and scenarios, report back the effectiveness of the `vcs` skill, and continuously iterate until multiple subagents can more efficiently handle parallel work and hand effectively handle merge conflicts among them. Make it clear that this new skill I'm asking the agent to create should only be used during skill authoring or change ONLY for the `vcs` skill.
+I changed my mind. Modify the prompt to provide context, but instead of creating the VCS skill itself, I need to create a skill to test the `vcs` skill. Call it `improving-vcs-skill`. This skill should be used to instruct the agent to create sub-agents to use the `vcs` skill in these different environments and scenarios, report back the effectiveness of the `vcs` skill, and continuously iterate until multiple subagents can more efficiently handle parallel work and hand effectively handle merge conflicts among them. Make it clear that this new skill I'm asking the agent to create should only be used during skill authoring or change ONLY for the `vcs` skill.
 
 I am also now working in a repo named `coding-agent-skills`, where the `jj-setup-test` repo lives in `../jj-setup-test`. Change the prompt to work in `coding-agent-skills` repo, where the skill should be added to `.agents/skills/` (not `.claude/skills`), the agent can still use the `jj-setup-test` repo to test the skill if it chooses to, but it's not required.
 
@@ -16,16 +16,16 @@ I am also now working in a repo named `coding-agent-skills`, where the `jj-setup
 
 A single prompt to paste into the LLM chat tool. It asks the chatbot to produce
 the kick-start prompt I will then hand to a coding agent in this repo to author
-and test `testing-vcs-skill`. It does not ask anyone to build the skill yet — the
+and test `improving-vcs-skill`. It does not ask anyone to build the skill yet — the
 deliverable is the prompt, not the skill.
 
 ```text
 You are helping me write ONE self-contained prompt, which will be added to
-<./0002-20260606-creating-testing-vcs-skill.md>.
+<./0002-20260606-creating-improving-vcs-skill.md>.
 
 Do NOT design or write any skill yourself — your only output is that kick-start
 prompt, ready for me to copy. The prompt must direct the agent to author and then
-iteratively test a new skill called `testing-vcs-skill`.
+iteratively test a new skill called `improving-vcs-skill`.
 
 Context (why this exists):
 
@@ -47,7 +47,7 @@ Context (why this exists):
 
 The intent to emphasize above everything else:
 
-`testing-vcs-skill` exists to validate and harden the `vcs` skill by using
+`improving-vcs-skill` exists to validate and harden the `vcs` skill by using
 MULTIPLE agentic coding tools to exercise it across DIFFERENT environments, and
 specifically across two VCS modes:
 
@@ -61,7 +61,7 @@ The harness must confirm the `vcs` skill makes each agent correctly detect which
 mode it's in and strictly abide by the right workflow both before and after it
 starts work.
 
-What the kick-start prompt should tell the agent to build — `testing-vcs-skill`:
+What the kick-start prompt should tell the agent to build — `improving-vcs-skill`:
 
 - Scope it tightly as a meta / authoring harness: it is used ONLY while authoring
   or changing the `vcs` skill, never during normal development. State this in the
@@ -91,7 +91,7 @@ Repo specifics to bake into the prompt:
 
 - Work in the `coding-agent-skills` repo. The canonical home for a skill is
   `skills/<name>/SKILL.md`, symlinked into `.agents/skills/<name>` (and
-  `.claude/skills` symlinks to `.agents/skills`). Add `testing-vcs-skill`
+  `.claude/skills` symlinks to `.agents/skills`). Add `improving-vcs-skill`
   following that convention — it must land under `.agents/skills/`, not
   `.claude/skills`.
 - The `vcs` skill under test is at `skills/vcs/` (symlinked at `.agents/skills/vcs`).
