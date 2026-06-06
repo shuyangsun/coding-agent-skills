@@ -1,0 +1,10 @@
+# Hide secrets and credentials from the Cursor agent's context.
+# Syntax is .gitignore-style. This is secret-hiding, not a hard security boundary.
+.env
+.env.*
+.envrc
+**/*.pem
+**/*.key
+**/id_rsa*
+**/id_ed25519*
+secrets/

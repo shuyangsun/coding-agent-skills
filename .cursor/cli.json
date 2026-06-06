@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(bun install)",
+      "Shell(bun run)",
+      "Shell(bun add)",
+      "Shell(git status)",
+      "Shell(git diff)",
+      "Shell(git log)",
+      "Shell(git show)",
+      "Shell(git add)",
+      "Shell(git commit)",
+      "Shell(jj status)",
+      "Shell(jj log)",
+      "Shell(jj diff)",
+      "Shell(jj show)",
+      "Shell(jj commit)",
+      "Shell(jj describe)",
+      "Shell(jj new)",
+      "Shell(jj bookmark)",
+      "Shell(jj fix)",
+      "WebFetch(github.com)",
+      "WebFetch(code.claude.com)",
+      "WebFetch(docs.anthropic.com)"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa*)",
+      "Read(secrets/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Shell(curl)",
+      "Shell(wget)"
+    ]
+  }
+}

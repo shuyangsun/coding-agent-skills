@@ -1,0 +1,12 @@
+# Antigravity-native variant of .aiexclude (.gitignore syntax). Kept alongside
+# .aiexclude because which file a given Antigravity build reads is version-dependent;
+# both are zero-cost and an unrecognized one is simply ignored.
+# Secret-hiding only — not a hard security boundary.
+.env
+.env.*
+.envrc
+**/*.pem
+**/*.key
+**/id_rsa*
+**/id_ed25519*
+secrets/

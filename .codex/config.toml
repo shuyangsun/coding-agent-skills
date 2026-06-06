@@ -1,0 +1,24 @@
+# OpenAI Codex CLI — project-scoped config for this repo.
+#
+# Codex reads `.codex/config.toml` from the repo (merged over ~/.codex/config.toml)
+# but ONLY when the project is trusted. The first time you run `codex` here it will
+# ask you to trust the folder; until then these settings are ignored.
+# Docs: https://developers.openai.com/codex/config-advanced
+#
+# Posture (mirrors .claude/settings.json): read the repo and edit/run commands inside
+# the workspace without prompts; require approval to touch anything outside it or the
+# network. Command-level allow/deny lives in .codex/rules/default.rules.
+
+# Ask for approval only when an action needs it (edits outside the workspace,
+# network access, or a rule marked "prompt"). Values: untrusted | on-request | never.
+approval_policy = "on-request"
+
+# Read repo + edit/run within the workspace; approval required to escape it.
+# Values: read-only | workspace-write | danger-full-access.
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+# Block outbound network from sandboxed commands (this is also the default).
+network_access = false
+# No writable paths beyond the workspace itself.
+writable_roots = []

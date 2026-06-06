@@ -14,3 +14,10 @@ pnpm-lock.yaml
 
 # Licenses and other verbatim documents
 LICENSE
+
+# Agent permission configs in non-standard formats (gitignore-syntax globs, Starlark
+# rules) — keep formatters away so patterns and rule syntax are never mangled.
+.aiexclude
+.antigravityignore
+.cursorignore
+.codex/rules/

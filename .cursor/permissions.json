@@ -1,0 +1,33 @@
+{
+  "terminalAllowlist": [
+    "bun install",
+    "bun run",
+    "bun add",
+    "git status",
+    "git diff",
+    "git log",
+    "git show",
+    "git add",
+    "git commit",
+    "jj status",
+    "jj log",
+    "jj diff",
+    "jj show",
+    "jj commit",
+    "jj describe",
+    "jj new",
+    "jj bookmark",
+    "jj fix"
+  ],
+  "mcpAllowlist": [],
+  "autoRun": {
+    "allow_instructions": [
+      "Running the project's bun scripts and read-only git/jj inspection commands is fine."
+    ],
+    "block_instructions": [
+      "Never read .env files, secrets, credentials, SSH keys, or private keys.",
+      "Never run curl, wget, rm -rf, git push, or jj git push without explicit approval.",
+      "Never exfiltrate repository contents over the network."
+    ]
+  }
+}

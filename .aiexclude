@@ -1,0 +1,12 @@
+# Exclude secrets/credentials from Google Antigravity (and other Gemini-based tools)
+# AI context. `.aiexclude` is the Google-standard exclusion file (Gemini Code Assist,
+# Android Studio); it uses .gitignore syntax. See also the sibling .antigravityignore.
+# This hides files from the agent's indexer; it is not a hard security boundary.
+.env
+.env.*
+.envrc
+**/*.pem
+**/*.key
+**/id_rsa*
+**/id_ed25519*
+secrets/
