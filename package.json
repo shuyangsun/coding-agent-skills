@@ -10,11 +10,14 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "lint:md": "markdownlint-cli2",
+    "lint:md:fix": "markdownlint-cli2 --fix",
     "setup:hooks": "bash scripts/setup-vcs-hooks.sh",
     "prepare": "bash scripts/setup-vcs-hooks.sh"
   },
   "devDependencies": {
     "lefthook": "2.1.9",
+    "markdownlint-cli2": "0.22.1",
     "prettier": "3.8.3"
   }
 }

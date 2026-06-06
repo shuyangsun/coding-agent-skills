@@ -2,17 +2,25 @@
 #
 # `bun install` runs `lefthook install` (via the package.json "prepare"
 # script), which wires .git/hooks/* to this file. On each `git commit`, staged
-# Markdown is formatted with the repo-pinned Prettier and the fixes are
-# re-staged automatically.
+# Markdown is first formatted with the repo-pinned Prettier (fixes re-staged
+# automatically), then linted with markdownlint so a commit fails on any
+# structural issue Prettier doesn't fix. The jobs run sequentially (not in
+# parallel) so the two tools never write the same staged file at once.
 #
 # NOTE: Jujutsu (jj) does not run Git hooks — commits are created implicitly and
 # must stay fast, so jj deliberately has no commit-hook mechanism. The jj-native
-# equivalent is `jj fix`, configured by scripts/setup-vcs-hooks.sh. Run that
-# script once per clone to enable Markdown formatting under jj.
+# equivalent is `jj fix`, configured by scripts/setup-vcs-hooks.sh. `jj fix`
+# only hosts stdin→stdout formatters, so it runs Prettier; markdownlint is a
+# whole-file linter and runs via `bun run lint:md`. Run the setup script once
+# per clone to enable Markdown formatting under jj.
 pre-commit:
-  parallel: true
+  parallel: false
   jobs:
     - name: prettier-markdown
       glob: "*.md"
       run: bunx prettier --write {staged_files}
+      stage_fixed: true
+    - name: markdownlint
+      glob: "*.md"
+      run: bunx markdownlint-cli2 --fix {staged_files}
       stage_fixed: true

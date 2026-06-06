@@ -1,0 +1,21 @@
+// markdownlint configuration, honored by both `markdownlint-cli2` (CLI / hooks)
+// and the VS Code markdownlint extension. Prettier owns Markdown formatting; the
+// linter only catches structural issues Prettier doesn't. The single rule we
+// turn off conflicts with a deliberate Prettier choice:
+//
+//   MD013 (line length) — prose is never reflowed (`proseWrap: preserve` in
+//   .prettierrc.json), so an 80-column cap would flag every long line.
+//
+// Session transcripts also repeat `## User` / `## Assistant` headings (MD024);
+// rather than relax that rule repo-wide, each exported transcript carries its
+// own `<!-- markdownlint-disable MD013 MD024 -->` directive so it lints cleanly
+// in any host project too (see skills/export-coding-session).
+{
+  "config": {
+    "default": true,
+    "MD013": false,
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules"],
+  "gitignore": true,
+}

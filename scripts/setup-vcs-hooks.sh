@@ -3,10 +3,14 @@
 # Wire up automatic Markdown formatting for whichever VCS this clone uses.
 #
 #   • Git      → lefthook installs a pre-commit hook (see lefthook.yml) that runs
-#                Prettier on staged *.md files and re-stages the result.
+#                Prettier and then markdownlint on staged *.md files, re-staging
+#                any fixes.
 #   • Jujutsu  → jj has no commit hooks (commits are implicit and must stay
 #                fast), so we configure `jj fix` to run Prettier on Markdown.
 #                Format changed files at will with `jj fix` (or `jj fix -s @`).
+#                `jj fix` only hosts stdin→stdout formatters, so markdownlint
+#                (a whole-file linter) is not wired in here — run `bun run
+#                lint:md` to lint under jj.
 #
 # Safe to run repeatedly. Each VCS is configured only if it's present and this
 # directory is actually a repo of that kind, so the script is a no-op for tools
