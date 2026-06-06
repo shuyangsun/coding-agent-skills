@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Lockfiles (managed by the package manager)
+bun.lock
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# VCS internals
+.jj/
+.git/
+
+# Licenses and other verbatim documents
+LICENSE

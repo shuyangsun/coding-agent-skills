@@ -14,6 +14,20 @@ Thumbs.db
 *.local.json
 *.local.md
 
+# Node / Bun
+node_modules/
+.npm/
+npm-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+.bun/
+dist/
+build/
+coverage/
+
+# lefthook local overrides (machine-specific, not shared)
+lefthook-local.yml
+
 # Python
 .venv/
 __pycache__/
