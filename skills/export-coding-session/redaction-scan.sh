@@ -42,7 +42,19 @@ escaped_repo_root="$(echo "$repo_root" | sed 's/[^A-Za-z0-9_]/\\&/g')"
 home_dir="${HOME:-}"
 escaped_home_dir="$(echo "$home_dir" | sed 's/[^A-Za-z0-9_]/\\&/g')"
 
-scan "Email address"              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+# Author email is intentional transcript metadata (VCS user.email); skip it.
+author_email="$(git config user.email 2>/dev/null || true)"
+if [[ -z "$author_email" ]]; then
+  author_email="$(jj config get user.email 2>/dev/null || true)"
+fi
+email_matches="$(grep -nE -e '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- "$file" 2>/dev/null | cut -c1-240 || true)"
+if [[ -n "$author_email" && -n "$email_matches" ]]; then
+  email_matches="$(printf '%s\n' "$email_matches" | grep -Fv -- "$author_email" || true)"
+fi
+if [[ -n "$email_matches" ]]; then
+  printf '== Email address ==\n%s\n\n' "$email_matches"
+  total=$((total + $(printf '%s\n' "$email_matches" | wc -l)))
+fi
 scan "IPv4 address"               '((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
 scan "IPv6 address"               '([0-9a-fA-F]{1,4}:){4,7}[0-9a-fA-F]{1,4}'
 scan "Phone number"               '(\+?[0-9]{1,3}[ .-])?\(?[0-9]{3}\)?[ .-][0-9]{3}[ .-][0-9]{4}'
