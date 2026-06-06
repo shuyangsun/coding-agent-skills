@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+.vscode/
+.idea/
+
+# VCS
+.jj/
+
+# Local LLM coding agent settings
+*.local.json
+*.local.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+.envrc
