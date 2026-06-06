@@ -85,6 +85,25 @@ else
   fi
 fi
 
+# 1b. jj WORKFLOW integrity (verify, don't assert) --------------------------
+# .jj surviving is necessary but NOT sufficient: in a colocated repo plain git
+# also "works", so an agent can integrate with git and leave .jj untouched and
+# the Git-ref scans below would still pass — a false success that hides a mode
+# violation. Advancing `main` THROUGH jj always records a "point/move bookmark
+# main" operation in the op log; the seed creates `main` once but never moves
+# it, and a pure-git integration only triggers benign import/export/snapshot
+# ops. So the absence of any main-advancing jj op means git was used where jj
+# was required. (This assumes the seed never moves `main` — keep it that way.)
+if [[ "$MODE" == "jj" && -d "$repo/.jj" ]]; then
+  moved="$(jj -R "$repo" op log --no-graph -T 'description.first_line() ++ "\n"' 2>/dev/null |
+    grep -cE '(point|move) bookmark main\b' || true)"
+  if [[ "${moved:-0}" -gt 0 ]]; then
+    echo "  ok: 'main' advanced through jj ($moved bookmark op(s)) — jj workflow used."
+  else
+    note_fail "jj round not integrated through jj: 'main' never advanced via a jj operation (git was used in the colocated repo)."
+  fi
+fi
+
 # 2. conflict markers on the integrated tree --------------------------------
 markers="$(grep -rnE '^(<<<<<<<|>>>>>>>|\|\|\|\|\|\|\|)' "$tree" 2>/dev/null || true)"
 if [[ -n "$markers" ]]; then
