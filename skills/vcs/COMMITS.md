@@ -11,6 +11,7 @@ Optional body wrapped at ~72 chars. Explain WHY the change exists and any
 non-obvious tradeoff — not WHAT changed (the diff shows that). Skip the
 body only for trivial one-liners (typo fixes, dep bumps, config tweaks).
 
+Author: <Your Full Name> <your-git-email>
 Co-Authored-By: <Model Name> <noreply-email>
 ```
 
@@ -18,10 +19,15 @@ Co-Authored-By: <Model Name> <noreply-email>
 - **scope**: short area tag matching the codebase (`picker`, `consent`, `langfuse`, `setup`, `plan`, …). Skip parens if no natural scope.
 - **subject**: imperative ("add", "fix", "route"), lowercase after the colon, no period.
 - **body**: present only when it adds signal a reader can't get from the diff (motivation, constraint, follow-up). Never restate the file list.
+- **session transcripts**: a change often ships with an exported `docs/coding-sessions/` transcript — describe the substantive change in the subject/scope/body and ignore the transcript, which accompanies nearly every change and is noise in the message. Prefer committing the transcript as its own `docs(coding-sessions): …` change.
 
-## Co-Authored-By trailer (LLM agents)
+## Author and Co-Authored-By trailers
 
-If you are an LLM agent **and** your tool/model has a known no-reply GitHub email, append a `Co-Authored-By` trailer naming **both the model and the coding-agent tool**. One blank line before the trailer block; no blank lines between multiple trailers.
+End every commit with a trailer block: one blank line before it, no blank lines between trailers, `Author:` first and any `Co-Authored-By:` lines after.
+
+**`Author` trailer (human owner).** Always include an `Author: Full Name <email>` trailer naming the human who owns the work, derived from the repo's VCS config — `git config user.name` / `git config user.email`, falling back to `jj config get user.name` / `jj config get user.email`. This keeps the human author explicit in the message itself, regardless of which identity the VCS records on the commit.
+
+**`Co-Authored-By` trailer (LLM agents).** If you are an LLM agent **and** your tool/model has a known no-reply GitHub email, append a `Co-Authored-By` trailer naming **both the model and the coding-agent tool**.
 
 Known identities:
 
@@ -54,6 +60,7 @@ Make the three cookie choices visually equal and aligned on both
 desktop and mobile, and let the hero illustration dominate on phones
 again (cookies were taking most of the viewport).
 
+Author: Shuyang Sun <shuyangsun10@gmail.com>
 Co-Authored-By: Claude Opus 4.7 (1M context) (Claude Code) <noreply@anthropic.com>
 ```
 
@@ -80,6 +87,7 @@ chore(setup): migrate repo workflow
 
 Explain why the workflow moved and any non-obvious constraints.
 
+Author: Shuyang Sun <shuyangsun10@gmail.com>
 Co-Authored-By: GPT-5.1 Codex (Codex) <codex@openai.com>
 EOF
 )"

@@ -1,7 +1,10 @@
+<!-- markdownlint-disable MD013 MD024 -->
+
 # Prettier + Bun formatting with Git and Jujutsu pre-commit hooks
 
 - **Date:** 2026-06-06
 - **Repo:** coding-agent-skills (colocated Git + Jujutsu repo; parent commit on `main`)
+- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
 - **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
 - **Summary:** Set up Prettier via Bun to format Markdown, pinned exact dependency versions, added Node/Bun `.gitignore` entries, and wired automatic pre-commit Markdown formatting for both Git (lefthook) and Jujutsu (`jj fix`). Verified both hooks end-to-end, then removed an orphaned markdownlint config and exported the session.
 

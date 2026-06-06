@@ -1,7 +1,10 @@
+<!-- markdownlint-disable MD013 MD024 -->
+
 # Port export-coding-session skill, add vcs skill, gitignore, and commit setup
 
 - **Date:** 2026-06-06
 - **Repo:** coding-agent-skills (Jujutsu over Git backend; commits stacked on `main`)
+- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
 - **Agent:** Claude Code (Opus 4.8, 1M context)
 - **Summary:** Cleaned a skill copied from another repo (`export-session-history` → `export-coding-session`) to be repo-agnostic, retargeted exports to `docs/coding-sessions/`, made its scripts VCS-agnostic and dir-creating; documented Git-submodule and `jj` consumption in README/AGENTS; added a `vcs` commit-message skill (with a generic Gemini/Antigravity co-author hint); added a minimal `.gitignore`; then committed everything as four focused `jj` changes using the `/vcs` message format.
 
