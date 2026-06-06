@@ -8,18 +8,24 @@ improvement; revert it.
 
 ## Per-round procedure
 
-For **each** VCS mode (`git` and `jj`) — both run every round:
+Each round, cover **both** VCS modes (`git` and `jj`) and vary **difficulty**
+and **model tier** so a few rounds sample the whole space ([MATRIX.md](MATRIX.md),
+[SCENARIOS.md](SCENARIOS.md)). For each (mode, difficulty) cell:
 
-1. **Provision.** `bash <skill-dir>/scripts/new-sandbox.sh --mode <git|jj> --agents N`.
-   It prints a manifest (and writes `manifest.env` / `manifest.txt` + `briefs/`).
-   Note the per-agent workspace paths, the briefs, and the integration ref (`main`).
-   See [SCENARIOS.md](SCENARIOS.md) for what the fixtures and briefs contain.
+1. **Provision.** `bash <skill-dir>/scripts/new-sandbox.sh --mode <git|jj>
+--difficulty <easy|medium|hard> [--agents N]`. It seeds deterministic
+   fixtures, **pre-commits each agent's change** on `agent-K`, writes a plan
+   (`spec.json`), the briefs, and a manifest. Note the per-agent workspace paths
+   and the integration ref (`main`). The agents author **no code** — their work
+   already exists; they only integrate it.
 
-2. **Brief & spawn sub-agents — one per workspace, in parallel.** Each sub-agent
-   stands in for an agent/tool × environment cell from [MATRIX.md](MATRIX.md). Give
-   each sub-agent **only**:
+2. **Brief & spawn sub-agents — one per workspace, in parallel.** Each stands in
+   for an (agent/tool × environment × **model tier**) cell from
+   [MATRIX.md](MATRIX.md). Spawn across tiers (large / mid / small) using
+   whatever your platform exposes for model selection. Give each sub-agent
+   **only**:
    - the `vcs` skill (instruct it to load and follow `vcs` for all VCS decisions);
-   - its task brief (`briefs/agent-K.md`) — a realistic ticket;
+   - its task brief (`briefs/agent-K.md`) — an integration-only ticket;
    - its workspace path, and the instruction to publish onto `main`.
 
    Withhold everything else. **Do not** reveal this harness, that it's a test,
@@ -27,40 +33,48 @@ For **each** VCS mode (`git` and `jj`) — both run every round:
    and handling conflicts is exactly what `vcs` must make the agent do alone. The
    exact sub-agent prompt template is at the end of this file.
 
-3. **Drive the collision.** The briefs already target overlapping files/lines, so
-   conflicts arise naturally. Choose an integration pattern (escalate across
-   rounds):
-   - **Parallel work, serialized integration** (start here): all agents do their
-     edits concurrently; they integrate onto `main` one after another, so each
-     later agent meets the earlier ones' conflicts. Cleanest to measure.
-   - **Fully parallel integration** (stress): agents also integrate concurrently,
-     contending for `main`. Maximal pressure on `vcs`'s etiquette.
+3. **Drive the collision.** The pre-committed branches already target overlapping
+   files/lines, so conflicts arise the moment agents integrate. Choose an
+   integration pattern (escalate across rounds):
+   - **Serialized integration** (start here): agents integrate onto `main` one
+     after another, so each later agent meets the earlier ones' conflicts.
+     Cleanest to measure.
+   - **Concurrent integration** (stress): agents integrate at the same time,
+     contending for `main`. Maximal pressure on `vcs`'s etiquette. The correct
+     union result is order-independent, so quality stays objectively checkable.
 
-4. **Collect reports.** Each sub-agent returns the structured report defined in
+4. **Collect reports.** Each sub-agent returns the structured report in
    [METRICS.md](METRICS.md) (conflict-detection/resolution time, retries, stalls,
-   round-trips, plus a short effectiveness narrative: what was clear, what was
-   ambiguous, where it stalled, where a conflict was mishandled).
+   round-trips, plus a short narrative: what was clear, what was ambiguous, where
+   it stalled, where a conflict was mishandled). Reports note the agent's **tier**.
 
 5. **Score objectively.** `bash <skill-dir>/scripts/check-quality.sh <round-dir>`.
    It is the source of truth for quality — it does not trust agent self-reports.
-   PASS requires: mode integrity intact, no conflict markers on `main`, every
-   agent's sentinel present (no lost/clobbered work), and no unresolved conflicts.
+   PASS requires: mode integrity intact, no conflict markers, no unresolved
+   conflict, every sentinel present, and the **resolution oracle** green (union
+   preserved with no dups/loss, tie-break value correct, structured files still
+   parse, untouched files byte-identical to baseline). That last clause also
+   catches an agent that did forbidden "extra work".
 
 6. **Record + compare.** For each agent, `record-metrics.sh` the time/conflict/
-   retry numbers and the quality verdict; then `scoreboard.sh` to see this round
-   against prior rounds. The headline costs are **batch wall-clock** and, above
-   all, **conflict-resolution time** — watch their round-over-round deltas.
+   retry numbers, the quality verdict, **and `--tier` / `--difficulty`**; then
+   `scoreboard.sh` to see this round against prior rounds **and** the per-tier
+   breakdown. Headline costs: **batch wall-clock** and, above all,
+   **conflict-resolution time** — watch their round-over-round deltas and whether
+   any tier or difficulty×tier cell lags.
 
 7. **Diagnose, then revise `vcs`.** Read the narratives _through the lens of the
    numbers_: find what actually cost time or caused a `check-quality` failure
    (ambiguous mode detection, a missing rebase step, unclear conflict-resolution
    etiquette, a slow or absent helper script) and change `vcs` to fix that one
-   thing. Keep edits small and attributable so the next round's numbers tell you
-   whether they worked.
+   thing. Pay attention to tier: if small models stall where large ones don't,
+   `vcs` is relying on inference the smaller model can't supply — make the step
+   explicit. Keep edits small and attributable so the next round's numbers tell
+   you whether they worked.
 
 8. **Re-run & re-measure.** New round, fresh sandboxes (`new-sandbox.sh` auto-picks
    the next round number). Compare. **Keep** the revision if wall-clock and/or
-   conflict time fell and quality held; **revert** it otherwise.
+   conflict time fell and quality held (across tiers); **revert** it otherwise.
 
 9. **Tear down** finished rounds with `rm-sandbox.sh <round-dir>` (or `--all` at
    the end). Sandboxes are disposable; the metrics log persists for comparison.
@@ -77,9 +91,13 @@ the measurements justify:
   intuitive bookmark/branch names; integrate-and-publish) that resolve the repo
   root themselves and respect the repo's hooks (lefthook under Git, `jj fix`
   under jj). If a missing script cost agents time, add it; measure that it helped.
-- **`COMMITS.md`** — refine the existing commit-message guidance, don't duplicate it.
+- **`COMMITS.md`** — refine the existing commit-message guidance, don't duplicate
+  it. (Feature commits are pre-made here, so this is exercised mainly on the
+  merge commits agents author while integrating.)
 - **Conflict etiquette** — the exact sequence to detect, resolve, and verify a
-  conflict in each mode, since conflict time is the cost you most want down.
+  conflict in each mode, since conflict time is the cost you most want down. The
+  briefs ask for union resolution and a higher-version tie-break; if agents get
+  that wrong, `vcs` must teach the etiquette more explicitly.
 
 Judge every change by the scoreboard, not by how it reads. If two rounds with a
 change look the same as without, it's noise — drop it and keep `vcs` smaller.
@@ -87,9 +105,10 @@ change look the same as without, it's noise — drop it and keep `vcs` smaller.
 ## Convergence
 
 Keep iterating until the [METRICS.md](METRICS.md) exit bar holds across **multiple
-consecutive rounds in both modes** — low and still-improving (or stable-at-floor)
-wall-clock and conflict time, quality holding or rising, mode detection never
-broken. Don't stop on a single good round; one clean run can be luck.
+consecutive rounds, in both modes, across the difficulty ladder and across model
+tiers** — low and still-improving (or stable-at-floor) wall-clock and conflict
+time, quality holding or rising, mode detection never broken. Don't stop on a
+single good round; one clean run can be luck.
 
 ## Sub-agent prompt template
 
@@ -113,3 +132,6 @@ Your task:
 When done, report back exactly in this format:
 <PASTE THE STRUCTURED REPORT TEMPLATE FROM METRICS.md>
 ```
+
+The brief itself already forbids writing code, adding tests, or running the app
+to "verify" — the test is the integration and conflict resolution, nothing after.
