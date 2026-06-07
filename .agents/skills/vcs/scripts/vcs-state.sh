@@ -201,6 +201,16 @@ vcs_record_current_session() {
   mkdir -p "$dir" || return 1
   created_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   session_id="$(vcs_session_id)"
+  # Never overwrite a real, previously-recorded session id with a freshly
+  # synthesized local- one (a plain helper invocation has no session id in its
+  # env). Keeps the owner marker matched to the session that created it.
+  if [[ "$session_id" == local-* && -f "$marker" ]]; then
+    local prior_session_id
+    prior_session_id="$(sed -n 's/^session_id=//p' "$marker" | head -1)"
+    prior_session_id="${prior_session_id%\'}"
+    prior_session_id="${prior_session_id#\'}"
+    [[ -n "$prior_session_id" ]] && session_id="$prior_session_id"
+  fi
   [[ -n "$parent_repo_root" ]] || parent_repo_root="$root"
 
   {
@@ -237,4 +247,76 @@ vcs_current_marker_matches() {
   if [[ -n "$expected_ref" ]]; then
     [[ "${work_ref:-}" == "$expected_ref" || "${workspace_name:-}" == "$expected_ref" ]] || return 1
   fi
+}
+
+# --- isolated-session awareness helpers (used by the guard hook) ---
+# These let vcs-check.sh tell "editing the shared checkout" apart from "editing
+# an isolated sibling workspace", and recognize a session that already isolated
+# via session-start.sh / isolate.sh even when the shell cwd has drifted back to
+# the shared root. See docs/issues/0008 for the trap this removes.
+
+# Absolute path of the shared/default checkout root (the jj `default` workspace,
+# or the primary git checkout). Empty when it cannot be determined.
+vcs_shared_root_abs() {
+  local mode root common
+  mode="$(vcs_detect_mode 2>/dev/null)" || return 1
+  case "$mode" in
+    jj)
+      root="$(vcs_jj_default_root 2>/dev/null)" || return 1
+      ;;
+    git)
+      common="$(vcs_git_common_dir 2>/dev/null)" || return 1
+      root="$(dirname "$common")"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  vcs_abs_dir "$root"
+}
+
+# Return 0 when $1 is the shared root itself or lives anywhere under it.
+vcs_path_in_shared_root() {
+  local target="$1" shared dir base abs
+  [[ -n "$target" ]] || return 1
+  shared="$(vcs_shared_root_abs 2>/dev/null)" || return 1
+  [[ -n "$shared" ]] || return 1
+  if [[ -d "$target" ]]; then
+    abs="$(vcs_abs_dir "$target" 2>/dev/null)" || abs="$target"
+  else
+    dir="$(dirname "$target")"
+    base="$(basename "$target")"
+    if [[ -d "$dir" ]]; then
+      abs="$(vcs_abs_dir "$dir" 2>/dev/null)/$base"
+    else
+      abs="$target"
+    fi
+  fi
+  [[ "$abs" == "$shared" || "$abs" == "$shared"/* ]]
+}
+
+# Return 0 when the current session (VCS_SESSION_ID) owns at least one
+# non-default workspace whose root still exists. Lets the guard trust a correctly
+# isolated session even when the shell cwd has drifted back to the shared root.
+vcs_session_owns_isolated_workspace() {
+  local sid dir f
+  sid="$(vcs_session_id)"
+  [[ -n "$sid" ]] || return 1
+  case "$sid" in local-*) return 1 ;; esac
+  dir="$(vcs_state_dir 2>/dev/null)" || return 1
+  [[ -d "$dir" ]] || return 1
+  for f in "$dir"/*.env; do
+    [[ -f "$f" ]] || continue
+    if (
+      # shellcheck disable=SC1090
+      source "$f" 2>/dev/null || exit 1
+      [[ "${session_id:-}" == "$sid" ]] || exit 1
+      [[ -n "${workspace_name:-}" && "${workspace_name}" != "default" ]] || exit 1
+      [[ -n "${workspace_root:-}" && -d "${workspace_root}" ]] || exit 1
+      exit 0
+    ); then
+      return 0
+    fi
+  done
+  return 1
 }

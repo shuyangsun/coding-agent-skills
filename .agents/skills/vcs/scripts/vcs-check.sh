@@ -102,7 +102,11 @@ current_shared_reason() {
 ensure_not_shared() {
   local action="$1" reason
   reason="$(current_shared_reason || true)"
-  [[ -z "$reason" ]] || deny "$action refused: $reason. Run session-start.sh or isolate.sh, cd to NEXT_CWD, then retry."
+  [[ -z "$reason" ]] && return 0
+  if vcs_session_owns_isolated_workspace; then
+    deny "$action refused: $reason, but this session already owns an isolated workspace. Prefix the command with: cd <your-workspace> && ... (or target an absolute path inside it)."
+  fi
+  deny "$action refused: $reason. Run session-start.sh or isolate.sh, cd to NEXT_CWD, then retry."
 }
 
 ensure_owner_marker() {
@@ -124,7 +128,20 @@ is_helper_name() {
 }
 
 check_pre_edit() {
+  local target="${1:-}"
   [[ "${VCS_GUARD_ALLOW_SHARED:-}" == "1" ]] && return 0
+  # Path-aware: only refuse edits whose target lives inside the shared checkout's
+  # working copy. Edits to an isolated sibling workspace are always fine, even
+  # when the shell cwd has drifted back to the shared root.
+  if [[ -n "$target" ]]; then
+    if vcs_path_in_shared_root "$target"; then
+      ensure_not_shared "edit"
+    fi
+    return 0
+  fi
+  # No target path available: trust a session that owns an isolated workspace,
+  # otherwise fall back to the shell-cwd signal.
+  vcs_session_owns_isolated_workspace && return 0
   ensure_not_shared "edit"
 }
 
@@ -167,10 +184,10 @@ is_read_only_command() {
   local c="$1"
   c="${c#"${c%%[![:space:]]*}"}"
   case "$c" in
-    "" | pwd | "pwd "* | ls | "ls "* | date | "date "* | true | "true "* | false | "false "*)
+    "" | pwd | "pwd "* | date | "date "* | true | "true "* | false | "false "*)
       return 0
       ;;
-    rg | "rg "* | grep | "grep "* | "sed -n "* | cat | "cat "* | head | "head "* | tail | "tail "* | wc | "wc "* | find | "find "*)
+    ls | "ls "* | rg | "rg "* | grep | "grep "* | "sed -n "* | cat | "cat "* | head | "head "* | tail | "tail "* | wc | "wc "* | find | "find "*)
       return 0
       ;;
     "git status"* | "git log"* | "git diff"* | "git show"* | "git branch --show-current"* | "git rev-parse"* | "git remote get-url"* | "git ls-remote"* | "git worktree list"*)
@@ -239,6 +256,7 @@ if cur is not None:
 
 hook_warn_if_shared() {
   local event="$1" reason
+  vcs_session_owns_isolated_workspace && return 0
   reason="$(current_shared_reason || true)"
   [[ -n "$reason" ]] || return 0
   cat <<EOF
@@ -249,13 +267,47 @@ Then cd to NEXT_CWD and continue there.
 EOF
 }
 
+# If a Bash command leads with `cd <dir> &&` / `cd <dir>;` (or is a bare
+# `cd <dir>`), chdir into <dir> here so the rest of the command is judged against
+# the directory it will actually run in. Sets VCS_REST_COMMAND to the remainder
+# ("" for a bare cd). Returns 0 only when it chdir'd successfully. Handles
+# unquoted directory paths (the common agent case).
+VCS_REST_COMMAND=""
+maybe_chdir_leading_cd() {
+  local c="$1" dir rest
+  c="${c#"${c%%[![:space:]]*}"}"
+  case "$c" in
+    "cd "*) : ;;
+    *) return 1 ;;
+  esac
+  c="${c#cd }"
+  c="${c#"${c%%[![:space:]]*}"}"
+  dir="${c%%[ ;&]*}"
+  [[ -n "$dir" ]] || return 1
+  rest="${c#"$dir"}"
+  rest="${rest#"${rest%%[![:space:]]*}"}"
+  case "$rest" in
+    "&&"*) rest="${rest#&&}" ;;
+    ";"*) rest="${rest#;}" ;;
+    "") rest="" ;;
+    *) return 1 ;;
+  esac
+  rest="${rest#"${rest%%[![:space:]]*}"}"
+  cd "$dir" 2>/dev/null || return 1
+  VCS_REST_COMMAND="$rest"
+  return 0
+}
+
 check_hook() {
   hook_mode=1
-  local input event tool command
+  local input event tool command file_path session_id
   input="$(cat 2>/dev/null || true)"
   event="$(json_field "$input" hook_event_name)"
   tool="$(json_field "$input" tool_name)"
   command="$(json_field "$input" tool_input.command)"
+  file_path="$(json_field "$input" tool_input.file_path)"
+  session_id="$(json_field "$input" session_id)"
+  [[ -n "$session_id" ]] && export VCS_SESSION_ID="$session_id"
 
   case "$event" in
     SubagentStart | CwdChanged)
@@ -266,10 +318,18 @@ check_hook() {
 
   case "$tool" in
     apply_patch | Edit | Write | MultiEdit | NotebookEdit)
-      check_pre_edit
+      check_pre_edit "$file_path"
       return 0
       ;;
     Bash)
+      # Honor a leading `cd <dir> &&|;` (or a bare `cd <dir>`): evaluate the rest
+      # of the command from <dir>, the directory it will actually run in.
+      if maybe_chdir_leading_cd "$command"; then
+        command="$VCS_REST_COMMAND"
+      fi
+      if [[ -z "${command//[[:space:]]/}" ]]; then
+        return 0
+      fi
       if is_vetted_helper_command "$command"; then
         return 0
       fi

@@ -73,6 +73,9 @@ run_jj() {
     source "$old_marker" || true
     [[ -n "${agent_id:-}" ]] || agent_id="${new_name%%-*}"
     [[ -n "${parent_repo_root:-}" ]] || parent_repo_root="$(vcs_jj_default_root)"
+    # Carry the original session id forward so the refreshed marker still matches
+    # the owning session (vcs-check.sh keys ownership off session_id).
+    [[ -n "${session_id:-}" ]] && export VCS_SESSION_ID="$session_id"
   fi
 
   jj workspace rename "$new_name" >/dev/null 2>&1 ||
@@ -116,6 +119,9 @@ run_git() {
     source "$old_marker" || true
     [[ -n "${agent_id:-}" ]] || agent_id="${new_name%%-*}"
     [[ -n "${parent_repo_root:-}" ]] || parent_repo_root="$top"
+    # Carry the original session id forward so the refreshed marker still matches
+    # the owning session (vcs-check.sh keys ownership off session_id).
+    [[ -n "${session_id:-}" ]] && export VCS_SESSION_ID="$session_id"
   fi
 
   git branch -m "$current" "$new_name" >/dev/null 2>&1 ||
