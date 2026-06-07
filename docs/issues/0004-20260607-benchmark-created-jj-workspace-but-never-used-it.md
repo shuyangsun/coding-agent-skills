@@ -2,7 +2,7 @@
 
 # Benchmark created `cursor-vcs-benchmark` jj workspace but never used it
 
-- **Status:** Open (documented only; not retroactively fixable for the run)
+- **Status:** Resolved (2026-06-07) — guardrail added; the original run stays as recorded
 - **Date:** 2026-06-07
 - **Area:** `vcs` skill adherence during harness orchestration; benchmark artifact provenance
 - **Severity:** Low–medium — the benchmark results are still valid, but the orchestrator violated its own isolation rule and the written report overstated what happened
@@ -154,6 +154,34 @@ were in the wrong checkout.
   ≠ host-repo working copy; isolate before writing `docs/benchmarks/*`.
 - Parent-agent isolation failures are tracked separately from `--task start`
   sub-agent isolation metrics (which only score synthetic sandboxes today).
+
+## Resolution
+
+The "created but never used" gap is closed at the point the workspace is made.
+`scripts/isolate.sh` now emits, only when it actually creates a fresh
+workspace/worktree (`CREATED=yes`), a prominent actionable pair reusing the
+`NEXT_CWD=` convention agents already act on after `integrate.sh`:
+
+```text
+vcs-isolate: NEXT_CWD=<path>
+vcs-isolate: cd to NEXT_CWD now; do every edit and command for this work from there, not the checkout you started in
+```
+
+`vcs/SKILL.md` §2 was tightened to make the `cd` mandatory ("before you edit,
+read, or run anything else") and to distinguish `CREATED=no` (already isolated;
+work in place). This targets the exact failure mode — treating workspace
+creation as a checkbox rather than the directory to work from.
+
+Verified with the `improving-vcs-skill` harness on Claude Haiku across both
+modes: `--task start --start-from main` rounds in jj and git both score
+`ISOLATED=pass`, `NAME_OK=pass`, and crucially **`ISO_FS=pass`** — the agent did
+its edits *inside* the isolated checkout, not the shared one (the git round
+confirms "primary checkout untouched … work was done in a separate worktree").
+
+The behavioral acceptance criteria around *parent-agent* orchestration
+(confirming `pwd`/workspace name before writing, separate parent-vs-sub-agent
+isolation metrics) remain as future harness work; this fix addresses the
+script/skill side that makes the `cd` unmissable.
 
 ## What would have been correct (for reference)
 

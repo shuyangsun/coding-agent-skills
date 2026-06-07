@@ -2,7 +2,7 @@
 
 # `integrate.sh` forms a degenerate empty merge for fast-forwardable jj work, then can't push it
 
-- **Status:** Open
+- **Status:** Resolved (2026-06-07)
 - **Date:** 2026-06-07
 - **Area:** `skills/vcs` — `scripts/integrate.sh`, jj publish path (`jj_form_merge`, `jj_publish_loop`)
 - **Severity:** Medium — work lands correctly, but the helper leaves `main` on an empty, description-less merge commit that `jj git push` refuses, forcing manual recovery and leaving orphaned commits in the graph
@@ -178,6 +178,31 @@ In the jj publish path, branch on whether a merge is actually needed:
 - The `improving-vcs-skill` harness gains a publish/land assertion (linear land
   fast-forwards; diverged land merges-with-message) so this is caught by
   measurement, not by hand.
+
+## Resolution
+
+Fixed in `scripts/integrate.sh`. The jj land path now branches on whether a
+merge is actually needed:
+
+- **Fast-forward when linear.** `jj_work_contains_main` (`work & descendants(main)`)
+  detects that `main` is already an ancestor of the work; when so, `jj_land`
+  advances the bookmark directly (`jj bookmark set main -r <work>`) — no merge
+  node, no empty working-copy detour, `main` lands on the real described commit.
+- **Described merge only on divergence.** When `main` moved independently,
+  `jj_land` forms `jj new main work -m "$(jj_merge_message)"`, where
+  `jj_merge_message` emits a `chore(merge): …` subject with an `Author:` trailer
+  per [COMMITS.md](../../.agents/skills/vcs/COMMITS.md), so it pushes cleanly.
+- **Publish-target validation.** `jj_finish` calls `jj_is_pushable` and refuses
+  to finish (exit 3, actionable message) if `main` would point at an empty,
+  description-less commit, instead of letting `jj git push` fail out of band.
+- **No orphans.** The fast-forward path never creates the empty merge/working-copy
+  commits the bug left dangling above `main`.
+
+Verified with the `improving-vcs-skill` harness on Claude Haiku: a single-agent
+jj integrate round (linear work) now fast-forwards — `check-quality.sh` reports
+`RESULT: PASS` with **0 merges** on `main` and `DEFAULT_OK=pass` (previously an
+empty merge that `jj git push` rejected). The divergent-merge and `--continue`
+paths were also confirmed to produce described, pushable merges.
 
 ## Reproduction from this session
 
