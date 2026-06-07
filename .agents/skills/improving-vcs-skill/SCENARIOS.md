@@ -101,10 +101,12 @@ image:
   instead of mutating the shared primary checkout — so several co-located agents
   on one machine don't trample each other. That's a **per-agent** property, so a
   start round is single-agent; cover tiers/modes/arms by running several.
-- Two arms (`--start-from`): **main** — the agent begins in the shared primary
+- Three arms (`--start-from`): **main** — the agent begins in the shared primary
   checkout and must isolate; **worktree** — it is _given_ its own worktree/
   workspace already and must work in place, **not** spawn a redundant nested one
-  (the don't-double-isolate conditional).
+  (the don't-double-isolate conditional); **wrong-cwd** — it is assigned its own
+  worktree/workspace but launched from the shared checkout by mistake, so it must
+  move to the assigned path before any edit or VCS write.
 
 `check-isolation.sh` scores it from **durable** signals (chosen so the agent's own
 cleanup — worktree removal, branch/bookmark deletion, `jj workspace forget` —
@@ -124,6 +126,12 @@ Reported as `ISOLATED=pass/fail` (+ `ISO_FS` / `OVER_ISOLATE`), **separate** fro
 both the correctness verdict and the hygiene line — "did the work, but in the
 shared checkout" is an isolation miss, not a correctness one. See
 [METRICS.md](METRICS.md).
+
+For `wrong-cwd` rounds the scorer also prints `CWD_GUARD_OK` and
+`HOST_REPO_MUTATIONS`. The expected result is `CWD_GUARD_OK=pass` and
+`HOST_REPO_MUTATIONS=0`: a hook or helper guard may block the first wrong-cwd
+write, but no tracked host checkout change or shared-ref movement should happen
+before the agent moves to the assigned workspace.
 
 On the `main` arm `check-isolation.sh` also scores, **separately again**, the
 **naming convention** (`NAME_OK`): whether the working copy/branch the agent

@@ -28,6 +28,54 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["git", ["status", "log", "diff", "show", "rev-parse"]],
+    decision = "allow",
+    justification = "Allow read-only Git inspection.",
+)
+
+prefix_rule(
+    pattern = ["jj", ["root", "status", "log", "diff", "show"]],
+    decision = "allow",
+    justification = "Allow read-only jj inspection.",
+)
+
+prefix_rule(
+    pattern = ["jj", "workspace", "list"],
+    decision = "allow",
+    justification = "Allow read-only jj workspace inspection.",
+)
+
+prefix_rule(
+    pattern = ["jj", "bookmark", "list"],
+    decision = "allow",
+    justification = "Allow read-only jj bookmark inspection.",
+)
+
+prefix_rule(
+    pattern = ["bash", ".agents/skills/vcs/scripts/isolate.sh"],
+    decision = "allow",
+    justification = "Allow the vetted vcs isolation helper.",
+)
+
+prefix_rule(
+    pattern = ["bash", ".agents/skills/vcs/scripts/integrate.sh"],
+    decision = "allow",
+    justification = "Allow the vetted vcs integration helper.",
+)
+
+prefix_rule(
+    pattern = ["bash", ".agents/skills/vcs/scripts/session-start.sh"],
+    decision = "allow",
+    justification = "Allow the vetted vcs session-start helper.",
+)
+
+prefix_rule(
+    pattern = ["bash", ".agents/skills/vcs/scripts/rename-work.sh"],
+    decision = "allow",
+    justification = "Allow the vetted vcs work rename helper.",
+)
+
+prefix_rule(
     pattern = ["git", "push"],
     decision = "allow",
     justification = "Allow publishing from trusted local Codex sessions.",
@@ -37,4 +85,58 @@ prefix_rule(
     pattern = ["jj", "git", "push"],
     decision = "allow",
     justification = "Allow publishing from trusted local Codex sessions.",
+)
+
+prefix_rule(
+    pattern = ["jj", "describe"],
+    decision = "prompt",
+    justification = "Direct jj commit mutation must be guarded by workspace ownership.",
+)
+
+prefix_rule(
+    pattern = ["jj", "commit"],
+    decision = "prompt",
+    justification = "Direct jj commit mutation must be guarded by workspace ownership.",
+)
+
+prefix_rule(
+    pattern = ["jj", "new"],
+    decision = "prompt",
+    justification = "Direct jj working-copy movement must be guarded by workspace ownership.",
+)
+
+prefix_rule(
+    pattern = ["jj", "bookmark", ["set", "create", "delete", "move", "rename"]],
+    decision = "prompt",
+    justification = "Direct jj bookmark mutation must be guarded by workspace ownership.",
+)
+
+prefix_rule(
+    pattern = ["jj", "workspace", ["add", "forget", "rename"]],
+    decision = "prompt",
+    justification = "Use the vetted vcs helpers for workspace lifecycle changes.",
+)
+
+prefix_rule(
+    pattern = ["jj", ["abandon", "split"]],
+    decision = "prompt",
+    justification = "History-rewrite recovery commands need explicit review.",
+)
+
+prefix_rule(
+    pattern = ["jj", "git", ["export", "import"]],
+    decision = "prompt",
+    justification = "Direct jj/Git synchronization must be guarded by workspace ownership.",
+)
+
+prefix_rule(
+    pattern = ["git", ["reset", "checkout", "switch"]],
+    decision = "prompt",
+    justification = "Direct Git working-copy movement must be guarded by workspace ownership.",
+)
+
+prefix_rule(
+    pattern = ["git", "branch", ["-D", "-d"]],
+    decision = "prompt",
+    justification = "Direct branch deletion must be guarded by workspace ownership.",
 )

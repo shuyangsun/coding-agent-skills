@@ -114,8 +114,8 @@ const REPORT_SCHEMA = {
 function buildPrompt(ws, brief) {
   return `You are a coding agent working in a software repository. Your version-control guidance is the team's \`vcs\` skill. Before doing anything else, read it and follow it for every commit, merge, rebase, and publish decision you make:
   - ${A.vcsSkill}
-  - and any file it references (read those too).
-Do not assume which version-control system is in use — determine it yourself from the repository, exactly as your VCS guidance instructs, before you start. Use ONLY the \`vcs\` skill for version-control guidance; do not consult or invoke any other skill, and do not look outside your workspace except to read the vcs skill files named above.
+Read \`SKILL.md\` first. Open referenced fallback files only when \`SKILL.md\` says they are needed for your current step; do not pre-read every linked doc.
+Do not assume which version-control system is in use — determine it yourself from the repository, exactly as your VCS guidance instructs, before you start. Use ONLY the \`vcs\` skill for version-control guidance; do not consult or invoke any other skill, and do not look outside your workspace except to read the vcs skill files needed for the current step.
 
 Your workspace is: ${ws}
 Run integration commands against that workspace (cd into it, or pass -C "${ws}").

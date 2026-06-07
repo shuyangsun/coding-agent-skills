@@ -1,11 +1,15 @@
 # Starting new work: isolate first (parallel-agent safety)
 
-Before you start changing files, give yourself your **own working copy** so you
-don't collide with other agents/teammates working in the same repository at the
-same time. Two agents editing, building, or switching branches in the _same_
-working directory trample each other; a per-agent workspace (jj) / worktree (Git)
-prevents that. Isolate **unless you are already isolated** — don't nest a second
-working copy inside one you already have.
+If the prompt gives you an explicit assigned workspace/worktree path, `cd` there
+immediately and work in place. That path is already your isolation; creating
+another workspace/worktree is wrong.
+
+Otherwise, before you start changing files, give yourself your **own working
+copy** so you don't collide with other agents/teammates working in the same
+repository at the same time. Two agents editing, building, or switching branches
+in the _same_ working directory trample each other; a per-agent workspace (jj) /
+worktree (Git) prevents that. Isolate **unless you are already isolated** — don't
+nest a second working copy inside one you already have.
 
 **When this applies:** you're on a **local machine** doing **new** work in a repo
 that other agents may also be working in concurrently. **When to skip it:** a
@@ -26,7 +30,40 @@ obvious at a glance which agent owns which working copy when several share a
 machine. The examples below use `<ide>-<work>` as that placeholder — substitute
 your own tool name and task.
 
+## Session-start bootstrap (before the task name is known)
+
+Local agent hooks may run the startup helper before you have enough context to
+choose `<work>`:
+
+```sh
+bash <skill-dir>/scripts/session-start.sh --hook <agent> --ide <ide>
+```
+
+In a local jj repo this always creates a temporary workspace such as
+`codex-pending-1a2b3c4d`, creates the same-name bookmark, writes a local owner
+marker outside the tracked tree, and prints `NEXT_CWD=...`. In a Git primary
+checkout it creates a temporary worktree; in a linked Git worktree it records the
+owner marker and works in place. If `NEXT_CWD` is printed, `cd` there before
+editing or publishing.
+
+When the task is clear, rename the temporary owner to the normal convention:
+
+```sh
+bash <skill-dir>/scripts/rename-work.sh <ide>-<work>
+```
+
+The marker is local admin state (`.git/agent-sessions/` when a Git admin dir is
+available, otherwise XDG state for non-colocated jj). It is not tracked and is
+used only by guards to reject edits or publishes from a shared checkout or a
+workspace this session does not own.
+
 ## Fast path: let the helper decide whether to isolate
+
+If the user, orchestrator, IDE, or harness explicitly gives you an assigned
+workspace/worktree path that is already yours, **go there first and work in
+place**. Do not run `isolate.sh` from the shared checkout and create a second
+workspace. The assigned path is the isolation; creating another one is
+over-isolation and leaves cleanup residue.
 
 Run this from the checkout you were handed, before editing:
 
@@ -123,11 +160,11 @@ workspaces/bookmarks" means the `<ide>-<work>` ones **you** created — not ever
 non-`default` entry you can see. Don't enumerate-and-investigate another agent's
 workspace (`codex-*`, `cursor-*`, …), reason about whether it's safe to delete, or
 ask the user about it: skip it silently and leave it alone unless the user names it
-explicitly. Ask only to clarify scope *within your own* work, never to request
+explicitly. Ask only to clarify scope _within your own_ work, never to request
 permission to touch someone else's.
 
 The **one** exception — narrow and automatic: during an explicit integration/
-consolidation task, `INTEGRATE.md` may identify a sibling jj workspace as *retired*
+consolidation task, `INTEGRATE.md` may identify a sibling jj workspace as _retired_
 because its work has already **landed on `main`** and it backs no open review work.
 That is merged residue, not in-progress work, so you forget it and remove its
 directory even if another agent created it (`integrate.sh` does this for the

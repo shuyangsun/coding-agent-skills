@@ -22,3 +22,30 @@ sandbox_mode = "workspace-write"
 network_access = false
 # No writable paths beyond the workspace itself.
 writable_roots = []
+
+[[hooks.SessionStart]]
+matcher = "^startup$"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = 'repo="$(jj root 2>/dev/null || git rev-parse --show-toplevel)" && bash "$repo/.agents/skills/vcs/scripts/session-start.sh" --hook codex --ide codex'
+timeout = 30
+statusMessage = "Preparing isolated vcs workspace"
+
+[[hooks.PreToolUse]]
+matcher = "^(Bash|apply_patch|Edit|Write)$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = 'repo="$(jj root 2>/dev/null || git rev-parse --show-toplevel)" && bash "$repo/.agents/skills/vcs/scripts/vcs-check.sh" hook --agent codex'
+timeout = 30
+statusMessage = "Checking vcs workspace ownership"
+
+[[hooks.SubagentStart]]
+matcher = ".*"
+
+[[hooks.SubagentStart.hooks]]
+type = "command"
+command = 'repo="$(jj root 2>/dev/null || git rev-parse --show-toplevel)" && bash "$repo/.agents/skills/vcs/scripts/vcs-check.sh" hook --agent codex'
+timeout = 30
+statusMessage = "Checking subagent vcs workspace"

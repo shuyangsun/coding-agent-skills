@@ -80,14 +80,19 @@ const REPORT_SCHEMA = {
 // `startPath` is baked into the prompt so _score.py can map the agent's transcript
 // back to its round for the per-agent token count (same `round-<N>/ws-agent-<k>`
 // or repo path convention the integration runners rely on).
-function buildPrompt(startPath, brief) {
+function buildPrompt(startPath, brief, assignedPath) {
+  const assigned =
+    assignedPath && assignedPath !== startPath
+      ? `\nYour assigned workspace is: ${assignedPath}\nIf your starting point is different from the assigned workspace, move to the assigned workspace before any edit, commit, branch/bookmark change, or publish.\n`
+      : "";
   return `You are a coding agent working in a software repository. Your version-control guidance is the team's \`vcs\` skill. Before doing anything else, read it and follow it for every commit, branch, merge, and publish decision you make:
   - ${A.vcsSkill}
-  - and any file it references (read those too).
-Do not assume which version-control system is in use — determine it yourself from the repository, exactly as your VCS guidance instructs, before you start. Use ONLY the \`vcs\` skill for version-control guidance; do not consult or invoke any other skill, and do not look outside your starting area except to read the vcs skill files named above.
+Read \`SKILL.md\` first. Open referenced fallback files only when \`SKILL.md\` says they are needed for your current step; do not pre-read every linked doc.
+Do not assume which version-control system is in use — determine it yourself from the repository, exactly as your VCS guidance instructs, before you start. Use ONLY the \`vcs\` skill for version-control guidance; do not consult or invoke any other skill, and do not look outside your starting area except to read the vcs skill files needed for the current step.
 
 Your starting point is: ${startPath}
 Run your version-control commands from there. Several teammates are working in this same repository on this machine at the same time; follow your VCS guidance for how to set yourself up before you start changing files.
+${assigned}
 
 Timing — follow exactly so your run can be measured:
   - Your VERY FIRST action: run \`date +%s\` and remember the number as START.
@@ -106,13 +111,16 @@ phase("Start");
 const rounds = await parallel(
   A.rounds.map((rd) => async () => {
     const label = `r${rd.round}-${rd.mode}-start-${rd.startFrom || "main"}-${rd.tier}`;
-    const report = await agent(buildPrompt(rd.startPath, rd.brief), {
-      label,
-      phase: "Start",
-      model: MODEL[rd.tier],
-      schema: REPORT_SCHEMA,
-      agentType: "general-purpose",
-    });
+    const report = await agent(
+      buildPrompt(rd.startPath, rd.brief, rd.assignedPath),
+      {
+        label,
+        phase: "Start",
+        model: MODEL[rd.tier],
+        schema: REPORT_SCHEMA,
+        agentType: "general-purpose",
+      },
+    );
     return {
       round: rd.round,
       mode: rd.mode,

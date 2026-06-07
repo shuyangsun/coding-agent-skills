@@ -7,11 +7,14 @@ description: Load at the START of new repo work, BEFORE you change any file, so
 
 # VCS
 
-**Isolate before you edit.** For any new work, do not change a single file in
-the checkout you were handed. First understand the task well enough to name it
-`<ide>-<work>` (e.g. `claude-fix-auth-retry`), then create your own
-workspace/worktree (§2) and work there. The one exception: a dedicated cloud/PR
-session, where you already have your own clone — then skip isolation.
+**Isolate before you edit.** If the prompt gives you an explicit assigned
+workspace/worktree path, `cd` there immediately and work in place; that path is
+already your isolation, so do **not** create another workspace/worktree. Otherwise,
+for any new local work, do not change a single file in the checkout you were
+handed. First understand the task well enough to name it `<ide>-<work>` (e.g.
+`claude-fix-auth-retry`), then create your own workspace/worktree (§2) and work
+there. The one exception: a dedicated cloud/PR session, where you already have
+your own clone — then skip isolation.
 
 Then follow this skill for every commit, merge, rebase, and publish too, in
 whatever version-control system the repo uses.
@@ -37,6 +40,17 @@ detect the mode and run the standard Git/jj mechanics. Use prose judgment only
 when a helper stops for semantic conflict resolution or reports an unexpected
 condition.
 
+- **Agent session startup:** local project hooks may run
+  `bash <skill-dir>/scripts/session-start.sh --hook <agent> --ide <ide>` before
+  you know the task name. If it prints `NEXT_CWD=...`, `cd` there before edits or
+  VCS writes. When the task slug is clear, run
+  `bash <skill-dir>/scripts/rename-work.sh <ide>-<work>` from that temporary
+  workspace. These helpers record local session ownership outside the tracked
+  tree so later guards can reject writes from the shared checkout.
+- **Assigned workspace from the user/orchestrator:** if the task gives you an
+  explicit workspace/worktree path that is already yours, `cd` there first and
+  work in place. Do **not** run `isolate.sh` from the shared checkout and create a
+  second workspace; the assigned path is already the isolation.
 - **Starting new local work:** from the checkout you were handed, run
   `bash <skill-dir>/scripts/isolate.sh <ide>-<work>`, for example
   `bash <skill-dir>/scripts/isolate.sh codex-fix-auth-retry`. If it prints
@@ -52,6 +66,10 @@ condition.
   `VCS_CONFLICT=...`, resolve only the listed files using the conflict etiquette
   below, then rerun
   `bash <skill-dir>/scripts/integrate.sh --continue <branch-or-bookmark>`.
+  This helper is the standard publish path, not an optional wrapper: raw
+  `git push`, `jj bookmark set`, or `jj git push` skip required stale-ref,
+  workspace, and `default` cleanup unless the helper explicitly tells you to
+  fall back.
 
 `integrate.sh` handles the no-ambiguity finish steps: Git fetch/rebase/push retry,
 safe additive Git conflict cleanup for text/JSON files, deterministic
@@ -62,6 +80,10 @@ branch/bookmark deletion when no real remote backs it, parking jj `default` on
 are mechanically additive and structurally valid. If it prints `NEXT_CWD=...`,
 run any later shell command from that live directory because your jj workspace
 was intentionally removed.
+
+Direct file edits, raw VCS writes, and raw publishes may also be guarded by
+`vcs-check.sh` through agent hooks. Treat a guard denial as a cwd/ownership bug:
+move to the workspace you own or use the helper it names.
 
 ## 3. Conflict etiquette
 
@@ -90,18 +112,18 @@ Several agents may share one machine, or even one checkout. Act only on the work
 **you** authored:
 
 - **Commit and publish only your own changes.** Never `jj describe` / `git commit
-  -a` a shared checkout's whole dirty tree, and never push a commit that bundles
+-a` a shared checkout's whole dirty tree, and never push a commit that bundles
   edits you didn't make. If the working copy holds changes you don't recognize,
   **stop and surface them** — don't sweep them into your commit or take authorship.
   (Isolating first, §2, is what keeps your working copy yours; the helpers reinforce
   it — `integrate.sh` lands only the branch/bookmark you name, never the live tree.)
-- **Clean up only what you created.** An unqualified "clean up" means *your own*
+- **Clean up only what you created.** An unqualified "clean up" means _your own_
   `<ide>-<work>` workspaces/bookmarks. Do not inspect, reason about, or ask about
   another agent's workspace/bookmark — leave it untouched unless the user names it.
   The one thing you may retire that you didn't create is a sibling jj workspace
   whose work has already **landed on `main`** during an integration task (merged
   residue, handled automatically by `integrate.sh`) — never another agent's
-  *unmerged* work.
+  _unmerged_ work.
 
 ## 5. Fallback docs and commits
 

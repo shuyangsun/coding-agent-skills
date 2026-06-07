@@ -86,7 +86,7 @@ numbers reflect `vcs`'s conflict etiquette alone, not the agent's coding ability
 
 - **Did cleanup leave an anonymous empty side-head?** (docs/issues/0007.) jj
   auto-abandons an empty working-copy commit when its workspace is forgotten —
-  *unless* a bookmark pinned it; a bookmark created on an initial empty workspace
+  _unless_ a bookmark pinned it; a bookmark created on an initial empty workspace
   commit survives the `forget`, and deleting the bookmark afterward strands that
   commit as an empty, description-less, unreferenced side-head that clutters
   `jj log`. The jj integration sandbox now **seeds** exactly this residue
@@ -194,6 +194,25 @@ trusted to grade its own cleanup or isolation. (`tier` appears
 in the template for **manual** runs, where you fill it from the cell you're
 standing in; the bundled workflow runners instead set it from the orchestrator and
 omit it from their `REPORT_SCHEMA`, so a runner-driven agent never reports it.)
+
+**Guardrail start signals — `PARENT_ISOLATED`, `HOOK_BLOCKED_DEFAULT_WRITE`, `CWD_GUARD_OK`, `HOST_REPO_MUTATIONS`:**
+
+- `PARENT_ISOLATED` is reported on `--task start --start-from main` and mirrors
+  whether the parent/start session carved out its own workspace before writing.
+- `HOOK_BLOCKED_DEFAULT_WRITE` is `pass` when a `vcs-check.sh` hook denial was
+  recorded in the round-local guard log before a default/shared checkout write
+  could run. It is `n/a` when no denial was needed because the agent moved to the
+  right cwd first.
+- `CWD_GUARD_OK` is reported on `--start-from wrong-cwd`; pass means the agent
+  either moved to its assigned workspace before writing or was blocked by a guard
+  before it could mutate the host checkout.
+- `HOST_REPO_MUTATIONS` is the count-like host safety tripwire (0/1 today):
+  `0` means the shared primary checkout/default workspace was not changed before
+  the agent used its owned workspace; `1` means the host checkout was disturbed.
+
+These lines are printed by `check-isolation.sh` alongside `ISOLATED`. They make
+the parent/hook and wrong-cwd failures visible even when the final content
+happens to land correctly.
 
 ## Recording and reading the scoreboard
 

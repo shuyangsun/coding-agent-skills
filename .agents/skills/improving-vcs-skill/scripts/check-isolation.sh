@@ -27,6 +27,9 @@
 #   main      the agent began in the shared primary checkout → it MUST isolate.
 #   worktree  the agent was GIVEN its own worktree/workspace already → it must
 #             work in place and NOT create a redundant nested one (over-isolate).
+#   wrong-cwd the agent was GIVEN its own worktree/workspace, but launched from
+#             the shared primary checkout by mistake → it must move to the
+#             assigned workspace before any edit or VCS write.
 #
 # It also reports, SEPARATELY (never folded into the ISOLATED verdict or its exit
 # code), the NAMING metric: whether the work-copy/branch the agent created on the
@@ -86,6 +89,10 @@ fi
 
 iso_fs="n/a"
 over_isolate="n/a"
+host_repo_mutations="n/a"
+parent_isolated="n/a"
+cwd_guard_ok="n/a"
+hook_blocked_default_write="n/a"
 verdict_fail=0
 detail=()
 
@@ -106,14 +113,16 @@ if [[ "$MODE" == "git" ]]; then
 
   if [[ "$cur_lines" == "$seed_lines" ]]; then
     iso_fs="pass"
+    host_repo_mutations=0
     detail+=("primary checkout untouched (HEAD reflog $cur_lines == seed $seed_lines): work was done in a separate worktree")
   else
     iso_fs="fail"
+    host_repo_mutations=1
     detail+=("primary checkout WAS used (HEAD reflog grew $seed_lines -> $cur_lines): agent worked in the shared checkout, not its own worktree")
   fi
   detail+=("live worktrees: $wt_count; local branches: ${branches:-<none>}")
 
-  if [[ "$arm" == "worktree" ]]; then
+  if [[ "$arm" == "worktree" || "$arm" == "wrong-cwd" ]]; then
     # It was handed exactly one worktree (primary + ws-agent-1 = 2). A 3rd is
     # redundant nested isolation. Branches beyond {main, GIVEN_BRANCH} corroborate.
     given_branch="${GIVEN_BRANCH:-agent-1}"
@@ -132,6 +141,14 @@ if [[ "$MODE" == "git" ]]; then
 else
   # jj: filesystem isolation = an `add workspace` for a name not seeded.
   seed_ws=" ${SEED_WS:-default} "
+  seed_default="${SEED_DEFAULT_COMMIT:-}"
+  cur_default="$(jj -R "$repo" --ignore-working-copy log --no-graph -r 'default@' -T 'commit_id ++ "\n"' 2>/dev/null | head -1)"
+  default_mutated="no"
+  if [[ -n "$seed_default" && -n "$cur_default" && "$seed_default" != "$cur_default" ]]; then
+    default_mutated="yes"
+    detail+=("shared default workspace changed ($seed_default -> $cur_default); this is allowed only as post-work default parking after isolation")
+  fi
+  host_repo_mutations=0
   adds="$(jj -R "$repo" op log --no-graph -T 'description.first_line() ++ "\n"' 2>/dev/null |
     sed -n "s/^add workspace '\(.*\)'.*/\1/p")"
   agent_ws=""
@@ -146,7 +163,10 @@ else
       detail+=("agent created its own workspace(s): $agent_ws (op log 'add workspace')")
     else
       iso_fs="fail"
-      detail+=("no agent workspace-add in the op log: agent worked in the shared 'default' workspace")
+      [[ "$default_mutated" == "yes" ]] && host_repo_mutations=1
+      if [[ -z "$agent_ws" ]]; then
+        detail+=("no agent workspace-add in the op log: agent worked in the shared 'default' workspace")
+      fi
     fi
   else
     # worktree arm: handed 'agent-1' already; any further add is over-isolation.
@@ -156,6 +176,24 @@ else
     else
       over_isolate="no"
       detail+=("stayed in the workspace it was given (no extra 'add workspace' ops)")
+    fi
+    if [[ "$default_mutated" == "no" ]]; then
+      iso_fs="pass"
+    else
+      if [[ -n "$agent_ws" ]]; then
+        # Extra workspace creation is already an over-isolation failure. Do not
+        # double-count default parking cleanup as a host-repo mutation.
+        iso_fs="pass"
+      elif [[ "$work_landed" == "yes" ]] &&
+        ! jj -R "$repo" --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null | grep -qxF "${GIVEN_BRANCH:-agent-1}"; then
+        # The assigned workspace was retired after its work landed. A default@
+        # change here is the normal post-integration parking step, not evidence
+        # that the agent authored work in the host checkout.
+        iso_fs="pass"
+      else
+        iso_fs="fail"
+        host_repo_mutations=1
+      fi
     fi
   fi
 fi
@@ -212,15 +250,32 @@ fi
 [[ "$work_landed" == "yes" ]] || verdict_fail=1
 if [[ "$arm" == "main" ]]; then
   [[ "$iso_fs" == "pass" ]] || verdict_fail=1
+  parent_isolated="$iso_fs"
 else
   [[ "$over_isolate" == "no" ]] || verdict_fail=1
   [[ "$iso_fs" == "fail" ]] && verdict_fail=1 # touched the shared primary checkout
+  if [[ "$arm" == "wrong-cwd" ]]; then
+    if [[ "$host_repo_mutations" == "0" && "$over_isolate" == "no" && "$work_landed" == "yes" ]]; then
+      cwd_guard_ok="pass"
+    else
+      cwd_guard_ok="fail"
+    fi
+  fi
+fi
+if [[ -n "${GUARD_LOG:-}" && -s "$GUARD_LOG" ]]; then
+  hook_blocked_default_write="pass"
+elif [[ "$arm" == "wrong-cwd" ]]; then
+  hook_blocked_default_write="n/a"
 fi
 
 for d in "${detail[@]:-}"; do [[ -n "$d" ]] && echo "  - $d"; done
 echo "  WORK_LANDED=$work_landed"
 echo "  ISO_FS=$iso_fs"
 echo "  OVER_ISOLATE=$over_isolate"
+echo "  PARENT_ISOLATED=$parent_isolated"
+echo "  HOOK_BLOCKED_DEFAULT_WRITE=$hook_blocked_default_write"
+echo "  CWD_GUARD_OK=$cwd_guard_ok"
+echo "  HOST_REPO_MUTATIONS=$host_repo_mutations"
 echo "  WS_NAME=$ws_name"
 echo "  NAME_PREFIX=$name_prefix"
 echo "  NAME_OK=$name_ok"

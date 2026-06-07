@@ -1,8 +1,8 @@
 # VCS guardrails for jj workspace isolation
 
-- **Status:** Plan only; no implementation in this pass
+- **Status:** Implemented in `codex-vcs-guardrails-impl`; validation in progress
 - **Date:** 2026-06-07
-- **Working workspace:** `codex-vcs-guardrails`
+- **Working workspace:** `codex-vcs-guardrails-impl`
 - **Primary issues:** [0002](../issues/0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md), [0004](../issues/0004-20260607-benchmark-created-jj-workspace-but-never-used-it.md), [0005](../issues/0005-20260607-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md)
 
 ## Problem
@@ -250,6 +250,41 @@ path when the harness prompt tells it to load `vcs` and starts it in the sandbox
 It does **not** prove the issue is fixed: the open failure is when the parent
 agent or a spawned sub-agent starts acting before it applies `vcs`, or starts in
 the wrong cwd. The next validation must target those paths directly.
+
+## Implementation validation
+
+Implemented in `codex-vcs-guardrails-impl`:
+
+- `session-start.sh`, `rename-work.sh`, `vcs-check.sh`, and shared local owner
+  marker state in `vcs-state.sh`.
+- Guard calls in `isolate.sh` and `integrate.sh`, including assigned-workspace
+  redirects so agents do not create redundant workspaces from a wrong cwd.
+- Claude/Codex hook and permission-policy updates that keep direct dangerous
+  VCS writes guarded while leaving vetted helpers and push paths fast.
+- `improving-vcs-skill` wrong-cwd start rounds and guard metrics:
+  `PARENT_ISOLATED`, `HOOK_BLOCKED_DEFAULT_WRITE`, `CWD_GUARD_OK`, and
+  `HOST_REPO_MUTATIONS`.
+
+Low-tier (`gpt-5.4-mini`, low reasoning) harness results:
+
+```text
+round 9303 jj  main-start       PASS 47s stale=0 iso=pass name=pass
+round 9304 git main-start       PASS 40s stale=0 iso=pass name=pass
+round 9312 jj  wrong-cwd-start  PASS 50s stale=0 iso=pass host_mutations=0
+round 9313 git wrong-cwd-start  PASS 44s stale=0 iso=pass host_mutations=0
+round 9314 jj  wrong-cwd-start  PASS 60s stale=0 iso=pass host_mutations=0
+```
+
+Accuracy and hygiene are green for both modes: no host checkout mutation, no
+over-isolation, no stale `agent-*` ref, no orphan workspace residue, and the jj
+rounds advanced `main` through jj rather than raw Git. The measured small-model
+wall clock is still slightly slower for jj than Git in this sample. The harness
+prompt was tightened to follow the skill's fast path and avoid pre-reading every
+fallback doc, and `integrate.sh` now skips one redundant `jj new main` before
+retiring the current landed workspace. The redundant-op removal reduced the jj
+operation sequence, but the post-change low-tier agent run did not demonstrate a
+wall-clock win, so further jj speed work should be measured separately instead
+of asserting parity from these rounds.
 
 ## Implementation sequence
 

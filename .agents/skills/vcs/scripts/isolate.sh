@@ -4,6 +4,10 @@
 # Run from the repository checkout the agent was handed.
 set -uo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=vcs-state.sh
+. "$script_dir/vcs-state.sh"
+
 name=""
 
 usage() {
@@ -69,8 +73,31 @@ next_path() {
 
 mode="$(detect_mode)" || die "not inside a Git or jj repository"
 
+maybe_use_assigned_workspace() {
+  local assigned assigned_abs root root_abs assigned_mode assigned_ref marker
+  assigned="$(vcs_assigned_workspace_hint 2>/dev/null || true)"
+  [[ -n "$assigned" && -d "$assigned" ]] || return 1
+  assigned_abs="$(vcs_abs_dir "$assigned")" || return 1
+  if [[ "$mode" == "jj" ]]; then
+    root="$(jj root 2>/dev/null || true)"
+  else
+    root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  fi
+  root_abs="$(vcs_abs_dir "$root" 2>/dev/null || true)"
+  [[ -n "$root_abs" && "$root_abs" != "$assigned_abs" ]] || return 1
+
+  assigned_mode="$(cd "$assigned_abs" && vcs_detect_mode 2>/dev/null)" || return 1
+  assigned_ref="$(cd "$assigned_abs" && vcs_current_workspace_name "$assigned_mode" 2>/dev/null)" || assigned_ref="$name"
+  marker="$(cd "$assigned_abs" && vcs_record_current_session "${name%%-*}" "$assigned_ref" "$root_abs")" ||
+    die "could not record session ownership for assigned workspace '$assigned_abs'"
+  msg "assigned workspace already exists; use it instead of creating another"
+  printf 'MODE=%s\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=no\n' "$assigned_mode" "$assigned_abs" "$assigned_ref" "$marker"
+  emit_next_cwd "$assigned_abs"
+  return 0
+}
+
 run_git() {
-  local top git_dir common_dir branch base repo_name parent path
+  local top git_dir common_dir branch base repo_name parent path marker
   top="$(git rev-parse --show-toplevel)" || die "cannot find git top-level"
   git_dir="$(git rev-parse --git-dir)" || die "cannot find git dir"
   common_dir="$(git rev-parse --git-common-dir)" || die "cannot find git common dir"
@@ -82,13 +109,16 @@ run_git() {
         die "already in a worktree, but could not create branch '$name'"
       branch="$name"
     fi
+    marker="$(vcs_record_current_session "${name%%-*}" "$branch" "$top")" ||
+      die "could not record session ownership for '$branch'"
     msg "already in a linked git worktree"
-    printf 'MODE=git\nWORKSPACE=%s\nWORK_REF=%s\nCREATED=no\n' "$top" "$branch"
+    printf 'MODE=git\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=no\n' "$top" "$branch" "$marker"
     return 0
   fi
 
   repo_name="$(basename "$top")"
   parent="$(dirname "$top")"
+  maybe_use_assigned_workspace && return 0
   path="$(next_path "$parent/$repo_name-$name")"
 
   if git remote get-url origin >/dev/null 2>&1; then
@@ -100,8 +130,10 @@ run_git() {
 
   git worktree add "$path" -b "$name" "$base" >/dev/null 2>&1 ||
     die "could not create git worktree '$path' on branch '$name'"
+  marker="$(cd "$path" && vcs_record_current_session "${name%%-*}" "$name" "$top")" ||
+    die "could not record session ownership for '$name'"
   msg "created git worktree"
-  printf 'MODE=git\nWORKSPACE=%s\nWORK_REF=%s\nCREATED=yes\n' "$path" "$name"
+  printf 'MODE=git\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=yes\n' "$path" "$name" "$marker"
   emit_next_cwd "$path"
 }
 
@@ -124,7 +156,7 @@ jj_bookmark_exists() {
 }
 
 run_jj() {
-  local root current repo_name parent path work_ref
+  local root current repo_name parent path work_ref marker
   jj workspace update-stale >/dev/null 2>&1 || true
   root="$(jj root)" || die "cannot find jj root"
   current="$(jj_workspace_name || true)"
@@ -135,20 +167,25 @@ run_jj() {
       jj bookmark create "$work_ref" -r @ >/dev/null 2>&1 ||
         die "could not create bookmark '$work_ref'"
     fi
+    marker="$(vcs_record_current_session "${name%%-*}" "$work_ref" "$(vcs_jj_default_root)")" ||
+      die "could not record session ownership for '$work_ref'"
     msg "already in a jj workspace"
-    printf 'MODE=jj\nWORKSPACE=%s\nWORK_REF=%s\nCREATED=no\n' "$root" "$work_ref"
+    printf 'MODE=jj\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=no\n' "$root" "$work_ref" "$marker"
     return 0
   fi
 
   repo_name="$(basename "$root")"
   parent="$(dirname "$root")"
+  maybe_use_assigned_workspace && return 0
   path="$(next_path "$parent/$repo_name-$name")"
   jj workspace add --name "$name" -r main "$path" >/dev/null 2>&1 ||
     die "could not create jj workspace '$name'"
   (cd "$path" && jj bookmark create "$name" -r @ >/dev/null 2>&1) ||
     die "could not create bookmark '$name'"
+  marker="$(cd "$path" && vcs_record_current_session "${name%%-*}" "$name" "$root")" ||
+    die "could not record session ownership for '$name'"
   msg "created jj workspace"
-  printf 'MODE=jj\nWORKSPACE=%s\nWORK_REF=%s\nCREATED=yes\n' "$path" "$name"
+  printf 'MODE=jj\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=yes\n' "$path" "$name" "$marker"
   emit_next_cwd "$path"
 }
 

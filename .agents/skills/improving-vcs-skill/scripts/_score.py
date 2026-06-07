@@ -134,6 +134,8 @@ for rd in rounds:
         for line in iout.splitlines():
             s = line.strip()
             if s.startswith(("ISOLATED", "ISO_FS", "OVER_ISOLATE", "WORK_LANDED",
+                             "PARENT_ISOLATED", "CWD_GUARD_OK",
+                             "HOOK_BLOCKED_DEFAULT_WRITE", "HOST_REPO_MUTATIONS",
                              "WS_NAME", "NAME_PREFIX", "NAME_OK")):
                 print("  " + s)
     # show the non-ok lines (failures) + the RESULT/HYGIENE lines

@@ -14,6 +14,8 @@
 set -uo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=vcs-state.sh
+. "$script_dir/vcs-state.sh"
 main_ref="main"
 continue_mode=0
 work_ref=""
@@ -90,6 +92,8 @@ detect_mode() {
 }
 
 mode="$(detect_mode)" || die "not inside a Git or jj repository"
+"$script_dir/vcs-check.sh" pre-vcs-write --helper integrate "$work_ref" ||
+  exit $?
 
 # ---------------------------------------------------------------------------
 # Git mode
@@ -474,9 +478,12 @@ jj_finish() {
     die "refusing to finish: '$main_ref' points at an empty, description-less commit that 'jj git push' would reject"
   # Resolve a stable repo anchor BEFORE retiring this agent's workspace, whose
   # directory (and our cwd) may be removed by jj_retire_landed_workspaces.
-  local anchor
+  local anchor current_ws
   anchor="$(jj_repo_anchor)"
-  jj new "$main_ref" >/dev/null 2>&1 || true
+  current_ws="$(vcs_jj_workspace_name 2>/dev/null || true)"
+  if [[ "$current_ws" != "$work_ref" ]]; then
+    jj new "$main_ref" >/dev/null 2>&1 || true
+  fi
   jj_cleanup_bookmark
   jj_retire_landed_workspaces
   jj_abandon_orphan_empty_heads "$anchor"

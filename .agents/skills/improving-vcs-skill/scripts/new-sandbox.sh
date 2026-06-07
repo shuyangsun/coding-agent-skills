@@ -30,6 +30,10 @@
 #                            — correct behavior is to work in place and NOT create
 #                            a redundant nested one (the don't-double-isolate
 #                            conditional).
+#     --start-from wrong-cwd the agent is ASSIGNED its own worktree/workspace but
+#                            launched from the shared primary checkout by mistake;
+#                            correct behavior is to move to the assigned path
+#                            before any edit or VCS write.
 #
 # Modes (mode detection is the core thing `vcs` must get right):
 #   --mode git   plain Git, no .jj. Per-agent isolation via `git worktree`; the
@@ -119,7 +123,7 @@ fi
 # always the one trivial `easy` edit. Cover tiers/modes/arms by running several
 # start rounds, exactly as the integration side covers its matrix across rounds.
 if [[ "$task" == "start" ]]; then
-  case "$start_from" in main | worktree) : ;; *) die "--start-from must be main or worktree" ;; esac
+  case "$start_from" in main | worktree | wrong-cwd) : ;; *) die "--start-from must be main, worktree, or wrong-cwd" ;; esac
   [[ -z "$agents" || "$agents" == "1" ]] || die "--task start is single-agent (isolation is per-agent); omit --agents or pass 1"
   agents=1
   [[ "$difficulty" == "easy" ]] || echo "new-sandbox.sh: note: --task start ignores --difficulty (work is always the easy edit); using easy" >&2
@@ -224,8 +228,9 @@ EOF
 }
 
 write_start_brief() {
-  # $1=k  $2=ticket  $3=feature  $4=start path (where the agent begins)  $5=start_from
+  # $1=k  $2=ticket  $3=feature  $4=start path (where the agent begins)  $5=start_from  $6=assigned path
   local k="$1" ticket="$2" feature="$3" startpath="$4" from="$5"
+  local assignedpath="${6:-}"
   local brief="$round_dir/briefs/agent-$k.md"
   local instructions
   instructions="$(python3 "$scenario" start-instructions --round "$round" --agent "$k")"
@@ -244,13 +249,30 @@ checkout you are looking at sits on the team's mainline."
     # measures whether that name follows the convention the guidance teaches.
     naming="If your version-control workflow has you set up a place to work and/or a
 branch/bookmark for this ticket, name it however that guidance tells you to."
-  else
+  elif [[ "$from" == "worktree" ]]; then
     context="Your starting point is your own working area at:
 
     $startpath
 
 Your teammates each have their own separate working area on this machine and are
 working on their own tickets at the same time; this one is yours."
+    naming="Your working area is already set up for this ticket; do the work there."
+  else
+    context="Your assigned working area is:
+
+    $assignedpath
+
+The process was launched from this shared host checkout by mistake:
+
+    $startpath
+
+Several teammates are using the host checkout on this machine. Move to your
+assigned working area before any edit, commit, branch/bookmark change, or
+publish. If a guard blocks a command from the host checkout, treat that as the
+expected signal that you are in the wrong cwd and continue from the assigned
+working area. After any required timing command, your next filesystem or VCS
+action must be from the assigned working area; do not run isolation helpers or
+manual workspace/worktree creation from the host checkout."
     naming="Your working area is already set up for this ticket; do the work there."
   fi
   cat >"$brief" <<EOF
@@ -304,7 +326,9 @@ manifest_env="$round_dir/manifest.env"
   echo "PR_BACKED=\"$pr_backed\""
   echo "SPEC=$round_dir/spec.json"
   echo "DEFAULT_STALE_SEEDED=0"
+  echo "GUARD_LOG=$round_dir/guard-blocks.log"
 } >"$manifest_env"
+: >"$round_dir/guard-blocks.log"
 
 # commit message for a pre-made agent change (COMMITS.md-shaped; it's test data).
 agent_msg() {
@@ -346,11 +370,12 @@ if [[ "$mode" == "git" ]]; then
     done
   else
     # start task: NO pre-committed work — the agent authors the edit itself.
-    if [[ "$start_from" == "worktree" ]]; then
+    if [[ "$start_from" == "worktree" || "$start_from" == "wrong-cwd" ]]; then
       # Hand the agent an isolated worktree on its own branch already (the
-      # don't-double-isolate arm). No commit: the agent does the work here.
+      # don't-double-isolate / wrong-cwd arm). No commit: the agent does the work here.
       git -C "$repo" worktree add -q "$round_dir/ws-agent-1" -b "agent-1" main
       echo "GIVEN_WS=$round_dir/ws-agent-1" >>"$manifest_env"
+      echo "ASSIGNED_WS=$round_dir/ws-agent-1" >>"$manifest_env"
       echo "GIVEN_BRANCH=agent-1" >>"$manifest_env"
     fi
     # Durable filesystem-isolation baseline: the primary worktree's HEAD reflog
@@ -441,9 +466,11 @@ else
     # worktree arm we also hand the agent one named workspace. check-isolation.sh
     # flags any workspace-add NOT in SEED_WS as agent-created.
     seed_ws="default"
-    if [[ "$start_from" == "worktree" ]]; then
+    echo "SEED_DEFAULT_COMMIT=$(jj --repository "$repo" --ignore-working-copy log --no-graph -r 'default@' -T 'commit_id ++ "\n"' 2>/dev/null | head -1)" >>"$manifest_env"
+    if [[ "$start_from" == "worktree" || "$start_from" == "wrong-cwd" ]]; then
       jj --repository "$repo" workspace add --name "agent-1" -r main "$round_dir/ws-agent-1" >/dev/null 2>&1
       echo "GIVEN_WS=$round_dir/ws-agent-1" >>"$manifest_env"
+      echo "ASSIGNED_WS=$round_dir/ws-agent-1" >>"$manifest_env"
       echo "GIVEN_BRANCH=agent-1" >>"$manifest_env"
       seed_ws="default agent-1"
     fi
@@ -459,7 +486,7 @@ fi
 # start/main: the shared primary checkout (it must isolate itself from there).
 # start/worktree: the one isolated workspace it was handed.
 ws_path_for() {
-  if [[ "$task" == "start" && "$start_from" == "main" ]]; then
+  if [[ "$task" == "start" && ( "$start_from" == "main" || "$start_from" == "wrong-cwd" ) ]]; then
     echo "$repo"
   else
     echo "$round_dir/ws-agent-$1"
@@ -472,7 +499,7 @@ for ((k = 1; k <= agents; k++)); do
   tokens="${tokens:+$tokens }$ticket"
   ws_k="$(ws_path_for "$k")"
   if [[ "$task" == "start" ]]; then
-    brief="$(write_start_brief "$k" "$ticket" "$(feature_for "$k")" "$ws_k" "$start_from")"
+    brief="$(write_start_brief "$k" "$ticket" "$(feature_for "$k")" "$ws_k" "$start_from" "${ASSIGNED_WS:-$round_dir/ws-agent-$k}")"
   else
     brief="$(write_brief "$k" "$ticket" "$(feature_for "$k")")"
   fi
@@ -500,7 +527,11 @@ manifest_txt="$round_dir/manifest.txt"
   if [[ "$task" == "start" ]]; then
     echo "per-agent (NO pre-committed work — the agent authors one tiny edit and lands it):"
     for ((k = 1; k <= agents; k++)); do
-      echo "  agent-$k  start=$(ws_path_for "$k")  brief=$round_dir/briefs/agent-$k.md  branch/bookmark=agent-$k  ticket=VCS-$round-$k"
+      if [[ "$start_from" == "wrong-cwd" ]]; then
+        echo "  agent-$k  start=$(ws_path_for "$k")  assigned=$round_dir/ws-agent-$k  brief=$round_dir/briefs/agent-$k.md  branch/bookmark=agent-$k  ticket=VCS-$round-$k"
+      else
+        echo "  agent-$k  start=$(ws_path_for "$k")  brief=$round_dir/briefs/agent-$k.md  branch/bookmark=agent-$k  ticket=VCS-$round-$k"
+      fi
     done
   else
     echo "per-agent (work is PRE-COMMITTED on agent-K; the agent only integrates it):"

@@ -103,21 +103,24 @@ machine don't interfere ([SCENARIOS.md](SCENARIOS.md)). Run these alongside
 integration rounds; they're single-agent, so cover the space by repetition.
 
 1. **Provision.** `new-sandbox.sh --mode <git|jj> --task start --start-from
-<main|worktree>`. `main` = the agent begins in the shared primary checkout and
+<main|worktree|wrong-cwd>`. `main` = the agent begins in the shared primary checkout and
    must isolate; `worktree` = it's handed its own worktree/workspace and must
-   **not** create a redundant nested one. (Difficulty is fixed to the `easy` edit;
-   the round is single-agent.)
+   **not** create a redundant nested one; `wrong-cwd` = it's assigned its own
+   worktree/workspace but launched from the shared checkout by mistake, so it must
+   move to the assigned path before any edit or VCS write. (Difficulty is fixed
+   to the `easy` edit; the round is single-agent.)
 2. **Brief & spawn one sub-agent**, exactly as in step 2 above — only `vcs` + its
    brief + its **start** path (the `start=` line in the manifest). Withhold the
    harness, the mode, and the fact that isolation is under test. The brief asks
    for one tiny, fully-specified edit landed on `main` — the isolation decision
    must come from `vcs` alone.
 3. **Score with BOTH** `check-isolation.sh <round-dir>` (the `ISOLATED=pass/fail`
-   session-start verdict **and** the `NAME_OK` `<ide>-<work>` naming verdict on the
-   main arm) **and** `check-quality.sh <round-dir>` (that the change and the branch
-   cleanup landed right — start rounds carry the hygiene metric too). All report
-   **separately**, so isolation, naming, correctness, and cleanup stay
-   distinguishable.
+   session-start verdict, `NAME_OK` `<ide>-<work>` naming on the main arm, and the
+   guardrail lines `PARENT_ISOLATED`, `CWD_GUARD_OK`, and
+   `HOST_REPO_MUTATIONS`) **and** `check-quality.sh <round-dir>` (that the change
+   and the branch cleanup landed right — start rounds carry the hygiene metric
+   too). All report **separately**, so isolation, naming, correctness, guard
+   behavior, and cleanup stay distinguishable.
 4. **Record** with `record-metrics.sh … --isolate <pass|fail> --name-ok
 <pass|fail|n/a>` and read the `iso` and `name` columns on the scoreboard (want
    0; `-` on integration rounds, and `name` is `-`/`n/a` on the worktree arm).

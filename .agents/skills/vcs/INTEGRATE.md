@@ -14,6 +14,13 @@ instead of reconstructing the command chain:
 bash <skill-dir>/scripts/integrate.sh <branch-or-bookmark>
 ```
 
+This is the standard publish path, not an optional convenience wrapper. Do not
+finish a normal local-agent integration with raw `git push`, `jj bookmark set`,
+or `jj git push`: those commands can land the content while skipping the
+stale-ref, workspace, and `default` lifecycle cleanup the helper owns. Use the
+manual recipes below only when the helper is missing or reports an unexpected
+setup problem.
+
 If it stops with `VCS_CONFLICT=...`, resolve only the listed files using the
 etiquette below, then continue:
 
