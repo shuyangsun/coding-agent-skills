@@ -1,0 +1,464 @@
+#!/usr/bin/env bash
+#
+# Script-first integration helper for the vcs skill.
+#
+# It owns the repeatable VCS mechanics:
+# - detect jj vs git from the current workspace;
+# - integrate a finished branch/bookmark onto main;
+# - publish/advance main with retry guards;
+# - delete the merged work ref when it is not remote-backed;
+# - in jj, recover/park default and retire landed agent workspaces.
+#
+# It intentionally stops at semantic conflicts. Resolve the listed files by the
+# vcs conflict etiquette, then rerun with --continue.
+set -uo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+main_ref="main"
+continue_mode=0
+work_ref=""
+
+usage() {
+  cat <<'EOF'
+usage: integrate.sh [--main main] [--continue] <work-branch-or-bookmark>
+
+Examples:
+  bash <skill-dir>/scripts/integrate.sh agent-2
+  bash <skill-dir>/scripts/integrate.sh --continue agent-2
+
+Exit codes:
+  0  integrated, published, and cleaned up
+  2  conflict needs agent resolution, then rerun with --continue
+  3  setup or unexpected VCS failure
+EOF
+}
+
+msg() { printf 'vcs-integrate: %s\n' "$*"; }
+die() {
+  printf 'vcs-integrate: %s\n' "$*" >&2
+  exit 3
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --main)
+      [[ $# -ge 2 ]] || die "--main requires a value"
+      main_ref="$2"
+      shift 2
+      ;;
+    --continue)
+      continue_mode=1
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      die "unknown option: $1"
+      ;;
+    *)
+      if [[ -n "$work_ref" ]]; then
+        die "only one work branch/bookmark may be supplied"
+      fi
+      work_ref="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$work_ref" && $# -gt 0 ]]; then
+  work_ref="$1"
+fi
+
+if [[ "$work_ref" == *$'\n'* || "$main_ref" == *$'\n'* ]]; then
+  die "ref names must be single-line values"
+fi
+
+detect_mode() {
+  if command -v jj >/dev/null 2>&1 && jj root >/dev/null 2>&1; then
+    printf 'jj\n'
+  elif git rev-parse --show-toplevel >/dev/null 2>&1; then
+    printf 'git\n'
+  else
+    return 1
+  fi
+}
+
+mode="$(detect_mode)" || die "not inside a Git or jj repository"
+
+# ---------------------------------------------------------------------------
+# Git mode
+
+git_remote_exists() {
+  git remote get-url origin >/dev/null 2>&1
+}
+
+git_rebase_in_progress() {
+  [[ -d "$(git rev-parse --git-path rebase-merge 2>/dev/null)" ||
+    -d "$(git rev-parse --git-path rebase-apply 2>/dev/null)" ]]
+}
+
+git_conflict_files() {
+  git diff --name-only --diff-filter=U 2>/dev/null
+}
+
+git_print_conflict_and_exit() {
+  msg "VCS_CONFLICT=git"
+  msg "Resolve these files by union; for single-valued fields keep the higher value:"
+  git_conflict_files | sed 's/^/  - /'
+  msg "During git rebase, the HEAD side is already-landed main; compare values directly instead of choosing ours/theirs."
+  msg "Then run: bash <skill-dir>/scripts/integrate.sh --continue $work_ref"
+  exit 2
+}
+
+git_fetch_main() {
+  if git_remote_exists; then
+    git fetch origin >/dev/null 2>&1 || die "git fetch origin failed"
+    printf 'origin/%s\n' "$main_ref"
+  else
+    git rev-parse --verify -q "$main_ref" >/dev/null ||
+      die "local main ref '$main_ref' does not exist"
+    printf '%s\n' "$main_ref"
+  fi
+}
+
+git_cleanup_branch() {
+  [[ -n "$work_ref" ]] || return 0
+  git show-ref --verify --quiet "refs/heads/$work_ref" || return 0
+
+  if git_remote_exists && git ls-remote --exit-code --heads origin "$work_ref" >/dev/null 2>&1; then
+    msg "keeping '$work_ref' because a remote branch backs it"
+    return 0
+  fi
+
+  current="$(git branch --show-current 2>/dev/null || true)"
+  if [[ "$current" == "$work_ref" ]]; then
+    git switch --detach >/dev/null 2>&1 || die "could not detach from '$work_ref'"
+  fi
+  git branch -d "$work_ref" >/dev/null 2>&1 ||
+    die "could not delete '$work_ref'; it may not be fully merged"
+  msg "deleted merged branch '$work_ref'"
+}
+
+git_publish_loop() {
+  local upstream
+  while :; do
+    upstream="$(git_fetch_main)"
+
+    if git_rebase_in_progress; then
+      git add -A
+      GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || {
+        [[ -n "$(git_conflict_files)" ]] && git_print_conflict_and_exit
+        die "git rebase --continue failed"
+      }
+    else
+      git rebase "$upstream" >/dev/null 2>&1 || {
+        [[ -n "$(git_conflict_files)" ]] && git_print_conflict_and_exit
+        die "git rebase $upstream failed"
+      }
+    fi
+
+    if git_remote_exists; then
+      if git push origin "HEAD:$main_ref" >/dev/null 2>&1; then
+        git fetch origin >/dev/null 2>&1 || true
+        git_cleanup_branch
+        msg "published=origin/$main_ref; a local '$main_ref' checked out in another worktree may remain visually behind"
+        msg "DONE mode=git main=$main_ref work=$work_ref"
+        return 0
+      fi
+      msg "push was rejected; rebasing onto the latest origin/$main_ref"
+      continue
+    fi
+
+    if git merge-base --is-ancestor "$main_ref" HEAD >/dev/null 2>&1; then
+      git update-ref "refs/heads/$main_ref" HEAD ||
+        die "could not fast-forward local '$main_ref'"
+      git_cleanup_branch
+      msg "DONE mode=git main=$main_ref work=$work_ref"
+      return 0
+    fi
+
+    msg "local '$main_ref' moved; rebasing again"
+  done
+}
+
+run_git() {
+  if [[ -z "$work_ref" ]]; then
+    work_ref="$(git branch --show-current 2>/dev/null || true)"
+    [[ -n "$work_ref" ]] || die "pass the work branch name"
+  fi
+
+  if ! git_rebase_in_progress; then
+    current="$(git branch --show-current 2>/dev/null || true)"
+    if [[ "$current" != "$work_ref" ]]; then
+      git switch "$work_ref" >/dev/null 2>&1 ||
+        die "could not switch to work branch '$work_ref'"
+    fi
+  fi
+
+  git_publish_loop
+}
+
+# ---------------------------------------------------------------------------
+# jj mode
+
+jj_conflict_list() {
+  local out
+  out="$(jj resolve --list 2>&1 || true)"
+  if printf '%s\n' "$out" | grep -qi 'No conflicts found'; then
+    return 0
+  fi
+  printf '%s\n' "$out" | sed '/^$/d'
+}
+
+jj_conflict_paths() {
+  jj_conflict_list | awk '{print $1}'
+}
+
+jj_has_conflicts() {
+  [[ -n "$(jj_conflict_list)" ]]
+}
+
+jj_try_auto_additive_conflicts() {
+  local paths=() safe_paths=() p backup valid=1 remaining remaining_has_safe=0
+  while IFS= read -r p; do
+    [[ -n "$p" ]] && paths+=("$p")
+  done < <(jj_conflict_paths)
+  [[ "${#paths[@]}" -gt 0 ]] || return 1
+  [[ -f "$script_dir/conflict-preview.py" ]] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+
+  for p in "${paths[@]}"; do
+    case "$p" in
+      *.yaml | *.yml | *.toml | *.ini | *.env)
+        ;;
+      *)
+        safe_paths+=("$p")
+        ;;
+    esac
+  done
+  [[ "${#safe_paths[@]}" -gt 0 ]] || return 1
+
+  backup="$(mktemp -d "${TMPDIR:-/tmp}/vcs-conflict-backup.XXXXXX")" || return 1
+  for p in "${safe_paths[@]}"; do
+    mkdir -p "$backup/$(dirname "$p")"
+    cp "$p" "$backup/$p" || {
+      rm -rf "$backup"
+      return 1
+    }
+  done
+
+  if ! python3 "$script_dir/conflict-preview.py" --write "${safe_paths[@]}" >/dev/null 2>&1; then
+    for p in "${safe_paths[@]}"; do cp "$backup/$p" "$p" 2>/dev/null || true; done
+    rm -rf "$backup"
+    return 1
+  fi
+
+  for p in "${safe_paths[@]}"; do
+    case "$p" in
+      *.json)
+        python3 -m json.tool "$p" >/dev/null 2>&1 || valid=0
+        ;;
+      *.py)
+        python3 -m py_compile "$p" >/dev/null 2>&1 || valid=0
+        ;;
+    esac
+  done
+
+  if [[ "$valid" -ne 1 ]]; then
+    for p in "${safe_paths[@]}"; do cp "$backup/$p" "$p" 2>/dev/null || true; done
+    rm -rf "$backup"
+    return 1
+  fi
+
+  jj_snapshot
+  remaining="$(jj_conflict_paths)"
+  for p in "${safe_paths[@]}"; do
+    if printf '%s\n' "$remaining" | grep -qxF "$p"; then
+      remaining_has_safe=1
+      break
+    fi
+  done
+  if [[ "$remaining_has_safe" -eq 1 ]]; then
+    for p in "${safe_paths[@]}"; do cp "$backup/$p" "$p" 2>/dev/null || true; done
+    jj_snapshot
+    rm -rf "$backup"
+    return 1
+  fi
+
+  rm -rf "$backup"
+  msg "AUTO_RESOLVED=jj-additive-preview paths=${safe_paths[*]}"
+  [[ -z "$remaining" ]] || msg "AUTO_RESOLVED_PARTIAL=remaining-conflicts paths=$(printf '%s' "$remaining" | tr '\n' ' ')"
+  [[ -z "$remaining" ]]
+}
+
+jj_print_conflict_and_exit() {
+  msg "VCS_CONFLICT=jj"
+  msg "Resolve these files by union; for single-valued fields keep the higher value:"
+  jj_conflict_list | sed 's/^/  - /'
+  msg "jj uses diff-style conflict markers: drop marker/header lines (<<<<<<<, %%%%%%%, \\\\\\\\\\, +++++++, >>>>>>>)."
+  msg "Inside a jj conflict, a leading '+' before a real content line means that line was added; keep the content without the marker prefix when unioning."
+  if command -v python3 >/dev/null 2>&1 && [[ -f "$script_dir/conflict-preview.py" ]]; then
+    msg "marker-stripped preview follows; verify it before copying into the files:"
+    # The first field from `jj resolve --list` is the conflicted path.
+    # shellcheck disable=SC2046
+    python3 "$script_dir/conflict-preview.py" $(jj_conflict_list | awk '{print $1}') 2>/dev/null || true
+    msg "For purely additive conflicts, you can apply that preview with:"
+    # shellcheck disable=SC2046
+    msg "python3 \"$script_dir/conflict-preview.py\" --write $(jj_conflict_list | awk '{print $1}' | tr '\n' ' ')"
+    msg "After --write, inspect structured files and adjust any single-valued fields before --continue."
+  fi
+  msg "Do not run git add. After editing, run: bash <skill-dir>/scripts/integrate.sh --continue $work_ref"
+  exit 2
+}
+
+jj_snapshot() {
+  jj workspace update-stale >/dev/null 2>&1 || true
+  jj status >/dev/null 2>&1 || die "jj status failed"
+}
+
+jj_conflicted_history() {
+  jj log --no-graph -r '::@' \
+    -T 'if(conflict, change_id.shortest(8) ++ "\n", "")' 2>/dev/null |
+    sed '/^$/d'
+}
+
+jj_main_is_ancestor_of_at() {
+  [[ -n "$(jj log --no-graph -r "$main_ref & ::@" -T 'commit_id ++ "\n"' 2>/dev/null | sed '/^$/d')" ]]
+}
+
+jj_form_merge() {
+  jj workspace update-stale >/dev/null 2>&1 || true
+  jj bookmark list "$work_ref" >/dev/null 2>&1 ||
+    die "bookmark '$work_ref' does not exist"
+  jj new "$main_ref" "$work_ref" >/dev/null 2>&1 ||
+    die "could not create jj integration merge from '$main_ref' and '$work_ref'"
+  jj_snapshot
+  if jj_has_conflicts; then
+    jj_try_auto_additive_conflicts || jj_print_conflict_and_exit
+  fi
+}
+
+jj_git_export_if_colocated() {
+  [[ -d "$(jj root 2>/dev/null)/.git" ]] && jj git export >/dev/null 2>&1 || true
+}
+
+jj_bookmark_remote_backed() {
+  local remotes line remote
+  remotes="$(jj git remote list 2>/dev/null | awk '{print $1}' | sed '/^$/d' || true)"
+  [[ -n "$remotes" ]] || return 1
+  line="$(jj bookmark list "$work_ref" 2>/dev/null || true)"
+  for remote in $remotes; do
+    if printf '%s\n' "$line" | grep -Eq "@${remote}([[:space:]]|$)"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+jj_cleanup_bookmark() {
+  [[ -n "$work_ref" ]] || return 0
+  if ! jj bookmark list "$work_ref" 2>/dev/null | grep -Eq "^${work_ref}:"; then
+    return 0
+  fi
+  if jj_bookmark_remote_backed; then
+    msg "keeping '$work_ref' because a real remote backs it"
+    return 0
+  fi
+  jj bookmark delete "$work_ref" >/dev/null 2>&1 ||
+    die "could not delete bookmark '$work_ref'"
+  msg "deleted merged bookmark '$work_ref'"
+}
+
+jj_workspace_listing() {
+  jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null
+}
+
+jj_bookmark_exists() {
+  local name="$1"
+  jj bookmark list "$name" 2>/dev/null | grep -Eq "^${name}:"
+}
+
+jj_retire_landed_workspaces() {
+  local listing default_root current_root admin_root line name root should_retire
+  listing="$(jj_workspace_listing || true)"
+  default_root="$(printf '%s\n' "$listing" | awk -F '\t' '$1=="default"{print $2; exit}')"
+  current_root="$(jj root 2>/dev/null || pwd)"
+  admin_root="${default_root:-$current_root}"
+
+  while IFS=$'\t' read -r name root; do
+    [[ -n "$name" && "$name" != "default" ]] || continue
+    [[ "$name" == "$work_ref" ]] || continue
+
+    if [[ "$PWD" == "$root"* ]]; then
+      msg "NEXT_CWD=$admin_root"
+      msg "current jj workspace '$name' is being retired; run any later shell commands from NEXT_CWD"
+      cd "$admin_root" 2>/dev/null || cd "$(dirname "$root")" || true
+    fi
+    jj -R "$admin_root" workspace update-stale >/dev/null 2>&1 || true
+    jj -R "$admin_root" workspace forget "$name" >/dev/null 2>&1 || true
+    if [[ -n "$root" && "$root" != "/" && -d "$root" ]]; then
+      rm -rf "$root"
+    fi
+    msg "retired jj workspace '$name'"
+  done <<<"$listing"
+
+  if [[ -n "$default_root" && -d "$default_root" ]]; then
+    (cd "$default_root" &&
+      jj workspace update-stale >/dev/null 2>&1 || true
+      jj new "$main_ref" >/dev/null 2>&1 || true)
+  fi
+}
+
+jj_publish_loop() {
+  while :; do
+    jj_snapshot
+    if jj_has_conflicts; then
+      jj_try_auto_additive_conflicts || jj_print_conflict_and_exit
+    fi
+
+    conflicted="$(jj_conflicted_history)"
+    if [[ -n "$conflicted" ]]; then
+      msg "jj commit history under @ is still conflicted: $conflicted"
+      jj_print_conflict_and_exit
+    fi
+
+    if ! jj_main_is_ancestor_of_at; then
+      msg "'$main_ref' moved; reforming the merge against the latest '$main_ref'"
+      jj_form_merge
+      continue
+    fi
+
+    if jj bookmark set "$main_ref" -r @ >/dev/null 2>&1; then
+      jj new "$main_ref" >/dev/null 2>&1 || true
+      jj_cleanup_bookmark
+      jj_retire_landed_workspaces
+      jj_git_export_if_colocated
+      msg "DONE mode=jj main=$main_ref work=$work_ref"
+      return 0
+    fi
+
+    msg "bookmark set did not advance cleanly; reforming the merge"
+    jj_form_merge
+  done
+}
+
+run_jj() {
+  [[ -n "$work_ref" ]] || die "pass the work bookmark name"
+
+  if [[ "$continue_mode" -eq 0 ]]; then
+    jj_form_merge
+  fi
+  jj_publish_loop
+}
+
+case "$mode" in
+  git) run_git ;;
+  jj) run_jj ;;
+  *) die "unknown mode '$mode'" ;;
+esac

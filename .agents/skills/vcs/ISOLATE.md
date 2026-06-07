@@ -26,6 +26,20 @@ obvious at a glance which agent owns which working copy when several share a
 machine. The examples below use `<ide>-<work>` as that placeholder — substitute
 your own tool name and task.
 
+## Fast path: let the helper decide whether to isolate
+
+Run this from the checkout you were handed, before editing:
+
+```sh
+bash <skill-dir>/scripts/isolate.sh <ide>-<work>
+```
+
+The helper detects Git vs jj, checks whether you are already in a linked
+worktree/non-`default` workspace, creates a correctly named worktree/workspace
+only when needed, and prints `WORKSPACE=` plus `WORK_REF=`. If `CREATED=yes`,
+`cd` to `WORKSPACE` before editing. Use the manual recipes below only if the
+helper is missing or reports an unexpected setup problem.
+
 ## Git mode
 
 First check whether the tool already started you in a linked worktree (some

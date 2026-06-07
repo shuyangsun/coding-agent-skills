@@ -14,47 +14,70 @@ description: Version-control etiquette for coding agents — detect the VCS mode
 Follow this for every commit, merge, rebase, and publish, in whatever
 version-control system the repo uses.
 
-## 1. Detect the mode first — before any VCS action
+## 1. Detect the mode first - before any VCS action
 
 Run `jj root` (or look for a `.jj/` directory).
 
-- **It succeeds → Jujutsu (jj) mode.** Use jj for everything, **even though Git
+- **It succeeds -> Jujutsu (jj) mode.** Use jj for everything, **even though Git
   commands also work** — a colocated repo has both `.git` and `.jj`, and a naive
   "is this Git?" check picks the wrong tool. jj is the right tool whenever jj is
   present.
-- **It fails / no `.jj` → Git mode.** Plain Git, including a Git _worktree_ (where
+- **It fails / no `.jj` -> Git mode.** Plain Git, including a Git _worktree_ (where
   `.git` is a file pointing into a parent repo). Use Git.
 
 Stay in that mode the whole session and re-confirm it before you publish; never
 cross tools (don't run jj in a Git repo, or fall back to raw git in a jj repo).
 
-## 2. Starting new work? Isolate first (local parallel-agent safety)
+## 2. For standard flows, run the helper first
 
-Before you change any files on a machine you share with other agents/teammates
-working in the same repo, give yourself your **own** workspace (jj) / worktree
-(Git) on your own branch/bookmark — **unless you're already in one** (some agentic
-tools start you in a worktree by default; don't nest another). This is what keeps
-co-located agents from trampling each other's working tree. Name the
-workspace/worktree and its branch/bookmark `<ide>-<work>` — your coding tool
-(`claude`, `codex`, `agy`, `cursor`, …) plus a short intuitive description of the
-task, e.g. `claude-streaming-export`. Full per-mode recipes,
-the already-in-a-git-worktree-with-jj judgement case, and the matching cleanup are
-in **[ISOLATE.md](ISOLATE.md)**. In a dedicated cloud/PR session you already have
-your own clone — skip this and go straight to landing your work.
+Do not spend tokens re-deriving the routine command chain. The bundled helpers
+detect the mode and run the standard Git/jj mechanics. Use prose judgment only
+when a helper stops for semantic conflict resolution or reports an unexpected
+condition.
 
-## 3. Land work & resolve conflicts
+- **Starting new local work:** from the checkout you were handed, run
+  `bash <skill-dir>/scripts/isolate.sh <ide>-<work>`, for example
+  `bash <skill-dir>/scripts/isolate.sh codex-fix-auth-retry`. If it prints a new
+  `WORKSPACE=...`, `cd` there before editing. In a dedicated cloud/PR session you
+  already have your own clone; skip isolation.
+- **Landing committed work on shared `main`:** run
+  `bash <skill-dir>/scripts/integrate.sh <branch-or-bookmark>`, for example
+  `bash <skill-dir>/scripts/integrate.sh agent-2`. If it prints
+  `VCS_CONFLICT=...`, resolve only the listed files using the conflict etiquette
+  below, then rerun
+  `bash <skill-dir>/scripts/integrate.sh --continue <branch-or-bookmark>`.
 
-To get your committed work onto a shared `main` — and pull in teammates' work
-that landed first — follow **[INTEGRATE.md](INTEGRATE.md)**. It has the exact
-integrate-and-publish steps for each mode, the conflict etiquette (union every
-additive change; keep the higher value for a single-valued field; leave no
-markers), the jj rule that **no conflicted commit may remain in `main`'s
-history** before you advance the bookmark, and the final tidy-up — **delete your
-merged branch/bookmark** (unless it backs an open PR), and in jj multi-workspace
-flows recover/park `default` and retire landed sibling workspaces, so stale
-working copies don't block the next consolidation.
+`integrate.sh` handles the no-ambiguity finish steps: Git fetch/rebase/push retry,
+jj merge formation, stale workspace recovery, `main` movement checks, `jj git
+export`, merged branch/bookmark deletion when no real remote backs it, parking
+jj `default` on `main`, retiring landed jj agent workspaces, and auto-resolving
+jj conflicts that are mechanically additive and structurally valid. If it prints
+`NEXT_CWD=...`, run any later shell command from that live directory because your
+jj workspace was intentionally removed.
 
-## 4. Write the commit message
+## 3. Conflict etiquette
 
-Whenever you author or edit a commit message — including the merge commits you
-create while integrating — format it as in **[COMMITS.md](COMMITS.md)**.
+When the helper stops for conflicts, the agent's job is semantic resolution:
+
+- Union every additive change. Keep every changelog entry, list/array element,
+  and code block that any side added. Do not drop teammates' work.
+- For a single-valued field set to different values, keep the higher value.
+  Compare values directly; do not rely on "ours" or "theirs" labels.
+- Never resolve a whole file with one side (`ours`, `theirs`, `-X ours`).
+- Remove every conflict marker: `<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`.
+- jj conflicts are diff-style. Drop marker/header lines such as `<<<<<<<`,
+  `%%%%%%%`, `\\\\\\\`, `+++++++`, and `>>>>>>>`. If a real content line appears
+  with a leading marker prefix like `+- streaming export (...)`, keep the content
+  line without that extra marker prefix. When `integrate.sh` prints a
+  marker-stripped preview, use it to inspect candidates faster, but still verify
+  the final file yourself. For purely additive conflicts, you may apply the
+  preview with the printed `conflict-preview.py --write ...` command, then inspect
+  structured files and adjust any single-valued fields before `--continue`.
+- After editing, rerun the helper with `--continue`; do not invent extra
+  publish/cleanup commands unless the helper failed.
+
+## 4. Fallback docs and commits
+
+Detailed fallback markdown lives beside this file. Do not read it up front. Open
+the matching fallback only if a helper is missing, reports an unexpected setup
+problem, or you are authoring/editing a commit message.
