@@ -39,9 +39,13 @@ condition.
 
 - **Starting new local work:** from the checkout you were handed, run
   `bash <skill-dir>/scripts/isolate.sh <ide>-<work>`, for example
-  `bash <skill-dir>/scripts/isolate.sh codex-fix-auth-retry`. If it prints a new
-  `WORKSPACE=...`, `cd` there before editing. In a dedicated cloud/PR session you
-  already have your own clone; skip isolation.
+  `bash <skill-dir>/scripts/isolate.sh codex-fix-auth-retry`. If it prints
+  `NEXT_CWD=...` (it created a fresh workspace/worktree), `cd` there **before you
+  edit, read, or run anything else** — every command for this work runs from that
+  path, not the checkout you started in. Creating the workspace but staying put
+  silently writes into the shared checkout. If instead it prints `CREATED=no` you
+  are already isolated; work in place. In a dedicated cloud/PR session you already
+  have your own clone; skip isolation.
 - **Landing committed work on shared `main`:** run
   `bash <skill-dir>/scripts/integrate.sh <branch-or-bookmark>`, for example
   `bash <skill-dir>/scripts/integrate.sh agent-2`. If it prints

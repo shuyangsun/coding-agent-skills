@@ -23,6 +23,13 @@ die() {
   exit 3
 }
 
+# A fresh isolated checkout was created; the agent MUST move into it before
+# touching any file, or edits land in the shared checkout it was handed.
+emit_next_cwd() {
+  msg "NEXT_CWD=$1"
+  msg "cd to NEXT_CWD now; do every edit and command for this work from there, not the checkout you started in"
+}
+
 case "${1:-}" in
   -h | --help)
     usage
@@ -95,6 +102,7 @@ run_git() {
     die "could not create git worktree '$path' on branch '$name'"
   msg "created git worktree"
   printf 'MODE=git\nWORKSPACE=%s\nWORK_REF=%s\nCREATED=yes\n' "$path" "$name"
+  emit_next_cwd "$path"
 }
 
 jj_workspace_name() {
@@ -141,6 +149,7 @@ run_jj() {
     die "could not create bookmark '$name'"
   msg "created jj workspace"
   printf 'MODE=jj\nWORKSPACE=%s\nWORK_REF=%s\nCREATED=yes\n' "$path" "$name"
+  emit_next_cwd "$path"
 }
 
 case "$mode" in

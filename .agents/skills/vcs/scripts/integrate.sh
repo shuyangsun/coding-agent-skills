@@ -332,16 +332,68 @@ jj_main_is_ancestor_of_at() {
   [[ -n "$(jj log --no-graph -r "$main_ref & ::@" -T 'commit_id ++ "\n"' 2>/dev/null | sed '/^$/d')" ]]
 }
 
-jj_form_merge() {
+# Non-empty when main is an ancestor of (or equal to) the work bookmark — the
+# work is already linear on top of main, so it can fast-forward with no merge.
+jj_work_contains_main() {
+  [[ -n "$(jj log --no-graph -r "$work_ref & descendants($main_ref)" -T 'commit_id ++ "\n"' 2>/dev/null | sed '/^$/d')" ]]
+}
+
+# `jj git push` rejects a commit that is empty AND has no description.
+jj_is_pushable() {
+  local rev="$1" empty desc
+  empty="$(jj log --no-graph -r "$rev" -T 'if(empty,"1","0")' 2>/dev/null | head -n1)"
+  desc="$(jj log --no-graph -r "$rev" -T 'description' 2>/dev/null)"
+  [[ -n "${desc//[[:space:]]/}" ]] && return 0
+  [[ "$empty" == "1" ]] && return 1
+  return 0
+}
+
+# Described message for a real merge, so jj will push it (see COMMITS.md).
+jj_merge_message() {
+  local name email body
+  name="$(jj config get user.name 2>/dev/null || true)"
+  email="$(jj config get user.email 2>/dev/null || true)"
+  body="chore(merge): integrate ${work_ref} into ${main_ref}"
+  [[ -n "$name" && -n "$email" ]] && body+=$'\n\n'"Author: ${name} <${email}>"
+  printf '%s' "$body"
+}
+
+# Land work onto main: fast-forward when linear, else form a described merge.
+# Sets jj_landed_via to "ff" or "merge".
+jj_landed_via=""
+jj_land() {
   jj workspace update-stale >/dev/null 2>&1 || true
   jj bookmark list "$work_ref" >/dev/null 2>&1 ||
     die "bookmark '$work_ref' does not exist"
-  jj new "$main_ref" "$work_ref" >/dev/null 2>&1 ||
+
+  if jj_work_contains_main; then
+    jj bookmark set "$main_ref" -r "$work_ref" >/dev/null 2>&1 ||
+      die "could not fast-forward '$main_ref' to '$work_ref'"
+    jj_snapshot
+    jj_landed_via="ff"
+    msg "fast-forwarded '$main_ref' to linear work '$work_ref' (no merge needed)"
+    return 0
+  fi
+
+  jj new "$main_ref" "$work_ref" -m "$(jj_merge_message)" >/dev/null 2>&1 ||
     die "could not create jj integration merge from '$main_ref' and '$work_ref'"
   jj_snapshot
+  jj_landed_via="merge"
   if jj_has_conflicts; then
     jj_try_auto_additive_conflicts || jj_print_conflict_and_exit
   fi
+}
+
+# Shared finish once main points at the landed commit: validate it would push,
+# open a fresh working copy, then run the cleanup/retire/export steps.
+jj_finish() {
+  jj_is_pushable "$main_ref" ||
+    die "refusing to finish: '$main_ref' points at an empty, description-less commit that 'jj git push' would reject"
+  jj new "$main_ref" >/dev/null 2>&1 || true
+  jj_cleanup_bookmark
+  jj_retire_landed_workspaces
+  jj_git_export_if_colocated
+  msg "DONE mode=jj main=$main_ref work=$work_ref"
 }
 
 jj_git_export_if_colocated() {
@@ -429,22 +481,20 @@ jj_publish_loop() {
     fi
 
     if ! jj_main_is_ancestor_of_at; then
-      msg "'$main_ref' moved; reforming the merge against the latest '$main_ref'"
-      jj_form_merge
+      msg "'$main_ref' moved; reforming the integration against the latest '$main_ref'"
+      jj_land
+      [[ "$jj_landed_via" == "ff" ]] && { jj_finish; return 0; }
       continue
     fi
 
     if jj bookmark set "$main_ref" -r @ >/dev/null 2>&1; then
-      jj new "$main_ref" >/dev/null 2>&1 || true
-      jj_cleanup_bookmark
-      jj_retire_landed_workspaces
-      jj_git_export_if_colocated
-      msg "DONE mode=jj main=$main_ref work=$work_ref"
+      jj_finish
       return 0
     fi
 
-    msg "bookmark set did not advance cleanly; reforming the merge"
-    jj_form_merge
+    msg "bookmark set did not advance cleanly; reforming the integration"
+    jj_land
+    [[ "$jj_landed_via" == "ff" ]] && { jj_finish; return 0; }
   done
 }
 
@@ -452,7 +502,11 @@ run_jj() {
   [[ -n "$work_ref" ]] || die "pass the work bookmark name"
 
   if [[ "$continue_mode" -eq 0 ]]; then
-    jj_form_merge
+    jj_land
+    if [[ "$jj_landed_via" == "ff" ]]; then
+      jj_finish
+      return 0
+    fi
   fi
   jj_publish_loop
 }
