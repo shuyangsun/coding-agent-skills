@@ -1,0 +1,11 @@
+{
+  "rag_config_id": "baseline-b",
+  "_note": "Naive baseline anchoring every rag marginal-effect number (plan §14 Q4): fixed-grid chunks, one embedder, dense-only, no fusion, no rerank.",
+  "chunker": {"strategy": "fixed", "size": 256, "overlap": 0},
+  "embedding": {"model": "hash", "dim": 256, "idf_weight": false},
+  "hybrid": {"sparse": false, "dense": true, "fusion": "rrf", "rrf_k": 60, "dense_weight": 0.5},
+  "rerank": {"enabled": false, "top_n": 50},
+  "top_k": 20,
+  "prefetch": 50,
+  "provider": "local-inproc"
+}
