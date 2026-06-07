@@ -327,9 +327,7 @@ maybe_chdir_leading_cd() {
 
 check_hook() {
   hook_mode=1
--  local input event tool command
-  local input event tool command file_path session_id
-  local input event tool command tool_cwd target_file target_dir
+  local input event tool command file_path session_id tool_cwd target_file target_dir
   input="$(cat 2>/dev/null || true)"
   event="$(json_field "$input" hook_event_name)"
   [[ -n "$event" ]] || event="$(json_field "$input" event)"
@@ -338,6 +336,7 @@ check_hook() {
   command="$(json_field "$input" tool_input.command)"
   file_path="$(json_field "$input" tool_input.file_path)"
   session_id="$(json_field "$input" session_id)"
+  [[ -n "$session_id" ]] || session_id="$(json_field "$input" conversationId)"
   [[ -n "$session_id" ]] && export VCS_SESSION_ID="$session_id"
   [[ -n "$command" ]] || command="$(json_field "$input" tool_input.commandLine)"
   [[ -n "$command" ]] || command="$(json_field "$input" tool_input.CommandLine)"
@@ -348,13 +347,12 @@ check_hook() {
   [[ -n "$tool_cwd" ]] || tool_cwd="$(json_field "$input" tool_input.Cwd)"
   [[ -n "$tool_cwd" ]] || tool_cwd="$(json_field "$input" toolCall.args.cwd)"
   [[ -n "$tool_cwd" ]] || tool_cwd="$(json_field "$input" toolCall.args.Cwd)"
-  if [[ -z "$tool_cwd" ]]; then
-    target_file="$(json_field "$input" toolCall.args.AbsolutePath)"
-    [[ -n "$target_file" ]] || target_file="$(json_field "$input" toolCall.args.TargetFile)"
-    if [[ "$target_file" == /* ]]; then
-      target_dir="$(dirname "$target_file")"
-      [[ -d "$target_dir" ]] && tool_cwd="$target_dir"
-    fi
+  target_file="$(json_field "$input" toolCall.args.AbsolutePath)"
+  [[ -n "$target_file" ]] || target_file="$(json_field "$input" toolCall.args.TargetFile)"
+  [[ -n "$file_path" ]] || file_path="$target_file"
+  if [[ -z "$tool_cwd" && "$target_file" == /* ]]; then
+    target_dir="$(dirname "$target_file")"
+    [[ -d "$target_dir" ]] && tool_cwd="$target_dir"
   fi
   if [[ -n "$tool_cwd" && -d "$tool_cwd" ]]; then
     cd "$tool_cwd" 2>/dev/null || true
@@ -369,14 +367,11 @@ check_hook() {
   esac
 
   case "$tool" in
-     apply_patch | Edit | Write | MultiEdit | NotebookEdit)
--      check_pre_edit
-      check_pre_edit "$file_path"
     apply_patch | Edit | Write | MultiEdit | NotebookEdit | write_to_file | replace_file_content | multi_replace_file_content)
-      check_pre_edit
+      check_pre_edit "$file_path"
       return 0
       ;;
-    Bash)
+    Bash | run_command)
       # Honor a leading `cd <dir> &&|;` (or a bare `cd <dir>`): evaluate the rest
       # of the command from <dir>, the directory it will actually run in.
       if maybe_chdir_leading_cd "$command"; then
@@ -385,8 +380,6 @@ check_hook() {
       if [[ -z "${command//[[:space:]]/}" ]]; then
         return 0
       fi
--    Bash)
-    Bash | run_command)
       if is_vetted_helper_command "$command"; then
         return 0
       fi
@@ -404,7 +397,6 @@ check_hook() {
       ;;
   esac
 }
-
 case "$cmd" in
   pre-edit)
     check_pre_edit
