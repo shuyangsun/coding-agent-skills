@@ -1,10 +1,12 @@
 ---
 name: vcs
 description: Version-control etiquette for coding agents — detect the VCS mode
-  (Jujutsu vs Git), isolate new work in your own worktree/workspace for safe
-  parallel-agent collaboration, land work on a shared main, resolve merge
-  conflicts by union, and format commit messages. Load before any commit, merge,
-  rebase, or publish.
+  (Jujutsu vs Git), isolate new work in your own workspace/worktree (named
+  <ide>-<work>) for safe parallel-agent collaboration, land work on a shared
+  main, resolve merge conflicts by union, and format commit messages. Load this
+  at the START of almost any repo task: before you change a single file for new
+  work (so you isolate first), and before any commit, merge, rebase, or publish.
+  When in doubt, load it — nearly all coding work touches version control.
 ---
 
 # VCS
@@ -29,10 +31,13 @@ cross tools (don't run jj in a Git repo, or fall back to raw git in a jj repo).
 ## 2. Starting new work? Isolate first (local parallel-agent safety)
 
 Before you change any files on a machine you share with other agents/teammates
-working in the same repo, give yourself your **own** worktree (Git) / workspace
-(jj) on your own branch/bookmark — **unless you're already in one** (some agentic
+working in the same repo, give yourself your **own** workspace (jj) / worktree
+(Git) on your own branch/bookmark — **unless you're already in one** (some agentic
 tools start you in a worktree by default; don't nest another). This is what keeps
-co-located agents from trampling each other's working tree. Full per-mode recipes,
+co-located agents from trampling each other's working tree. Name the
+workspace/worktree and its branch/bookmark `<ide>-<work>` — your coding tool
+(`claude`, `codex`, `agy`, `cursor`, …) plus a short intuitive description of the
+task, e.g. `claude-streaming-export`. Full per-mode recipes,
 the already-in-a-git-worktree-with-jj judgement case, and the matching cleanup are
 in **[ISOLATE.md](ISOLATE.md)**. In a dedicated cloud/PR session you already have
 your own clone — skip this and go straight to landing your work.

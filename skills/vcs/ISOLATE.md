@@ -3,7 +3,7 @@
 Before you start changing files, give yourself your **own working copy** so you
 don't collide with other agents/teammates working in the same repository at the
 same time. Two agents editing, building, or switching branches in the _same_
-working directory trample each other; a per-agent worktree (Git) / workspace (jj)
+working directory trample each other; a per-agent workspace (jj) / worktree (Git)
 prevents that. Isolate **unless you are already isolated** — don't nest a second
 working copy inside one you already have.
 
@@ -16,6 +16,15 @@ you're isolated by construction, so just do the work and land it
 The objective is what matters, not a specific command: **a filesystem-isolated,
 cleanly-removable place to work, on your own branch/bookmark.** Anything that
 achieves that is correct.
+
+**Name it `<ide>-<work>`.** Name your workspace/worktree **and** its
+branch/bookmark for who is doing the work and what it is: `<ide>-<work>`, where
+`<ide>` is the coding tool you are running in — `claude`, `codex`, `agy`,
+`cursor`, etc. — and `<work>` is a short, intuitive, hyphenated description of
+the task (e.g. `claude-streaming-export`, `codex-fix-auth-retry`). This makes it
+obvious at a glance which agent owns which working copy when several share a
+machine. The examples below use `<ide>-<work>` as that placeholder — substitute
+your own tool name and task.
 
 ## Git mode
 
@@ -31,14 +40,14 @@ agentic tools do this by default):
 
 - **Already in a linked worktree → you're isolated.** Don't create another. Just
   make sure you're on your **own** branch (if you're sitting on a shared branch
-  like `main`, `git switch -c agent-X` first), do the work, and clean up the
+  like `main`, `git switch -c <ide>-<work>` first), do the work, and clean up the
   branch when you finish.
 - **In the primary checkout → carve out your own worktree before working:**
 
   ```sh
   git fetch origin                                   # if there's a remote
-  git worktree add ../<repo>-agent-X -b agent-X origin/main   # or `main` if local-only
-  cd ../<repo>-agent-X
+  git worktree add ../<repo>-<ide>-<work> -b <ide>-<work> origin/main   # or `main` if local-only
+  cd ../<repo>-<ide>-<work>
   ```
 
   Work there, then integrate ([INTEGRATE.md](INTEGRATE.md)) and clean up (below).
@@ -46,15 +55,18 @@ agentic tools do this by default):
 ## jj mode
 
 jj's per-agent isolation primitive is a **workspace** (each has its own
-working-copy commit); the shared one is named `default`.
+working-copy commit); the shared one is named `default`. List every workspace and
+its on-disk path with
+`jj workspace list -T 'name ++ ": " ++ root ++ "\n"'` — handy to find (or `cd`
+back to) the path of yours.
 
 - **Already in your own (non-`default`) workspace → work in place**, make your
   bookmark, clean up at the end.
 - **Otherwise → add your own workspace before working:**
 
   ```sh
-  jj workspace add --name agent-X -r main ../<repo>-agent-X
-  cd ../<repo>-agent-X
+  jj workspace add --name <ide>-<work> -r main ../<repo>-<ide>-<work>
+  cd ../<repo>-<ide>-<work>
   ```
 
   Work there, then advance `main` ([INTEGRATE.md](INTEGRATE.md)) and clean up.
@@ -86,8 +98,8 @@ your merged branch/bookmark (see
 [INTEGRATE.md → Finish](INTEGRATE.md#finish-delete-the-merged-branch-then-stop)):
 
 - **Git worktree you created:** from outside it,
-  `git worktree remove ../<repo>-agent-X` (then delete the branch per Finish).
-- **jj workspace you created:** `jj workspace forget agent-X` and remove its
+  `git worktree remove ../<repo>-<ide>-<work>` (then delete the branch per Finish).
+- **jj workspace you created:** `jj workspace forget <ide>-<work>` and remove its
   directory (then delete the bookmark per Finish).
 - If the tool started you in a worktree you didn't create, leave its removal to
   the tool; just delete your branch/bookmark.

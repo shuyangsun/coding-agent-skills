@@ -142,13 +142,14 @@ jj repo with no remotes at all) is **not** a remote — delete in that case.
 - **jj:** `jj bookmark delete agent-K`; in a colocated repo follow with
   `jj git export` so the Git ref disappears too.
 
-If you created your **own** worktree or jj workspace to do this work
+If you created your **own** jj workspace or Git worktree to do this work
 ([ISOLATE.md](ISOLATE.md)), remove it now too so it doesn't linger — from outside
-it, `git worktree remove <path>` / `jj workspace forget <name>` (and delete its
-directory). Leave a worktree the _tool_ started you in for the tool to clean up.
+it, `jj workspace forget <name>` / `git worktree remove <path>` (and delete its
+directory). Leave a workspace/worktree the _tool_ started you in for the tool to
+clean up.
 
 Then **stop.** You are done the moment your work is on `main`, the union is
 preserved, the verify step is clean, and the merged branch is resolved (deleted,
-or kept because a remote backs it), and any worktree/workspace you created is
+or kept because a remote backs it), and any workspace/worktree you created is
 removed. Do not write new code, run builds/tests/formatters, or amend the
 committed change — integration is the whole job.
