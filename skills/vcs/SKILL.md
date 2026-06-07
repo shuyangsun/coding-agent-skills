@@ -1,8 +1,10 @@
 ---
 name: vcs
 description: Version-control etiquette for coding agents — detect the VCS mode
-  (Jujutsu vs Git), land work on a shared main, resolve merge conflicts by union,
-  and format commit messages. Load before any commit, merge, rebase, or publish.
+  (Jujutsu vs Git), isolate new work in your own worktree/workspace for safe
+  parallel-agent collaboration, land work on a shared main, resolve merge
+  conflicts by union, and format commit messages. Load before any commit, merge,
+  rebase, or publish.
 ---
 
 # VCS
@@ -18,13 +20,24 @@ Run `jj root` (or look for a `.jj/` directory).
   commands also work** — a colocated repo has both `.git` and `.jj`, and a naive
   "is this Git?" check picks the wrong tool. jj is the right tool whenever jj is
   present.
-- **It fails / no `.jj` → Git mode.** Plain Git, including a Git *worktree* (where
+- **It fails / no `.jj` → Git mode.** Plain Git, including a Git _worktree_ (where
   `.git` is a file pointing into a parent repo). Use Git.
 
 Stay in that mode the whole session and re-confirm it before you publish; never
 cross tools (don't run jj in a Git repo, or fall back to raw git in a jj repo).
 
-## 2. Land work & resolve conflicts
+## 2. Starting new work? Isolate first (local parallel-agent safety)
+
+Before you change any files on a machine you share with other agents/teammates
+working in the same repo, give yourself your **own** worktree (Git) / workspace
+(jj) on your own branch/bookmark — **unless you're already in one** (some agentic
+tools start you in a worktree by default; don't nest another). This is what keeps
+co-located agents from trampling each other's working tree. Full per-mode recipes,
+the already-in-a-git-worktree-with-jj judgement case, and the matching cleanup are
+in **[ISOLATE.md](ISOLATE.md)**. In a dedicated cloud/PR session you already have
+your own clone — skip this and go straight to landing your work.
+
+## 3. Land work & resolve conflicts
 
 To get your committed work onto a shared `main` — and pull in teammates' work
 that landed first — follow **[INTEGRATE.md](INTEGRATE.md)**. It has the exact
@@ -35,7 +48,7 @@ history** before you advance the bookmark, and the final tidy-up — **delete yo
 merged branch/bookmark** (unless it backs an open PR) so it doesn't linger as a
 stale ref.
 
-## 3. Write the commit message
+## 4. Write the commit message
 
 Whenever you author or edit a commit message — including the merge commits you
 create while integrating — format it as in **[COMMITS.md](COMMITS.md)**.

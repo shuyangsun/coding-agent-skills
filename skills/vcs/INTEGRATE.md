@@ -10,7 +10,7 @@ same in both modes; the mechanics differ.
 You have a finished change on your branch/bookmark. Several teammates are landing
 their own changes on the same `main`. Your job: **integrate your change with the
 current `main` and publish the union.** You do not hunt down teammates' branches —
-you integrate against `main` as it is *now* and resolve whatever conflicts that
+you integrate against `main` as it is _now_ and resolve whatever conflicts that
 produces. Two no-conflict outcomes are equally valid — don't manufacture work:
 if you arrive **first**, your change lands as a clean fast-forward with nothing to
 union; if `main` already contains everyone's work, there's nothing to resolve.
@@ -19,11 +19,11 @@ Either way, verify and stop.
 ## Conflict etiquette (both modes)
 
 - **Union every additive change.** Keep every changelog entry, every list/array
-  element, every code block any side added — yours *and* every teammate's. Never
+  element, every code block any side added — yours _and_ every teammate's. Never
   drop one.
 - **Single-valued field set two different ways** (e.g. a `version:` line): keep
   the **higher** value. Decide by the value itself, never by which side a marker
-  puts it on — under `git rebase` the sides are *inverted* (the `HEAD`/`<<<<<<<`
+  puts it on — under `git rebase` the sides are _inverted_ (the `HEAD`/`<<<<<<<`
   side is the teammates' already-landed work, the `>>>>>>>` side labeled with your
   commit is yours), so "keep mine" is the wrong heuristic; compare and keep the
   larger.
@@ -52,18 +52,18 @@ often checked out elsewhere and the checkout fails. Publish by pushing `HEAD:mai
    re-run from step 1 (`git fetch` then rebase onto the new `origin/main`) and
    push again. Repeat until it lands.
 6. **Verify:** `git show origin/main:docs/CHANGELOG.md` (or `git log origin/main`)
-   shows your change *and* the teammates' already there, with no markers.
-7. **Finish:** delete `agent-K` *unless a remote branch backs it* — if
+   shows your change _and_ the teammates' already there, with no markers.
+7. **Finish:** delete `agent-K` _unless a remote branch backs it_ — if
    `git ls-remote --heads origin agent-K` prints nothing, `git switch --detach &&
-   git branch -d agent-K`; if it prints a ref, keep it (open PR). Details in
+git branch -d agent-K`; if it prints a ref, keep it (open PR). Details in
    [Finish](#finish-delete-the-merged-branch-then-stop).
 
 ## jj mode (Jujutsu, usually on a Git backend)
 
 Your work is on bookmark `agent-K`. `main` is a local bookmark (jj sessions are
 typically local — there may be no remote; "publish" means advancing the `main`
-bookmark). jj records conflicts as **commit state**, so it will happily *commit* a
-conflict — you must resolve it *in the commit*, not paper over it in a child.
+bookmark). jj records conflicts as **commit state**, so it will happily _commit_ a
+conflict — you must resolve it _in the commit_, not paper over it in a child.
 
 1. If jj warns the working copy is stale, run `jj workspace update-stale` (or any
    `jj` command) first so the working copy reflects current `main`.
@@ -80,7 +80,7 @@ conflict — you must resolve it *in the commit*, not paper over it in a child.
    conflicts explicitly with
    `jj log -r '::@' -T 'if(conflict, change_id.shortest(8) ++ " CONFLICT\n", "")'`
    (it must print nothing). A clean working tree on top of a still-conflicted
-   commit is the #1 jj integration failure — fix the conflict *in* the commit
+   commit is the #1 jj integration failure — fix the conflict _in_ the commit
    (step 3), don't leave it behind.
 5. Advance `main` to your resolved merge — **but first re-check that `main` didn't
    move under you.** With no server to reject a bad update, `jj bookmark set` will
@@ -103,10 +103,10 @@ conflict — you must resolve it *in the commit*, not paper over it in a child.
 7. **Verify** with jj (not git): `jj log -r '::main'` shows no conflicted commit;
    the files on `main` contain your change and the teammates' (no markers); and
    `jj resolve --list` reports nothing to resolve. In a local (non-colocated) jj
-   repo the `main` *bookmark* is the shared line — a missing plain-git `main` ref
+   repo the `main` _bookmark_ is the shared line — a missing plain-git `main` ref
    is expected, not a publish failure.
-8. **Finish:** delete `agent-K` *unless a **real** remote backs it* (`jj git
-   remote list` is non-empty and the bookmark tracks one of those — `agent-K@git`
+8. **Finish:** delete `agent-K` _unless a **real** remote backs it_ (`jj git
+remote list` is non-empty and the bookmark tracks one of those — `agent-K@git`
    is the local backend, **not** a remote, so it doesn't count):
    `jj bookmark delete agent-K` then `jj git export`. Details in
    [Finish](#finish-delete-the-merged-branch-then-stop).
@@ -120,9 +120,9 @@ remote?
 
 - **git:** `git ls-remote --heads origin agent-K`
 - **jj:** first list real remotes with `jj git remote list`; a branch is
-  remote-backed only if it tracks one of *those* — `agent-K@<remote-name>` in
+  remote-backed only if it tracks one of _those_ — `agent-K@<remote-name>` in
   `jj bookmark list`. **`agent-K@git` does NOT count:** `@git` is jj's local
-  colocated Git backend, not a network remote, and it's present for *every*
+  colocated Git backend, not a network remote, and it's present for _every_
   bookmark in a git-backed repo. If `jj git remote list` is empty, there is **no**
   remote, so nothing is remote-backed — always delete.
 
@@ -130,7 +130,7 @@ remote?
 what a pull request is built on, so deleting your local copy throws away a ref a
 reviewer may still need. A bare / self-hosted remote still counts — don't try to
 judge whether a PR is "really" open (you usually can't from the CLI, and the
-remote branch itself *is* the PR's head). But a purely local backend (`@git`, or a
+remote branch itself _is_ the PR's head). But a purely local backend (`@git`, or a
 jj repo with no remotes at all) is **not** a remote — delete in that case.
 
 **If it prints nothing → the branch is purely local and merged, so DELETE it:**
@@ -142,8 +142,13 @@ jj repo with no remotes at all) is **not** a remote — delete in that case.
 - **jj:** `jj bookmark delete agent-K`; in a colocated repo follow with
   `jj git export` so the Git ref disappears too.
 
+If you created your **own** worktree or jj workspace to do this work
+([ISOLATE.md](ISOLATE.md)), remove it now too so it doesn't linger — from outside
+it, `git worktree remove <path>` / `jj workspace forget <name>` (and delete its
+directory). Leave a worktree the _tool_ started you in for the tool to clean up.
+
 Then **stop.** You are done the moment your work is on `main`, the union is
 preserved, the verify step is clean, and the merged branch is resolved (deleted,
-or kept because a remote backs it). Do not write new code, run
-builds/tests/formatters, or amend the committed change — integration is the whole
-job.
+or kept because a remote backs it), and any worktree/workspace you created is
+removed. Do not write new code, run builds/tests/formatters, or amend the
+committed change — integration is the whole job.
