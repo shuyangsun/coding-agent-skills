@@ -91,3 +91,10 @@ Encode the same intent everywhere, using whatever each tool actually supports:
   sandboxing with the network off, not bypassable deny-strings.
 - **Honesty over completeness** — a documented gap beats a fabricated config.
 - **One posture, many dialects** — every agent enforces the same intent in its own format.
+
+## Tool Config Targets & Schema Learnings
+
+- **Claude**: `.claude/settings.json` (`permissions` object with `allow` / `deny` array of `Bash(<cmd>)` / `Read(<glob>)` / `WebFetch(domain:<host>)`).
+- **Cursor**: `.cursor/permissions.json` (`terminalAllowlist` array and `autoRun` block) and `.cursor/cli.json` (`permissions.allow` / `permissions.deny`).
+- **Codex**: `.codex/config.toml` (sandbox configuration) and `.codex/rules/*.rules` (Starlark execution rules).
+- **Antigravity & Gemini**: `.antigravity/settings.json` & `.gemini/settings.json` (`permissions` object with `allow` / `deny` arrays of `command(<prefix>)` / `read_file(<path>)` / `read_url(<host>)`).

@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "command(bun install)",
+      "command(bun run)",
+      "command(bun add)",
+      "command(bunx)",
+      "command(git status)",
+      "command(git diff)",
+      "command(git log)",
+      "command(git show)",
+      "command(git add)",
+      "command(git commit)",
+      "command(git switch)",
+      "command(git branch)",
+      "command(git checkout)",
+      "command(git worktree)",
+      "command(git fetch)",
+      "command(git ls-remote)",
+      "command(git rev-parse)",
+      "command(git config)",
+      "command(jj status)",
+      "command(jj log)",
+      "command(jj diff)",
+      "command(jj show)",
+      "command(jj commit)",
+      "command(jj describe)",
+      "command(jj new)",
+      "command(jj bookmark)",
+      "command(jj fix)",
+      "command(jj workspace)",
+      "command(jj root)",
+      "command(jj config)",
+      "command(jj git)",
+      "command(bash)",
+      "command(chmod)",
+      "read_url(github.com)",
+      "read_url(code.claude.com)",
+      "read_url(docs.anthropic.com)"
+    ],
+    "deny": [
+      "read_file(.env*)",
+      "read_file(**/secrets/**)",
+      "read_file(**/*.pem)",
+      "read_file(**/*.key)",
+      "read_file(**/id_rsa*)",
+      "read_file(~/.ssh/**)",
+      "read_file(~/.aws/**)",
+      "command(curl)",
+      "command(wget)"
+    ]
+  }
+}
