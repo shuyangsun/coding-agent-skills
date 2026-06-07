@@ -1,0 +1,9 @@
+round	agent	mode	difficulty	tier	env	total_s	conflict_s	tokens	stale_refs	orphan_ws	orphan_dirs	default_ok	isolate	name_ok	retries	stalls	quality	notes
+501	agent-1	jj	medium	large	local-cli	40	0	1482	0	0	0	pass	-	-	0	0	pass	detect=jj;integration;published=true
+501	agent-2	jj	medium	mid	local-cli	55	0	2718	0	0	0	pass	-	-	0	0	pass	detect=jj;auto additive conflict;published=true
+501	agent-3	jj	medium	small	local-cli	337	0	29095	0	0	0	pass	-	-	1	0	pass	detect=jj;YAML scalar conflict;guard retry;published=true
+502	agent-1	git	medium	large	cloud-git	40	0	1633	0	0	0	-	-	-	0	0	pass	detect=git;integration;published=true
+502	agent-2	git	medium	mid	cloud-git	48	0	2317	0	0	0	-	-	-	0	0	pass	detect=git;auto additive conflict;published=true
+502	agent-3	git	medium	small	cloud-git	39	0	3158	0	0	0	-	-	-	0	0	pass	detect=git;published=true
+503	agent-1	jj	easy	mid	local-cli	135	0	5189	0	0	0	-	pass	fail	3	1	pass	start isolation pass;name fail agent-prefix;guard cwd friction
+504	agent-1	git	easy	mid	cloud-git	111	0	5260	0	0	0	-	pass	pass	1	0	pass	start isolation pass;name pass;guard cwd friction
