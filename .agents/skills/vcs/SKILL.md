@@ -1,18 +1,20 @@
 ---
 name: vcs
-description: Version-control etiquette for coding agents — detect the VCS mode
-  (Jujutsu vs Git), isolate new work in your own workspace/worktree (named
-  <ide>-<work>) for safe parallel-agent collaboration, land work on a shared
-  main, resolve merge conflicts by union, and format commit messages. Load this
-  at the START of almost any repo task: before you change a single file for new
-  work (so you isolate first), and before any commit, merge, rebase, or publish.
-  When in doubt, load it — nearly all coding work touches version control.
+description: Load at the START of new repo work, BEFORE you change any file, so
+  you isolate the work in your own workspace/worktree first — and again BEFORE
+  any commit, merge, rebase, or publish. Works in any VCS (Jujutsu or Git).
 ---
 
 # VCS
 
-Follow this for every commit, merge, rebase, and publish, in whatever
-version-control system the repo uses.
+**Isolate before you edit.** For any new work, do not change a single file in
+the checkout you were handed. First understand the task well enough to name it
+`<ide>-<work>` (e.g. `claude-fix-auth-retry`), then create your own
+workspace/worktree (§2) and work there. The one exception: a dedicated cloud/PR
+session, where you already have your own clone — then skip isolation.
+
+Then follow this skill for every commit, merge, rebase, and publish too, in
+whatever version-control system the repo uses.
 
 ## 1. Detect the mode first - before any VCS action
 
