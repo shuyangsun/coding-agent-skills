@@ -3,10 +3,10 @@
 # vcs skill: workspace naming convention + a measurable `NAME_OK` harness metric
 
 - **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj workspace `vcs-tune`, merging to `main`)
+- **Repo:** coding-agent-skills (jj; work landed on `main` from the `vcs-tune` workspace, since retired)
 - **Author:** Shuyang Sun <shuyangsun10@gmail.com>
 - **Agent:** Claude Code (Opus 4.8, 1M context)
-- **Summary:** Ran the `improving-vcs-skill` start-isolation harness to confirm agents create their own workspace/worktree before working (14/14 pass), added the `<ide>-<work>` workspace-naming convention to the `vcs` skill, and built a new durable, measurable `NAME_OK` metric into the harness (git reference-transaction hook + jj op log) — validated end-to-end, including a real small-model naming miss. Reordered "workspace/worktree" jj-first and documented the jj workspace-path one-liner. Mid-session, isolated the work into its own jj workspace after the user flagged it.
+- **Summary:** Ran the `improving-vcs-skill` start-isolation harness to confirm agents create their own workspace/worktree before working (14/14 pass), added the `<ide>-<work>` workspace-naming convention to the `vcs` skill, and built a new durable, measurable `NAME_OK` metric into the harness (git reference-transaction hook + jj op log) — validated end-to-end, including a real small-model naming miss. Reordered "workspace/worktree" jj-first and documented the jj workspace-path one-liner. Mid-session, isolated the work into its own jj workspace after the user flagged it. Merged via a clean 3-commit split (no push), then over follow-up turns documented two jj multi-workspace lifecycle gaps in `docs/issues/0001` (stale `default` workspace; retired workspaces not cleaned up), un-staled `default`, and cleaned up the `vcs-tune` workspace.
 
 ## User
 
@@ -79,4 +79,28 @@ Reordered every inline "worktree/workspace" pair to **workspace-first** across `
 
 ## Assistant
 
-Exported this transcript into `docs/coding-sessions/`, then merged the `vcs-tune` workspace work onto `main` (no push).
+Exported this transcript into `docs/coding-sessions/`. Then split the working-copy change into a clean 3-commit stack matching the repo's scopes — `feat(improving-vcs-skill)` (harness metric), `feat(vcs)` (naming + jj-first wording), `docs(coding-sessions)` (this transcript) — and fast-forwarded `main` onto it (no teammates had landed, so no conflicts). Synced the colocated git ref locally; **did not push** (`origin/main` left untouched, local `main` ahead).
+
+## User
+
+> This is a gap in the current skill. With `jj` workspace, I'd like to merge other workspaces to the default workspace before pushing. When I run `jj` in the main workspace, I get error: `The working copy is stale (not updated since operation …). Run jj workspace update-stale to update it.` This prevents effective agent collaboration. Document this problem under `docs/issues`, following the `XXXX-YYYYMMDD-...` filename format like other folders, then do what was said above so the default workspace is not stale. No need to fix it yet, just document it.
+
+## Assistant
+
+Reproduced the stale error in `default`, then wrote `docs/issues/0001-20260606-jj-default-workspace-goes-stale-blocking-collaboration.md` — symptom (every `jj` command in `default` blocked), repro, why jj does it (per-workspace working-copy sync pointer falls behind sibling operations), collaboration impact, the `jj workspace update-stale` remediation, and a proposed `vcs` direction (left unfixed per instruction). Committed it as `docs(issues): …` on `main` (no push). Then ran `jj workspace update-stale` in `default` and `jj new main` so it sits on the latest mainline, clean — the new issue file checked out there.
+
+## User
+
+> Another issue - now that the old workspace (`vcs-tune`) is no longer needed, it should have been cleaned up. This is another issue to document. Update the existing issue to document this undesired behavior, it's okay if you do it in the default workspace and commit afterwards.
+
+## Assistant
+
+Reframed issue 0001 into one tracking two related jj **multi-workspace lifecycle** gaps: Gap 1 (stale `default`) and a new Gap 2 — retired sibling workspaces are never auto-removed after their work lands on `main`, and each leftover keeps re-triggering Gap 1 (the two compound). As the concrete Gap-2 remediation, verified `vcs-tune`'s work was fully on `main`, then `jj workspace forget vcs-tune` + removed its directory (only `default` remains). Committed the doc update in `default` as `docs(issues): …`; no push.
+
+## User
+
+> Update existing session transcript @docs/coding-sessions/2026-06-06/0012-claude-vcs-skill-name-metric.md to include transcript after the last export, then commit.
+
+## Assistant
+
+Appended the post-export turns (the 3-commit merge, both `docs/issues` exchanges, and this update), refreshed the metadata/summary to the end state, re-ran the redaction scan, and committed the transcript on `main` (no push).
