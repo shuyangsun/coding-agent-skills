@@ -84,7 +84,26 @@ When the helper stops for conflicts, the agent's job is semantic resolution:
 - After editing, rerun the helper with `--continue`; do not invent extra
   publish/cleanup commands unless the helper failed.
 
-## 4. Fallback docs and commits
+## 4. Touch only your own work (shared-checkout etiquette)
+
+Several agents may share one machine, or even one checkout. Act only on the work
+**you** authored:
+
+- **Commit and publish only your own changes.** Never `jj describe` / `git commit
+  -a` a shared checkout's whole dirty tree, and never push a commit that bundles
+  edits you didn't make. If the working copy holds changes you don't recognize,
+  **stop and surface them** — don't sweep them into your commit or take authorship.
+  (Isolating first, §2, is what keeps your working copy yours; the helpers reinforce
+  it — `integrate.sh` lands only the branch/bookmark you name, never the live tree.)
+- **Clean up only what you created.** An unqualified "clean up" means *your own*
+  `<ide>-<work>` workspaces/bookmarks. Do not inspect, reason about, or ask about
+  another agent's workspace/bookmark — leave it untouched unless the user names it.
+  The one thing you may retire that you didn't create is a sibling jj workspace
+  whose work has already **landed on `main`** during an integration task (merged
+  residue, handled automatically by `integrate.sh`) — never another agent's
+  *unmerged* work.
+
+## 5. Fallback docs and commits
 
 Detailed fallback markdown lives beside this file. Do not read it up front. Open
 the matching fallback only if a helper is missing, reports an unexpected setup

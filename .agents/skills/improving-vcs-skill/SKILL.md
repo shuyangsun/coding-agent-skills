@@ -75,7 +75,7 @@ where mode integrity broke. **Verify this holds — never assert it.**
 3. **Run** them: each resolves conflicts, publishes, **stops**, and returns a
    structured report.
 4. **Measure** with `check-quality.sh` (objective pass/fail incl. the resolution
-   oracle, plus `STALE_REFS`, `DEFAULT_OK`, `ORPHAN_WS`, and `ORPHAN_DIRS`
+   oracle, plus `STALE_REFS`, `DEFAULT_OK`, `ORPHAN_WS`, `ORPHAN_DIRS`, and `ORPHAN_EMPTY_HEADS`
    lifecycle hygiene lines) and `record-metrics.sh` / `scoreboard.sh` (speed,
    conflict cost, **output tokens**, stale-ref hygiene, **jj default readiness**,
    and **retired-workspace cleanup**, broken down by round and by tier) —
@@ -103,7 +103,7 @@ for jj-mode rounds.
 | Script               | Purpose                                                                                                                                                                                                                                                                                                               |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `new-sandbox.sh`     | Provision one round: `--task integrate` (fixtures + pre-committed per-agent work + integration briefs; jj rounds deliberately stale `default`) or `--task start` (shared repo + a one-edit brief that tests session-start isolation).                                                                                 |
-| `check-quality.sh`   | Objectively score an integrated round: mode integrity, no markers/unresolved, no lost work, correct resolution, **+ branch/bookmark hygiene** (`STALE_REFS`), **jj default readiness** (`DEFAULT_OK`), and **retired workspace cleanup** (`ORPHAN_WS` / `ORPHAN_DIRS`). Also scores a start round's change + cleanup. |
+| `check-quality.sh`   | Objectively score an integrated round: mode integrity, no markers/unresolved, no lost work, correct resolution, **+ branch/bookmark hygiene** (`STALE_REFS`), **jj default readiness** (`DEFAULT_OK`), and **retired workspace cleanup** (`ORPHAN_WS` / `ORPHAN_DIRS` / `ORPHAN_EMPTY_HEADS`). Also scores a start round's change + cleanup. |
 | `check-isolation.sh` | Score a `--task start` round's **session-start isolation** (`ISOLATED`) — did the agent carve out its own worktree/workspace before working — from durable git-reflog / jj-op-log signals. Also scores the **`<ide>-<work>` naming** convention (`NAME_OK`, main arm only).                                           |
 | `scenario.py`        | Deterministic content engine: seeds fixtures, applies each agent's diff, emits the plan, runs the oracle, and prints the start-task edit instructions.                                                                                                                                                                |
 | `record-metrics.sh`  | Append one agent's measurements (time, conflict time, **tokens**, **stale refs**, **orphan workspaces**, **default readiness**, **isolation**, retries, quality, **tier**, **difficulty**) to the log.                                                                                                                |

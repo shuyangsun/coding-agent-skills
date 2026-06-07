@@ -413,6 +413,24 @@ else
     # rewriting default@ from a sibling workspace leaves the default working copy
     # stale until someone runs `jj workspace update-stale` there. This exercises
     # the consolidate-in-default bookend without changing the shared main line.
+    # Seed an orphan empty side-head (docs/issues/0007): a bookmark pinned on an
+    # empty workspace commit survives `jj workspace forget`; deleting the bookmark
+    # afterward strands that empty commit as an anonymous, unreferenced side-head
+    # (jj only auto-abandons an empty working copy that NO bookmark pinned). It is
+    # cleanup residue from a prior workspace/bookmark lifecycle — not on main, not
+    # any agent's work. A clean vcs finish must sweep it (the integrate helper
+    # abandons repo-wide orphan empty heads); check-quality.sh's ORPHAN_EMPTY_HEADS
+    # measures whether the agent's run left it behind. Seed it BEFORE making the
+    # default workspace stale (below), so `jj workspace add` runs against a clean
+    # default.
+    orphan_seed_ws="$round_dir/ws-orphan-seed"
+    jj --repository "$repo" workspace add --name orphan-seed -r main "$orphan_seed_ws" >/dev/null 2>&1
+    (cd "$orphan_seed_ws" && jj bookmark create orphan-seed -r @ >/dev/null 2>&1)
+    jj --repository "$repo" workspace forget orphan-seed >/dev/null 2>&1
+    rm -rf "$orphan_seed_ws"
+    jj --repository "$repo" bookmark delete orphan-seed >/dev/null 2>&1
+    echo "ORPHAN_SEEDED=1" >>"$manifest_env"
+
     jj --repository "$round_dir/ws-agent-1" rebase -r 'default@' -d 'agent-1' >/dev/null 2>&1
     echo "DEFAULT_STALE_SEEDED=1" >>"$manifest_env"
     seed_ws="default"

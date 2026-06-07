@@ -270,11 +270,37 @@ if [[ "$MODE" == "jj" && -d "$repo/.jj" && "${TASK:-integrate}" == "integrate" ]
   echo "  ORPHAN_WS_LIST=$orphan_ws_list"
   echo "  ORPHAN_DIRS=$orphan_dirs"
   echo "  ORPHAN_DIR_LIST=$orphan_dir_list"
-  if [[ "$orphan_ws" -eq 0 && "$orphan_dirs" -eq 0 ]]; then
-    echo "  WORKSPACE_HYGIENE: PASS — no retired agent workspace entry or directory left behind"
+
+  # Orphan empty side-heads (docs/issues/0007): anonymous empty, description-less
+  # commits with no bookmark, not on main, that no live workspace's working copy
+  # points at — cleanup residue from a forgotten workspace whose empty commit was
+  # pinned by a since-deleted bookmark. Same conservative predicate the vcs helper
+  # uses to abandon them, so a clean finish reports 0 here.
+  orphan_empty=0
+  orphan_empty_list=""
+  wc_set=""
+  for ws in $(jj -R "$repo" --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null); do
+    cid="$(jj -R "$repo" --ignore-working-copy log --no-graph -r "${ws}@" -T 'commit_id ++ "\n"' 2>/dev/null | head -1)"
+    [[ -n "$cid" ]] && wc_set="$wc_set $cid "
+  done
+  while IFS=$'\t' read -r cid flags; do
+    [[ -n "$cid" ]] || continue
+    [[ "$flags" == "Ex" ]] || continue
+    [[ "$wc_set" == *" $cid "* ]] && continue
+    orphan_empty=$((orphan_empty + 1))
+    orphan_empty_list="${orphan_empty_list:+$orphan_empty_list }${cid:0:12}"
+  done < <(jj -R "$repo" --ignore-working-copy log --no-graph \
+    -r 'heads(all()) ~ ::main ~ bookmarks()' \
+    -T 'commit_id ++ "\t" ++ if(empty,"E","x") ++ if(description,"D","x") ++ "\n"' 2>/dev/null)
+  echo "  ORPHAN_EMPTY_HEADS=$orphan_empty"
+  echo "  ORPHAN_EMPTY_LIST=$orphan_empty_list"
+
+  if [[ "$orphan_ws" -eq 0 && "$orphan_dirs" -eq 0 && "$orphan_empty" -eq 0 ]]; then
+    echo "  WORKSPACE_HYGIENE: PASS — no retired agent workspace entry, directory, or orphan empty side-head left behind"
   else
     [[ "$orphan_ws" -gt 0 ]] && echo "  WORKSPACE_HYGIENE: FAIL — workspace entries still registered: $orphan_ws_list"
     [[ "$orphan_dirs" -gt 0 ]] && echo "  WORKSPACE_HYGIENE: FAIL — workspace directories still on disk: $orphan_dir_list"
+    [[ "$orphan_empty" -gt 0 ]] && echo "  WORKSPACE_HYGIENE: FAIL — orphan empty side-head(s) left in jj log: $orphan_empty_list"
   fi
 else
   echo "  DEFAULT_OK=n/a"
@@ -282,6 +308,8 @@ else
   echo "  ORPHAN_WS_LIST="
   echo "  ORPHAN_DIRS=0"
   echo "  ORPHAN_DIR_LIST="
+  echo "  ORPHAN_EMPTY_HEADS=0"
+  echo "  ORPHAN_EMPTY_LIST="
 fi
 
 # history shape (informational) ---------------------------------------------

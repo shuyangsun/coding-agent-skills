@@ -72,7 +72,7 @@ for rd in rounds:
     # agent (the scoreboard then sums it per round and per tier).
     stale_set, stale_total = set(), 0
     orphan_ws_set, orphan_dir_set = set(), set()
-    orphan_ws_total = orphan_dir_total = 0
+    orphan_ws_total = orphan_dir_total = orphan_empty_total = 0
     default_ok = "-"
     for line in out.splitlines():
         s = line.strip()
@@ -97,6 +97,11 @@ for rd in rounds:
                 orphan_dir_total = int(s[len("ORPHAN_DIRS="):])
             except ValueError:
                 orphan_dir_total = 0
+        elif s.startswith("ORPHAN_EMPTY_HEADS="):
+            try:
+                orphan_empty_total = int(s[len("ORPHAN_EMPTY_HEADS="):])
+            except ValueError:
+                orphan_empty_total = 0
         elif s.startswith("DEFAULT_OK="):
             v = s[len("DEFAULT_OK="):].strip()
             default_ok = v if v in ("pass", "fail") else "-"
@@ -119,7 +124,10 @@ for rd in rounds:
         iso_note += f", name={name_ok}"
     jj_note = ""
     if default_ok != "-":
-        jj_note = f", default={default_ok}, orphan={orphan_ws_total + orphan_dir_total}"
+        jj_note = (f", default={default_ok}, "
+                   f"orphan={orphan_ws_total + orphan_dir_total + orphan_empty_total}")
+        if orphan_empty_total:
+            jj_note += f" (empty_heads={orphan_empty_total})"
     print(f"\n{'='*78}\n### round {rnum}  {mode}/{diff}  ->  {quality.upper()}  "
           f"(stale_refs={stale_total}{jj_note}{iso_note})\n{'='*78}")
     if isolate != "-":
@@ -134,7 +142,7 @@ for rd in rounds:
         if (s.startswith("FAIL") or s.startswith("RESULT") or s.startswith("HYGIENE")
                 or s.startswith(("STALE_REFS", "DEFAULT_OK", "DEFAULT_STATUS",
                                  "DEFAULT_PARENT", "ORPHAN_WS", "ORPHAN_DIRS",
-                                 "WORKSPACE_HYGIENE"))
+                                 "ORPHAN_EMPTY", "WORKSPACE_HYGIENE"))
                 or "jj workflow used" in line
                 or "advanced through jj" in line):
             print("  " + s)
@@ -146,6 +154,11 @@ for rd in rounds:
         stale = 1 if f"agent-{a['k']}" in stale_set else 0
         orphan_ws = 1 if f"agent-{a['k']}" in orphan_ws_set else 0
         orphan_dirs = 1 if f"agent-{a['k']}" in orphan_dir_set else 0
+        # Orphan empty side-heads are a round-level residue, not tied to one
+        # agent-K; attribute the round's count to the integrating agent (k=1) so
+        # the scoreboard's `orph` column reflects it (see docs/issues/0007).
+        if a["k"] == 1:
+            orphan_dirs += orphan_empty_total
         tokens = token_map.get((rnum, a["k"]), 0)
         note = f"detect={mode_ok};pub={r.get('published')};mis={str(r.get('mishandled',''))[:40]}"
         sh("bash", f"{HERE}/record-metrics.sh",

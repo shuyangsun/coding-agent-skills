@@ -173,6 +173,12 @@ serialized and concurrent rounds alike, across every model tier.
   after `agent-K` lands and its bookmark is gone, the matching sibling workspace
   is retired. `check-quality.sh` prints `ORPHAN_WS=N` for still-registered
   workspaces and `ORPHAN_DIRS=N` for their directories still present on disk.
+- **Orphan empty side-heads** (reported alongside, not folded into PASS) — the jj
+  integration sandbox seeds one anonymous empty, description-less, unbookmarked
+  side-head (a bookmark pinned on an empty workspace commit, then the workspace
+  forgotten and the bookmark deleted — the residue from docs/issues/0007). A clean
+  `vcs` finish sweeps it; `check-quality.sh` prints `ORPHAN_EMPTY_HEADS=N` and
+  fails `WORKSPACE_HYGIENE` if any survive.
 
 ## Hazards these scenarios surface (watch for them)
 

@@ -160,7 +160,7 @@ for t in trows:
 print("\nwall(max)=batch wall-clock (slowest agent); conf(max)=worst conflict time.")
 print("mean_tok=mean output tokens/agent (efficiency; lower=better). stale=merged")
 print("agent-* refs left undeleted across the group (branch/bookmark hygiene; want 0).")
-print("orph=retired jj workspace entries/directories left behind (want 0).")
+print("orph=retired jj workspace entries/dirs + orphan empty side-heads left behind (want 0).")
 print("def=jj default-workspace readiness failures (usable and parked on main; want 0).")
 print("iso=session-start isolation failures in the group (start rounds only; want 0;")
 print("'-' = not measured, i.e. integration rounds). name=<ide>-<work> naming")

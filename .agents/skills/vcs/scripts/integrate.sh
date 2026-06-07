@@ -457,16 +457,64 @@ jj_land() {
   fi
 }
 
+# The default workspace's root — a stable repo anchor that survives retiring the
+# agent's own (about-to-be-removed) workspace. Falls back to the current root.
+jj_repo_anchor() {
+  local root
+  root="$(jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null |
+    awk -F '\t' '$1=="default"{print $2; exit}')"
+  [[ -n "$root" ]] || root="$(jj root 2>/dev/null || pwd)"
+  printf '%s\n' "$root"
+}
+
 # Shared finish once main points at the landed commit: validate it would push,
 # open a fresh working copy, then run the cleanup/retire/export steps.
 jj_finish() {
   jj_is_pushable "$main_ref" ||
     die "refusing to finish: '$main_ref' points at an empty, description-less commit that 'jj git push' would reject"
+  # Resolve a stable repo anchor BEFORE retiring this agent's workspace, whose
+  # directory (and our cwd) may be removed by jj_retire_landed_workspaces.
+  local anchor
+  anchor="$(jj_repo_anchor)"
   jj new "$main_ref" >/dev/null 2>&1 || true
   jj_cleanup_bookmark
   jj_retire_landed_workspaces
+  jj_abandon_orphan_empty_heads "$anchor"
   jj_git_export_if_colocated
   msg "DONE mode=jj main=$main_ref work=$work_ref"
+}
+
+# Sweep away cleanup residue: anonymous empty side-heads left after a
+# workspace/bookmark lifecycle (jj abandons an empty working-copy commit when its
+# workspace is forgotten ONLY if no bookmark pinned it; a bookmark created on the
+# initial empty workspace commit — the isolate.sh path — survives the forget, and
+# deleting the bookmark afterward strands it as an empty, unreferenced side-head;
+# see docs/issues/0007). This abandons every commit that is, conservatively,
+# empty AND description-less AND has no bookmark AND is not an ancestor of main
+# AND is no live workspace's working copy — so real work, named commits,
+# bookmarked commits, main, and active working copies are never touched.
+jj_abandon_orphan_empty_heads() {
+  local root="$1" wc_set="" ws cid flags abandoned=()
+  [[ -n "$root" ]] || root="$(jj root 2>/dev/null || pwd)"
+  # Our cwd may be a just-removed workspace dir; jj needs a live cwd even with -R.
+  [[ -d "$root" ]] && cd "$root" 2>/dev/null || return 0
+  for ws in $(jj -R "$root" --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null); do
+    cid="$(jj -R "$root" --ignore-working-copy log --no-graph -r "${ws}@" -T 'commit_id ++ "\n"' 2>/dev/null | head -1)"
+    [[ -n "$cid" ]] && wc_set="$wc_set $cid "
+  done
+  while IFS=$'\t' read -r cid flags; do
+    [[ -n "$cid" ]] || continue
+    [[ "$flags" == "Ex" ]] || continue        # empty (E) + no description (x)
+    [[ "$wc_set" == *" $cid "* ]] && continue  # a live workspace's working copy
+    if jj -R "$root" --ignore-working-copy abandon "$cid" >/dev/null 2>&1; then
+      abandoned+=("${cid:0:12}")
+    fi
+  done < <(jj -R "$root" --ignore-working-copy log --no-graph \
+    -r 'heads(all()) ~ ::'"$main_ref"' ~ bookmarks()' \
+    -T 'commit_id ++ "\t" ++ if(empty,"E","x") ++ if(description,"D","x") ++ "\n"' 2>/dev/null)
+  [[ "${#abandoned[@]}" -gt 0 ]] &&
+    msg "abandoned ${#abandoned[@]} orphan empty side-head(s): ${abandoned[*]}"
+  return 0
 }
 
 jj_git_export_if_colocated() {
@@ -516,11 +564,17 @@ jj_retire_landed_workspaces() {
   current_root="$(jj root 2>/dev/null || pwd)"
   admin_root="${default_root:-$current_root}"
 
+  # jj reports canonical roots (e.g. /private/tmp/...); the shell PWD may be the
+  # symlinked form (/tmp/...). Compare the PHYSICAL cwd too so we reliably detect
+  # that we're standing in the workspace about to be removed and step out of it —
+  # otherwise later jj commands run from a deleted directory and fail.
+  local phys_pwd
+  phys_pwd="$(pwd -P 2>/dev/null || printf '%s' "$PWD")"
   while IFS=$'\t' read -r name root; do
     [[ -n "$name" && "$name" != "default" ]] || continue
     [[ "$name" == "$work_ref" ]] || continue
 
-    if [[ "$PWD" == "$root"* ]]; then
+    if [[ "$PWD" == "$root"* || "$phys_pwd" == "$root"* ]]; then
       msg "NEXT_CWD=$admin_root"
       msg "current jj workspace '$name' is being retired; run any later shell commands from NEXT_CWD"
       cd "$admin_root" 2>/dev/null || cd "$(dirname "$root")" || true

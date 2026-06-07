@@ -118,12 +118,23 @@ your merged branch/bookmark (see
 - If the tool started you in a worktree you didn't create, leave its removal to
   the tool; just delete your branch/bookmark.
 
-If you are doing an integration/consolidation task and `INTEGRATE.md` identifies
-a sibling jj workspace as retired (its work is on `main` and it does not back open
-review work), you are responsible for forgetting that workspace and removing its
-directory even if another agent originally created it. Confirm with
+**Scope your cleanup to your own artifacts.** An unqualified "clean up residual
+workspaces/bookmarks" means the `<ide>-<work>` ones **you** created — not every
+non-`default` entry you can see. Don't enumerate-and-investigate another agent's
+workspace (`codex-*`, `cursor-*`, …), reason about whether it's safe to delete, or
+ask the user about it: skip it silently and leave it alone unless the user names it
+explicitly. Ask only to clarify scope *within your own* work, never to request
+permission to touch someone else's.
+
+The **one** exception — narrow and automatic: during an explicit integration/
+consolidation task, `INTEGRATE.md` may identify a sibling jj workspace as *retired*
+because its work has already **landed on `main`** and it backs no open review work.
+That is merged residue, not in-progress work, so you forget it and remove its
+directory even if another agent created it (`integrate.sh` does this for the
+ref you integrate). Confirm with
 `jj workspace list -T 'name ++ ": " ++ root ++ "\n"'`, move outside the directory
-being removed, then forget and delete it.
+being removed, then forget and delete it. A sibling workspace whose work is **not**
+yet on `main` is off-limits — never abandon another agent's unmerged work.
 
 Skip deletion only when a **remote branch backs it** (an open PR) — same carve-out
 as Finish.

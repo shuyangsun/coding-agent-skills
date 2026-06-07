@@ -82,6 +82,23 @@ numbers reflect `vcs`'s conflict etiquette alone, not the agent's coding ability
   `default` failure: forgotten sibling workspaces that keep accreting around
   consolidation.
 
+**jj orphan empty side-heads — `ORPHAN_EMPTY_HEADS` (jj integration rounds; must be 0):**
+
+- **Did cleanup leave an anonymous empty side-head?** (docs/issues/0007.) jj
+  auto-abandons an empty working-copy commit when its workspace is forgotten —
+  *unless* a bookmark pinned it; a bookmark created on an initial empty workspace
+  commit survives the `forget`, and deleting the bookmark afterward strands that
+  commit as an empty, description-less, unreferenced side-head that clutters
+  `jj log`. The jj integration sandbox now **seeds** exactly this residue
+  (`ORPHAN_SEEDED=1`), so a clean `vcs` finish must sweep it (`integrate.sh`
+  abandons repo-wide orphan empty heads). `check-quality.sh` reports
+  `ORPHAN_EMPTY_HEADS=N` (+ `ORPHAN_EMPTY_LIST=`) — empty, description-less,
+  unbookmarked heads not on `main` that no live workspace's working copy points at
+  — and fails `WORKSPACE_HYGIENE` if any remain. It folds into the scoreboard's
+  `orph` column (attributed to the integrating agent, since the residue is
+  round-level, not per-`agent-K`). The predicate is conservative, so real work,
+  named commits, bookmarked commits, and active working copies are never counted.
+
 **Session-start isolation — `ISOLATED` (start rounds only; must be pass):**
 
 - **Did the agent isolate before doing new work?** A `--task start` round drops an
@@ -240,8 +257,9 @@ and across **model tiers**:
    — `default` is recovered from stale state when needed and parked on current
    `main` so the next consolidate/push command works immediately.
 8. **Retired jj workspaces are gone**: `orph` is **0** in every jj integration
-   round — no landed `agent-K` workspace remains registered and no matching
-   workspace directory remains on disk.
+   round — no landed `agent-K` workspace remains registered, no matching
+   workspace directory remains on disk, and no orphan empty side-head
+   (`ORPHAN_EMPTY_HEADS`) survives the finish (the sandbox seeds one each round).
 9. **Session-start isolation holds** (start rounds): every `--task start` agent
    `ISOLATED=pass` — it carved out its own worktree/workspace before doing new
    work (`--start-from main`) and did **not** create a redundant nested one when

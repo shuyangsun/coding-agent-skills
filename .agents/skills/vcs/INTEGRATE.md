@@ -197,6 +197,17 @@ In jj repos where several local workspaces share the same repo, also do the
 back open review work. This cleanup prevents the next agent from hitting a stale
 `default` before it can consolidate or push.
 
+Finally, sweep away **orphan empty side-heads** — anonymous empty,
+description-less commits with no bookmark, not on `main`, that no workspace's
+working copy points at. These are residue from a workspace/bookmark lifecycle (jj
+auto-abandons an empty working copy on `forget` only when no bookmark pinned it; a
+bookmark created on an initial empty workspace commit survives the forget, and
+deleting the bookmark afterward strands the commit). `integrate.sh` abandons them
+automatically at the end of a finish; if you are doing this by hand, `jj abandon`
+each such commit. The predicate is conservative — empty **and** description-less
+**and** unbookmarked **and** not on `main` **and** not any live workspace's working
+copy — so real work, named commits, and active working copies are never touched.
+
 Then **stop.** You are done the moment your work is on `main`, the union is
 preserved, the verify step is clean, and the merged branch is resolved (deleted,
 or kept because a remote backs it), `default` is usable if this is a jj

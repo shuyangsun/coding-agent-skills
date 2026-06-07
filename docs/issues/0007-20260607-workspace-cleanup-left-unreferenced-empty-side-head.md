@@ -1,6 +1,6 @@
 # Workspace cleanup left an unreferenced empty side-head
 
-- **Status:** Open
+- **Status:** Resolved (2026-06-07)
 - **Area:** `skills/vcs` jj workspace cleanup; multi-agent repository hygiene
 - **Severity:** Low/Medium — no work was lost, but `jj log` showed a confusing
   anonymous empty side-head after workspace/bookmark cleanup, which makes it
@@ -121,6 +121,39 @@ cleanup.
   empty side-head remains.
 - The cleanup rule is conservative enough that real unmerged work is never
   abandoned automatically.
+
+## Resolution
+
+Fixed in `scripts/integrate.sh`; measured by the `improving-vcs-skill` harness.
+
+- **Sweep in the helper.** `jj_finish` now calls `jj_abandon_orphan_empty_heads`
+  after retiring landed workspaces. It abandons every commit that is,
+  conservatively, **empty AND description-less AND unbookmarked AND not an ancestor
+  of `main` AND not any live workspace's working copy** — the revset
+  `heads(all()) ~ ::main ~ bookmarks()` filtered by an `empty`/`description`
+  template, minus the working-copy commit of every registered workspace
+  (`<name>@`). So real work, named commits, bookmarked commits, `main`, and active
+  working copies are never touched, while the anonymous residue is removed.
+- **Stable anchor + cwd fix.** The sweep runs `jj -R <anchor>` against the
+  `default` workspace root resolved *before* the agent's own workspace is removed,
+  and `cd`s into that live root first — because retiring the agent's workspace
+  `rm -rf`s the cwd. This also surfaced and fixed a latent bug: the retire step's
+  cwd-guard compared the shell `PWD` (`/tmp/…`) against jj's canonical root
+  (`/private/tmp/…`) and silently missed on macOS, leaving the agent in a deleted
+  directory and breaking the `NEXT_CWD` hand-off; it now also compares `pwd -P`.
+- **Objective metric + seed.** `check-quality.sh` reports `ORPHAN_EMPTY_HEADS=N`
+  (+ `ORPHAN_EMPTY_LIST`) with the same predicate and fails `WORKSPACE_HYGIENE` if
+  any remain; `new-sandbox.sh` deterministically **seeds** exactly this residue in
+  every jj integration round (`ORPHAN_SEEDED=1`: a bookmark pinned on an empty
+  workspace commit, then the workspace forgotten and the bookmark deleted), and
+  `_score.py` folds the count into the scoreboard's `orph` column.
+
+Verified with the harness on Claude **Haiku**: jj/easy and jj/medium integration
+rounds (seeded with an orphan each) both finish with `ORPHAN_EMPTY_HEADS=0`,
+`WORKSPACE_HYGIENE: PASS`, and `RESULT: PASS` — the agents' `vcs` finish swept the
+seeded side-head. A pre-integration `check-quality.sh` run reports
+`ORPHAN_EMPTY_HEADS=1` (the seed), confirming the metric detects the defect the
+fix removes.
 
 ## Reproduction Sketch
 

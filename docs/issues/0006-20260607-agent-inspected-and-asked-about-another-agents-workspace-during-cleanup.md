@@ -2,7 +2,7 @@
 
 # Agent inspected (and asked about) another agent's workspace during a "clean up" request instead of scoping to its own changes
 
-- **Status:** Open
+- **Status:** Resolved (2026-06-07)
 - **Date:** 2026-06-07
 - **Area:** Multi-agent etiquette; scope of "clean up" instructions; `vcs` cleanup behavior
 - **Severity:** Medium — no data was lost (the agent correctly avoided deleting another agent's unmerged work), but it **over-reached the scope of the request**: it inspected a workspace that was clearly not its own, and then spent a user round-trip asking what to do about it. The default should have been to ignore it entirely.
@@ -96,6 +96,31 @@ it didn't create and surfaced it rather than destroying it. The defect is purely
   workspaces present, the agent removes only its own and reports done — no
   inspection of, or question about, other agents' workspaces.
 - The agent touches another agent's workspace only when the user names it.
+
+## Resolution
+
+Encoded as an explicit scope rule in the `vcs` skill (the defect was behavioral,
+not mechanical — the helpers already scope by construction).
+
+- **SKILL.md §4 "Touch only your own work".** "Clean up only what you created. An
+  unqualified 'clean up' means *your own* `<ide>-<work>` workspaces/bookmarks. Do
+  not inspect, reason about, or ask about another agent's workspace/bookmark —
+  leave it untouched unless the user names it."
+- **ISOLATE.md cleanup section** now opens with "Scope your cleanup to your own
+  artifacts," tells the agent to skip another agent's workspace silently (don't
+  enumerate-and-investigate, don't ask), and confines the one ownerless exception
+  to a sibling jj workspace whose work has **already landed on `main`** during an
+  explicit integration task — merged residue `integrate.sh` retires automatically
+  for the ref you integrate — never another agent's *unmerged* work.
+- **Mechanically reinforced.** `integrate.sh` only ever retires the workspace
+  matching the `work_ref` you pass and abandons *ownerless* empty side-heads (no
+  bookmark, no workspace) — it never touches a named workspace it wasn't given, so
+  the helper can't over-reach even if invoked broadly.
+
+This is a prose/etiquette rule with no direct harness metric (the harness measures
+integration outcomes, not "did the agent refrain from inspecting"); the Haiku
+integration rounds confirmed the rule did not regress normal cleanup
+(`STALE_REFS`, `ORPHAN_WS/DIRS`, `DEFAULT_OK` all clean).
 
 ## Reproduction
 

@@ -2,7 +2,10 @@
 
 # Concurrent Cursor/Composer agent committed another agent's uncommitted work, bundled it with its own change, and pushed to shared `main`
 
-- **Status:** Open
+- **Status:** Reopened (2026-06-07) — the failure mode **recurred during the
+  fixing session** (a Claude Haiku sub-agent moved this repo's `main`; see
+  [Update: recurrence](#update-2026-06-07-recurrence-during-the-fixing-session)),
+  so partial `vcs`-skill mitigations are in place but the root cause is not closed.
 - **Date:** 2026-06-07
 - **Area:** Multi-agent etiquette in a shared checkout; `vcs` skill isolation invariant; cross-agent interference
 - **Severity:** High — a second agent swept a first agent's **uncommitted, in-progress, not-yet-tested** edits into a commit the first agent did not author, gave it a generated message, **and pushed it to the public GitHub remote** (`origin/main`). The work happened to be correct, but nothing guaranteed that; this is silent, unreviewed publication of another agent's working tree.
@@ -115,6 +118,73 @@ not absorb another agent's in-progress changes:
 - Commits contain only the acting agent's own work, with accurate authorship.
 - No agent auto-pushes a bundle of unrelated changes to `origin/main`.
 - Distinct logical changes land as distinct commits.
+
+## Partial mitigations so far (NOT a fix)
+
+These reduce blast radius but do **not** close the root cause — an agent can still
+reach into a checkout/refs that aren't its own. Kept here for traceability; the
+issue stays open.
+
+- **SKILL.md §4 "Touch only your own work".** "Commit and publish only your own
+  changes. Never `jj describe` / `git commit -a` a shared checkout's whole dirty
+  tree, and never push a commit that bundles edits you didn't make. If the working
+  copy holds changes you don't recognize, **stop and surface them** — don't sweep
+  them into your commit or take authorship."
+- **Helpers scope by construction.** `integrate.sh` lands only the branch/bookmark
+  you **name** onto `main`, never the live working tree.
+- **Isolate-before-you-edit** (§2, measured by the harness `ISOLATED` start-round
+  metric) remains the primary defense — and is exactly what made the recurrence
+  below recoverable.
+
+These are advisory/affordance changes. Nothing yet **prevents** a process from
+running `jj`/`git` against a repo it doesn't own, which is the actual mechanism in
+both the original report and the recurrence below.
+
+## Update (2026-06-07): recurrence during the fixing session
+
+The same failure mode happened again **while this very issue was being worked on**,
+which is why the issue is reopened rather than closed.
+
+- **Context.** A Claude (Opus) session was editing the `vcs` skill on the colocated
+  `coding-agent-skills` repo, with its in-flight work isolated on a
+  `claude-vcs-issues-567` bookmark in the `default` workspace. It launched the
+  `improving-vcs-skill` harness as a background **workflow** that spawned 10 Claude
+  **Haiku** integration sub-agents, each meant to operate only inside its own
+  throwaway sandbox under `$TMPDIR/vcs-harness-haiku/round-*/ws-agent-*`.
+- **What went wrong.** One sub-agent ran `jj` commands against the **real**
+  `coding-agent-skills` checkout instead of (or before `cd`-ing into) its sandbox
+  workspace — the documented **sub-agent cwd-hazard**: Agent-tool/workflow
+  sub-agents inherit the parent's real-repo cwd. The op log shows, ~9–11 minutes
+  into the run, `point bookmark main → <claude-vcs-issues-567 commit>`, then two
+  `new empty commit` ops, then `point bookmark main → <empty commit>`. Net effect:
+  local `main` was advanced **onto another agent's in-flight work plus empty
+  commits** — the same "act on a checkout/work that isn't yours" defect as the
+  original Cursor incident, here via a colocated background sub-agent rather than a
+  second IDE.
+- **Why it was recoverable (and what that confirms).** Damage was contained
+  entirely to *local* refs: `main@origin` was never moved and **nothing was
+  pushed**. Because the victim work was already isolated on its own named bookmark,
+  recovery was exact — `jj bookmark set main -r main@origin --allow-backwards` plus
+  abandoning the stray empty commits restored the correct state with no work lost.
+  This is the difference from the original report, where the swept-in work was
+  pushed to public `origin/main`: **isolation + not auto-pushing is what turned a
+  potential silent publication into a clean local rollback.**
+- **What this proves about the fix.** The advisory rules above govern how an agent
+  *should* treat its own commits, but they cannot stop a sub-agent that simply
+  starts in the wrong directory. The missing piece is a **mechanical** guard:
+  sub-agents must be pinned to their sandbox (e.g. `cd` enforced / `-R`/`-C`
+  required / refuse VCS writes when cwd is outside the assigned workspace), and the
+  orchestrator should detect a sub-agent that mutated refs outside its sandbox. See
+  the memory note "vcs harness subagent cwd hazard". Until such a guard exists,
+  this class of cross-agent interference remains open.
+
+## New acceptance criteria (from the recurrence)
+
+- A spawned sub-agent cannot move bookmarks/branches or commit in a repository
+  outside its assigned workspace; a VCS write attempted from a cwd outside the
+  sandbox fails loudly instead of mutating the host repo.
+- The harness/orchestrator surfaces (and ideally blocks) any sub-agent operation
+  that touches refs outside its sandbox path.
 
 ## Reproduction
 
