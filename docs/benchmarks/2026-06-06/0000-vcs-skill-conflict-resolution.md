@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-06
 **Harness:** `improving-vcs-skill` (deterministic, pre-committed conflicting work; objective resolution oracle)
-**Under test:** the [`vcs`](../../skills/vcs/SKILL.md) skill — can many coding agents, given only `vcs`, integrate each other's work onto a shared `main` and resolve merge conflicts cleanly and fast?
+**Under test:** the [`vcs`](../../../.agents/skills/vcs/SKILL.md) skill — can many coding agents, given only `vcs`, integrate each other's work onto a shared `main` and resolve merge conflicts cleanly and fast?
 **Scale:** 16 rounds, 72 agent-runs (14 baseline + 58 revised), across both VCS modes × {easy, medium, hard} × {large, mid, small} model tiers × {serialized, concurrent} integration.
 
 Model tiers map to: **large = Opus**, **mid = Sonnet**, **small = Haiku**.
@@ -29,7 +29,7 @@ The revision turned a commit-message-only stub into a skill that takes **100% of
 
 Every agent's change is generated deterministically and **pre-committed** on its own branch/bookmark (`agent-K`) — a finished "PR". The sub-agent writes no code; its only job is to integrate `agent-K` onto the shared `main`, resolving the conflicts that arise because teammates touched the same files/lines. Because the inputs are deterministic, the correct merged result is deterministic, so quality is scored by an **objective oracle**, not by what agents claim.
 
-- **Conflict classes** (per [SCENARIOS](../../.agents/skills/improving-vcs-skill/SCENARIOS.md)): adjacent-insert union (CHANGELOG), JSON array union (registry), list union (handlers), **same-line tie-break** (`version:` — keep the higher), large multi-line block union (pipeline), disjoint per-agent files.
+- **Conflict classes** (per [SCENARIOS](../../../.agents/skills/improving-vcs-skill/SCENARIOS.md)): adjacent-insert union (CHANGELOG), JSON array union (registry), list union (handlers), **same-line tie-break** (`version:` — keep the higher), large multi-line block union (pipeline), disjoint per-agent files.
 - **Difficulty ladder:** easy (1 union conflict), medium (3 unions + a version tie-break among a subset), hard (all of it, for every agent, + a big shared pipeline block + 6-way version tie-break).
 - **Integration patterns:** _serialized_ (agents land one after another — clean to measure) and _concurrent_ (all agents contend for `main` at once — the real multi-agent case).
 - **Sub-agents** were given **only** the `vcs` skill and an integration-only ticket — never the harness, the mode, or where the conflicts are. Mode detection and conflict handling had to come from `vcs` alone.

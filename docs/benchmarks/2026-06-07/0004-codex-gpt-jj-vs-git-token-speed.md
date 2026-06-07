@@ -2,11 +2,11 @@
 
 **Date:** 2026-06-07
 **Harness:** `improving-vcs-skill` (deterministic sandboxes, objective quality and isolation checks)
-**Under test:** the [`vcs`](../../.agents/skills/vcs/SKILL.md) Jujutsu workspace flow vs Git worktree flow.
+**Under test:** the [`vcs`](../../../.agents/skills/vcs/SKILL.md) Jujutsu workspace flow vs Git worktree flow.
 **Agents/models:** Codex sub-agents across tiers: `large=gpt-5.5`, `mid=gpt-5.4`, `small=gpt-5.4-mini`.
 **Scale:** 8 sub-agent runs: 2 medium serialized integration rounds (jj and Git, 3 agents each) plus 2 mid-tier start-isolation rounds (jj and Git, 1 agent each).
 
-Raw metrics: [data/0004-codex-gpt-jj-vs-git-metrics.tsv](data/0004-codex-gpt-jj-vs-git-metrics.tsv)
+Raw metrics: [data/0004-codex-gpt-jj-vs-git-metrics.tsv](0004-codex-gpt-jj-vs-git-metrics.tsv)
 
 ---
 

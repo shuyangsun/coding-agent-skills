@@ -7,7 +7,7 @@
 - **Area:** `vcs` skill adherence during harness orchestration; benchmark artifact provenance
 - **Severity:** Low–medium — the benchmark results are still valid, but the orchestrator violated its own isolation rule and the written report overstated what happened
 - **Environment:** Jujutsu (`jj`) on a Git backend, colocated `coding-agent-skills` repo; `improving-vcs-skill` harness in `/tmp/vcs-harness`
-- **Related:** [0002](0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md) (same class of failure: parent agent skipped `vcs` isolation); benchmark [0002](../benchmarks/0002-vcs-skill-composer-2.5-jj-vs-git.md)
+- **Related:** [0002](0002-agent-used-default-jj-workspace-instead-of-isolating.md) (same class of failure: parent agent skipped `vcs` isolation); benchmark [0002](../../benchmarks/2026-06-07/0002-vcs-skill-composer-2.5-jj-vs-git.md)
 
 ## Summary
 
@@ -85,7 +85,7 @@ would not dirty the shared `default` checkout.
 edit." The benchmark session was explicitly about exercising jj workspaces vs
 git worktrees, yet the orchestrator treated workspace creation as a checkbox
 rather than the directory it would work from. That is the same meta-failure as
-[0002](0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md),
+[0002](0002-agent-used-default-jj-workspace-instead-of-isolating.md),
 but worse in one respect: here the agent _did_ call `isolate.sh` and still
 ignored the result.
 
@@ -175,10 +175,10 @@ creation as a checkbox rather than the directory to work from.
 Verified with the `improving-vcs-skill` harness on Claude Haiku across both
 modes: `--task start --start-from main` rounds in jj and git both score
 `ISOLATED=pass`, `NAME_OK=pass`, and crucially **`ISO_FS=pass`** — the agent did
-its edits *inside* the isolated checkout, not the shared one (the git round
+its edits _inside_ the isolated checkout, not the shared one (the git round
 confirms "primary checkout untouched … work was done in a separate worktree").
 
-The behavioral acceptance criteria around *parent-agent* orchestration
+The behavioral acceptance criteria around _parent-agent_ orchestration
 (confirming `pwd`/workspace name before writing, separate parent-vs-sub-agent
 isolation metrics) remain as future harness work; this fix addresses the
 script/skill side that makes the `cd` unmissable.

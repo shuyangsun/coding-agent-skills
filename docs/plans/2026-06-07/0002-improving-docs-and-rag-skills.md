@@ -18,8 +18,8 @@
 
 **Goal.** Build `improving-docs-and-rag-skills`: a measurement-driven meta-skill
 that iteratively improves **two** skills at once, exactly as
-[`improving-vcs-skill`](../../.agents/skills/improving-vcs-skill/SKILL.md) improves
-[`vcs`](../../.agents/skills/vcs/SKILL.md):
+[`improving-vcs-skill`](../../../.agents/skills/improving-vcs-skill/SKILL.md) improves
+[`vcs`](../../../.agents/skills/vcs/SKILL.md):
 
 - **`docs`** — teaches agents to **read/search** and **write** docs (co-located
   with code for simple agents and as RAG context, and centralized under `docs/`
@@ -30,26 +30,26 @@ that iteratively improves **two** skills at once, exactly as
   Concerned **solely** with retrieval setup. Works for **local and cloud** LLM /
   vector-DB providers; **local-first** to bound scope.
 
-**Why one harness for both — the coupling thesis.** How docs are *written* changes
-the *best* RAG setup (self-contained, front-loaded docs let RAG use coarser chunks
-and skip costly per-chunk contextualization); and how RAG is *set up* changes how
-docs *should* be written (heading-aware chunking rewards clean sections; a small
+**Why one harness for both — the coupling thesis.** How docs are _written_ changes
+the _best_ RAG setup (self-contained, front-loaded docs let RAG use coarser chunks
+and skip costly per-chunk contextualization); and how RAG is _set up_ changes how
+docs _should_ be written (heading-aware chunking rewards clean sections; a small
 local embedder rewards explicit lexical anchors). The two are a **joint
 optimization**. The harness measures each skill's marginal effect **and their
 interaction**, and lets a round revise **either** skill while watching both.
 
 **The five outcome metrics** (every one sliced by model tier and query difficulty):
 
-| Metric | What it measures | Mostly driven by | Made objective by |
-| --- | --- | --- | --- |
-| **Precision** | of retrieved docs, how many are relevant | docs + rag | graded `qrels` |
-| **Recall** | of relevant docs, how many retrieved (recall@20 headline) | docs + rag | graded `qrels` |
-| **Speed** | index time + per-query retrieval latency (p50/p95) | **rag** | app per-stage timers, same-host trend |
-| **Factuality** | answer stays **grounded** in retrieved docs (no hallucination) | docs + rag | sentinel containment + closed-book control + advisory judge |
-| **Token usage** | context/read tokens to answer *at equal correctness* (↓) | **rag** (ctx) / **docs** (read) | read from transcripts, never self-reported |
+| Metric          | What it measures                                               | Mostly driven by                | Made objective by                                           |
+| --------------- | -------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------- |
+| **Precision**   | of retrieved docs, how many are relevant                       | docs + rag                      | graded `qrels`                                              |
+| **Recall**      | of relevant docs, how many retrieved (recall@20 headline)      | docs + rag                      | graded `qrels`                                              |
+| **Speed**       | index time + per-query retrieval latency (p50/p95)             | **rag**                         | app per-stage timers, same-host trend                       |
+| **Factuality**  | answer stays **grounded** in retrieved docs (no hallucination) | docs + rag                      | sentinel containment + closed-book control + advisory judge |
+| **Token usage** | context/read tokens to answer _at equal correctness_ (↓)       | **rag** (ctx) / **docs** (read) | read from transcripts, never self-reported                  |
 
 **The keystone, and the one hard problem.** `vcs` works because the correct merge
-is *computable* — a deterministic oracle. **Doc/retrieval quality has no such
+is _computable_ — a deterministic oracle. **Doc/retrieval quality has no such
 oracle.** The plan replaces it with **deterministic surrogates** (§2) and is honest
 about which numbers are bit-reproducible vs distributions. Three corrections are
 load-bearing throughout:
@@ -89,9 +89,9 @@ rag  ┘          └── drives ──> docs-eval app (local; Phase 0 CLI →
 ```
 
 **`docs` skill (built later) — solely reading and writing docs.** Repo-agnostic.
-*Write:* front-loaded high-signal openings, one concept per file, descriptive kebab
+_Write:_ front-loaded high-signal openings, one concept per file, descriptive kebab
 filenames, an `OVERVIEW.md` per directory, stable anchors, the centralized-docs
-convention (§10), sync up the tree on every change. *Read:* start at the nearest
+convention (§10), sync up the tree on every change. _Read:_ start at the nearest
 `OVERVIEW.md`, follow links, judge relevance from front-matter + filename, grep
 numbered slugs / dated folders, detect stale-vs-source. Its **testable invariants**
 (the `vcs` "mode detection" analog): `frontload_ok`, `filename_descriptive`,
@@ -131,11 +131,11 @@ version-stamped); it **beats a naive baseline config** on the gold set; it stays
 
 **The coupling, made concrete (the thing the harness exploits):**
 
-- *docs → rag:* well-front-loaded, self-contained docs let `rag` use coarser
+- _docs → rag:_ well-front-loaded, self-contained docs let `rag` use coarser
   chunks and **skip or limit** per-chunk contextualization (an LLM call per chunk)
   → cheaper indexing, fewer context tokens at equal recall. Poorly structured docs
   force small chunks + aggressive contextualization + reranking.
-- *rag → docs:* if `rag` settles on heading-aware chunking, `docs` should produce
+- _rag → docs:_ if `rag` settles on heading-aware chunking, `docs` should produce
   semantically-complete sections under clean headings; if `rag` uses a small local
   embedder, `docs` should carry the explicit lexical anchors users actually search.
 
@@ -143,9 +143,9 @@ The harness's **interaction term** (§3) quantifies this, and the revise loop (�
 can change **either** skill and watch both marginal effects plus the interaction.
 
 **Scope discipline (verbatim from `improving-vcs-skill`).** The harness is
-**authoring-only**: used *only* while writing/changing `docs` or `rag`, never during
+**authoring-only**: used _only_ while writing/changing `docs` or `rag`, never during
 normal development. The sub-agents under test **must never see** the harness or the
-gold queries — the *contamination firewall* (§6).
+gold queries — the _contamination firewall_ (§6).
 
 ---
 
@@ -177,7 +177,7 @@ An LLM-as-judge is permitted **only** as an advisory, **non-gating** signal.
 ## 3. Measurement planes, corpora, and the 2×2 factorial
 
 > This is the heart of the two-skill change. Previously the RAG pipeline was a
-> *fixed confound* used to isolate the `docs` skill. Now RAG setup is itself a
+> _fixed confound_ used to isolate the `docs` skill. Now RAG setup is itself a
 > skill under test, so it is a **second treatment** and the design becomes
 > factorial.
 
@@ -185,7 +185,7 @@ An LLM-as-judge is permitted **only** as an advisory, **non-gating** signal.
 **fixed reference RAG config** over the **GOLD** corpus (a frozen snapshot of
 today's `docs/` at a pinned revision) with version-pinned `qrels`. This number does
 **not** change when either skill changes; it measures instrument health, so a move
-here flags *instrument* drift, not skill quality.
+here flags _instrument_ drift, not skill quality.
 
 **Plane 2 — Skill effects via a 2×2 factorial.** Two binary treatments on the same
 fixed fact payload and gold queries:
@@ -193,10 +193,10 @@ fixed fact payload and gold queries:
 - **corpus** ∈ {**N** = naive dump, **D** = `docs`-skill-authored}
 - **rag** ∈ {**b** = baseline naive config, **r** = `rag`-skill config}
 
-| | rag = **b** (baseline) | rag = **r** (`rag` skill) |
-| --- | --- | --- |
-| corpus = **N** (naive) | cell `Nb` (control) | cell `Nr` (rag-only gain) |
-| corpus = **D** (`docs`) | cell `Db` (docs-only gain) | cell `Dr` (co-designed) |
+|                         | rag = **b** (baseline)     | rag = **r** (`rag` skill) |
+| ----------------------- | -------------------------- | ------------------------- |
+| corpus = **N** (naive)  | cell `Nb` (control)        | cell `Nr` (rag-only gain) |
+| corpus = **D** (`docs`) | cell `Db` (docs-only gain) | cell `Dr` (co-designed)   |
 
 Computed **per query (paired)** for power:
 
@@ -210,7 +210,7 @@ Computed **per query (paired)** for power:
 
 **Labels are per corpus.** `gold.py` derives `qrels` for N and D from the sentinels
 actually present in each corpus's files (sentinel → containing-file is computable
-*after* authoring), never from GOLD's paths.
+_after_ authoring), never from GOLD's paths.
 
 **Nondeterminism is scoped, not denied.** corpus D is LLM-authored and config r may
 involve LLM-generated contextualization, so factorial cells are **distributions**:
@@ -222,11 +222,11 @@ cross-round comparison** and FULL as the corroborating arm.
 
 **The headline attribution numbers.**
 
-- *Self-describing premium* (docs): recall D reaches under the **baseline** rag —
+- _Self-describing premium_ (docs): recall D reaches under the **baseline** rag —
   great docs make `docs + baseline-rag` approach `naive + rag-skill`.
-- *Setup premium* (rag): recall the `rag` skill adds over baseline on the **same**
+- _Setup premium_ (rag): recall the `rag` skill adds over baseline on the **same**
   corpus (`Dr − Db`, `Nr − Nb`).
-- *Co-design dividend* (coupling): the interaction above.
+- _Co-design dividend_ (coupling): the interaction above.
 
 ---
 
@@ -293,7 +293,7 @@ gold_doc_path(s), gold_chunk_ids, fact_source, difficulty, qtype}`. It is
 CROSS-LINK graph (relative links = ready-made relevance labels), COMMIT-HISTORY.
 
 **Graded, multi-relevant `qrels` (mandatory).** `ORPHAN_EMPTY_HEADS` is in **5**
-docs, `380s` in **2** — singletons are false. Label *all* containing docs
+docs, `380s` in **2** — singletons are false. Label _all_ containing docs
 (primary=2, corroborating=1); **nDCG is the headline**. Hard multi-hop requires
 multi-sentinel sets spanning **distinct doc types**, verified at build time.
 
@@ -305,7 +305,7 @@ to a separate bucket, excluded from the headline. (3) Fixed dev/held-out partiti
 **held-out**, never regenerated per round. (4) Both skills are rewarded **only** via
 the fixed pipeline's metrics.
 
-**Closed-book parametric-leakage control (critical — the corpus *is* this repo).**
+**Closed-book parametric-leakage control (critical — the corpus _is_ this repo).**
 Run generation with **empty** context; if the model emits the sentinel from prior
 knowledge, exclude that query from factuality. `retrieval_hit` (gold doc in top-k,
 judge-free, snapshot-reproducible) is the **primary** answerability signal;
@@ -341,8 +341,8 @@ and no eval-time LLM** — match that restraint.) **GO/NO-GO gate:** build Phase
 only once Phase 0 shows a measurable, significant factorial signal.
 
 **Phase 1 — the local app (only past the GO gate).** Two faces, one codebase:
-the *owner-facing chat UI* (repo-Q&A, simple|RAG toggle, configured local LLM) and
-the *harness-facing headless eval route* `POST /api/eval`
+the _owner-facing chat UI_ (repo-Q&A, simple|RAG toggle, configured local LLM) and
+the _harness-facing headless eval route_ `POST /api/eval`
 (`createFileRoute('/api/eval').server.handlers.POST`) + a CLI sharing the handler.
 **Crucially, the eval route now takes a full `rag-config`** (the `rag` skill's
 output) — chunker, embedder, contextualization, hybrid weights, reranker, top-k,
@@ -381,20 +381,20 @@ context-generation pass so an eval round is just deterministic retrieval.
 
 ## 8. Scripts (the `vcs` `scripts/` ported, extended for two skills)
 
-| Script | `vcs` analog | Role |
-| --- | --- | --- |
-| `new-corpus.sh` | `new-sandbox.sh` | provision a round: `--task read\|write`; build N/D (and GOLD reference); seed the write convention trap |
-| `apply-rag.sh` | (new) | given a corpus + a `rag-config.json`, chunk + contextualize + **snapshot** + index it; produce a reproducible, version-stamped index per (corpus × config) |
-| `gold.py` | `scenario.py` | **single source of truth**: emit per-corpus `qrels` + records, run all surrogates, build-time validation, held-out split, firewall |
-| `check-retrieval.py` | `check-quality.sh` | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines |
-| `check-convention.sh` | `check-isolation.sh` | `docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE` + §1 gates |
-| `check-rag-config.sh` | (new) | `rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline |
-| `next-index.sh` | (generalize export-coding-session's) | globally-unique index **per type folder**; shared by `docs` + the WRITE oracle |
-| `record-metrics.sh` | same | one TSV row per `query × cell(corpus,rag) × mode × round` |
-| `scoreboard.sh` | same | by-round / by-tier×mode / difficulty×tier **+ the 2×2 factorial view with marginal effects and the interaction** |
-| `_score.py` | same | glue: run oracles, parse `KEY=VALUE`, read per-agent **output tokens exactly** from transcript JSONLs (never `budget.spent()`, never self-reported) |
-| `_run-write.wf.js` / `_run-rag.wf.js` / `_run-read.wf.js` | `_run-*.wf.js` | Workflow runners for the three loops; `JSON.parse(args)`; `parallel()` over seeds/cells; per-cell `agent()` with a `REPORT_SCHEMA`; blind to gold labels |
-| `rm-corpus.sh` | `rm-sandbox.sh` | teardown guarded to `$DOCS_RAG_HARNESS_DIR` only; drop throwaway Qdrant collections |
+| Script                                                    | `vcs` analog                         | Role                                                                                                                                                       |
+| --------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new-corpus.sh`                                           | `new-sandbox.sh`                     | provision a round: `--task read\|write`; build N/D (and GOLD reference); seed the write convention trap                                                    |
+| `apply-rag.sh`                                            | (new)                                | given a corpus + a `rag-config.json`, chunk + contextualize + **snapshot** + index it; produce a reproducible, version-stamped index per (corpus × config) |
+| `gold.py`                                                 | `scenario.py`                        | **single source of truth**: emit per-corpus `qrels` + records, run all surrogates, build-time validation, held-out split, firewall                         |
+| `check-retrieval.py`                                      | `check-quality.sh`                   | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines                                                                                     |
+| `check-convention.sh`                                     | `check-isolation.sh`                 | `docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE` + §1 gates                                                                        |
+| `check-rag-config.sh`                                     | (new)                                | `rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline                                                               |
+| `next-index.sh`                                           | (generalize export-coding-session's) | globally-unique index **per type folder**; shared by `docs` + the WRITE oracle                                                                             |
+| `record-metrics.sh`                                       | same                                 | one TSV row per `query × cell(corpus,rag) × mode × round`                                                                                                  |
+| `scoreboard.sh`                                           | same                                 | by-round / by-tier×mode / difficulty×tier **+ the 2×2 factorial view with marginal effects and the interaction**                                           |
+| `_score.py`                                               | same                                 | glue: run oracles, parse `KEY=VALUE`, read per-agent **output tokens exactly** from transcript JSONLs (never `budget.spent()`, never self-reported)        |
+| `_run-write.wf.js` / `_run-rag.wf.js` / `_run-read.wf.js` | `_run-*.wf.js`                       | Workflow runners for the three loops; `JSON.parse(args)`; `parallel()` over seeds/cells; per-cell `agent()` with a `REPORT_SCHEMA`; blind to gold labels   |
+| `rm-corpus.sh`                                            | `rm-sandbox.sh`                      | teardown guarded to `$DOCS_RAG_HARNESS_DIR` only; drop throwaway Qdrant collections                                                                        |
 
 All sandboxes live under `$DOCS_RAG_HARNESS_DIR` (default `$TMPDIR/docs-rag-harness`);
 only `metrics.tsv` persists.
@@ -464,7 +464,7 @@ consider `decisions/` (ADRs), `designs/`, `guides/`, `reference/`.
 **demote** any structural gate that stays green while precision/recall/latency stays
 flat — the `vcs` revise-and-revert discipline applied to doc structure. Note the
 coupling: a gate's value may **depend on the rag config** (heading gates matter more
-under heading-aware chunking), so evaluate gates *within* rag cells.
+under heading-aware chunking), so evaluate gates _within_ rag cells.
 
 **Migration sequencing (strict).** (1) one-time migration: preserve per-subdir
 `NNNN` (type-qualified), add the dated path + front-matter, rewrite **all** relative
@@ -489,7 +489,7 @@ Per round (mirrors `improving-vcs-skill`'s `LOOP.md`, now over the factorial):
 5. **Diagnose then revise ONE skill** (one attributable change at a time), reading
    narratives through the numbers. Attribute via the factorial: if the `docs`
    marginal effect lags only under heading-aware chunking, the fix may belong to
-   `docs` *or* `rag` — the interaction tells you which lever moves it.
+   `docs` _or_ `rag` — the interaction tells you which lever moves it.
 6. **Re-run on fresh indexes.** **Keep** the change if its skill's marginal effect
    rises, quality holds across tiers/modes, **and** it doesn't degrade the other
    skill's marginal effect (coupling non-negative); **revert** otherwise. Noise →
@@ -510,7 +510,7 @@ tiers**, and across **all loops**:
 2. **Both marginal effects positive with CI excluding zero:** `docs` (`Db−Nb`,
    `Dr−Nr`) and `rag` (`Nr−Nb`, `Dr−Db`), surviving both chunker choices.
 3. **Coupling non-harmful:** the interaction `(Dr−Db)−(Nr−Nb)` is ≥ 0 (ideally > 0)
-   and stable — co-design never *hurts*.
+   and stable — co-design never _hurts_.
 4. **Speed:** `retrieval_ms` p50/p95 low and trending-down-or-stable on the same
    host (a recall gain bought with unacceptable latency or index cost fails — a
    `rag`-skill regression).
@@ -541,8 +541,8 @@ tiers**, and across **all loops**:
   only on held-out queries; report dev↔held-out gap as an overfit signal.
 - **Combinatorial blowup** (4 factorial cells × 2 modes × difficulty × embed-tier ×
   gen-tier × N seeds × 2 chunkers) → mandatory axes (cell, mode, difficulty); sample
-  + rotate the tier axes per round (MATRIX discipline); Phase-0 thin eval keeps each
-  cell cheap.
+  - rotate the tier axes per round (MATRIX discipline); Phase-0 thin eval keeps each
+    cell cheap.
 - **Teaching-to-the-test (both skills)** → four-layer firewall + the factorial
   isolates good-writing/good-setup from lucky strings; held-out bar.
 - **Gold-set rot / small-corpus noise** → pin corpus per gold-version + build-time
@@ -550,7 +550,7 @@ tiers**, and across **all loops**:
   tests; lean on deltas.
 - **Local-LLM nondeterminism + variable pipeline** → pin everything + snapshot
   contexts per (corpus × config); PLAIN as the noise-free comparison.
-- **Parametric leakage** (corpus *is* this repo) → closed-book control.
+- **Parametric leakage** (corpus _is_ this repo) → closed-book control.
 - **Cross-machine non-reproducibility** → host-fingerprint + refuse cross-fingerprint
   comparison + reproduction kit; absolute numbers host-relative.
 - **Scope creep** → Phase-0 first, GO/NO-GO gate, local-first, the app is an
@@ -558,7 +558,7 @@ tiers**, and across **all loops**:
 - **Self-reference loop** (indexing the harness/skills) → explicit include/exclude
   manifest (the `.aiexclude` analog).
 - **Co-located-code-docs gap** — the repo is mostly skills + markdown, so co-located
-  *code* docs barely exist; defer that corpus until the Phase-1 app itself becomes
+  _code_ docs barely exist; defer that corpus until the Phase-1 app itself becomes
   the first code worth co-located docs (a flagged later corpus, not MVP).
 
 ---
@@ -568,7 +568,7 @@ tiers**, and across **all loops**:
 1. **`rag` skill shape** — should it be a **decision guide** (given doc-set + provider
    properties, prescribe a config) or a **bounded search procedure** (try a small
    pinned grid, pick the best by the harness metrics)? Recommend a principled
-   decision guide validated on held-out queries, to avoid overfitting; a *tiny*
+   decision guide validated on held-out queries, to avoid overfitting; a _tiny_
    guarded sweep is acceptable if reported.
 2. **Corpus scope** — index `docs/` only, or also raw source + `SKILL.md`? Recommend
    docs-only first.
@@ -587,9 +587,9 @@ tiers**, and across **all loops**:
 ## 15. Build sequence (milestones)
 
 1. **M0 — `docs` skill v0 + `rag` skill v0** (separate efforts): `docs` (read/write
-   + generalized `next-index.sh` + convention); `rag` (the local-first decision
-   surface in §1, emitting `rag-config.json`). *Inputs to the harness, not part of
-   it.*
+   - generalized `next-index.sh` + convention); `rag` (the local-first decision
+     surface in §1, emitting `rag-config.json`). _Inputs to the harness, not part of
+     it._
 2. **M1 — `gold.py` + GOLD gold-set v1**: facts, graded per-corpus `qrels`, firewall,
    build-time validation, dev/held-out split. Pin the corpus revision **after** the
    §10 migration.

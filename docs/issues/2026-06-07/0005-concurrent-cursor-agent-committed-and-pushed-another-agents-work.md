@@ -10,7 +10,7 @@
 - **Area:** Multi-agent etiquette in a shared checkout; `vcs` skill isolation invariant; cross-agent interference
 - **Severity:** High — a second agent swept a first agent's **uncommitted, in-progress, not-yet-tested** edits into a commit the first agent did not author, gave it a generated message, **and pushed it to the public GitHub remote** (`origin/main`). The work happened to be correct, but nothing guaranteed that; this is silent, unreviewed publication of another agent's working tree.
 - **Environment:** Jujutsu (`jj`) on a Git backend, colocated `coding-agent-skills` repo. Two agents operating in the **same `default` checkout at the same time**: a Claude Code (Opus 4.8) session actively editing the `vcs` skill, and a Cursor / Composer 2.5 session.
-- **Related:** [0002](0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md), [0004](0004-20260607-benchmark-created-jj-workspace-but-never-used-it.md) (isolation failures); [0006](0006-20260607-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md) (the inverse over-reach during cleanup).
+- **Related:** [0002](0002-agent-used-default-jj-workspace-instead-of-isolating.md), [0004](0004-benchmark-created-jj-workspace-but-never-used-it.md) (isolation failures); [0006](0006-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md) (the inverse over-reach during cleanup).
 
 ## Summary
 
@@ -79,7 +79,7 @@ not absorb another agent's in-progress changes:
   pushed commit on a public branch (force-push), which is destructive and risky —
   especially while the interfering agent may still be active.
 - **Isolation invariant defeated.** This is the exact failure the `vcs` "isolate
-  before you edit" rule exists to prevent, but from the *other* direction: it's
+  before you edit" rule exists to prevent, but from the _other_ direction: it's
   not that the victim failed to isolate, it's that a co-located agent reached
   into the shared working copy and acted on changes that weren't its own.
 
@@ -162,7 +162,7 @@ which is why the issue is reopened rather than closed.
   original Cursor incident, here via a colocated background sub-agent rather than a
   second IDE.
 - **Why it was recoverable (and what that confirms).** Damage was contained
-  entirely to *local* refs: `main@origin` was never moved and **nothing was
+  entirely to _local_ refs: `main@origin` was never moved and **nothing was
   pushed**. Because the victim work was already isolated on its own named bookmark,
   recovery was exact — `jj bookmark set main -r main@origin --allow-backwards` plus
   abandoning the stray empty commits restored the correct state with no work lost.
@@ -170,7 +170,7 @@ which is why the issue is reopened rather than closed.
   pushed to public `origin/main`: **isolation + not auto-pushing is what turned a
   potential silent publication into a clean local rollback.**
 - **What this proves about the fix.** The advisory rules above govern how an agent
-  *should* treat its own commits, but they cannot stop a sub-agent that simply
+  _should_ treat its own commits, but they cannot stop a sub-agent that simply
   starts in the wrong directory. The missing piece is a **mechanical** guard:
   sub-agents must be pinned to their sandbox (e.g. `cd` enforced / `-R`/`-C`
   required / refuse VCS writes when cwd is outside the assigned workspace), and the

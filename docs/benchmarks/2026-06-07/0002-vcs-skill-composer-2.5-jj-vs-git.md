@@ -2,12 +2,12 @@
 
 **Date:** 2026-06-07
 **Harness:** `improving-vcs-skill` (deterministic, pre-committed conflicting work; objective resolution oracle)
-**Under test:** the [`vcs`](../../.agents/skills/vcs/SKILL.md) skill — can Cursor Composer 2.5 integrate pre-committed teammate work onto shared `main` and resolve merge conflicts cleanly in **both** VCS modes?
+**Under test:** the [`vcs`](../../../.agents/skills/vcs/SKILL.md) skill — can Cursor Composer 2.5 integrate pre-committed teammate work onto shared `main` and resolve merge conflicts cleanly in **both** VCS modes?
 **Model:** **Cursor Composer 2.5** only (`composer-2.5-fast`; recorded as tier `large` / env `cursor-ide`)
 **Orchestration workspace:** `cursor-vcs-benchmark` (jj workspace created via `isolate.sh` before the run)
 **Scale:** 6 rounds, 26 agent-runs, both VCS modes × {easy, medium, hard}, serialized integration only.
 
-Raw metrics: [data/0002-composer-2.5-metrics.tsv](data/0002-composer-2.5-metrics.tsv)
+Raw metrics: [data/0002-composer-2.5-metrics.tsv](0002-composer-2.5-metrics.tsv)
 
 ---
 
@@ -28,7 +28,7 @@ Raw metrics: [data/0002-composer-2.5-metrics.tsv](data/0002-composer-2.5-metrics
 
 ## Method
 
-Same determinism principle as [0000](0000-vcs-skill-conflict-resolution.md): every agent's change is pre-committed on `agent-K`; the agent only integrates it onto `main`; the correct union is fixed, so quality is scored by an objective oracle.
+Same determinism principle as [0000](../2026-06-06/0000-vcs-skill-conflict-resolution.md): every agent's change is pre-committed on `agent-K`; the agent only integrates it onto `main`; the correct union is fixed, so quality is scored by an objective oracle.
 
 - **Integration pattern:** serialized — agents land one after another so each later agent meets earlier teammates' conflicts (cleanest measurement).
 - **Sub-agents** were driven with **only** the `vcs` skill and an integration-only ticket — never the harness, the mode, or where conflicts are. Mode detection and conflict handling had to come from `vcs` alone.
@@ -107,7 +107,7 @@ Retries were low (0–1 per agent) and mostly `--continue` after conflict resolu
 
 ## Comparison to prior benchmarks
 
-Prior runs ([0000](0000-vcs-skill-conflict-resolution.md), [0001](0001-vcs-skill-branch-hygiene-and-tokens.md)) used Claude Opus/Sonnet/Haiku across serialized and concurrent patterns, reporting wall times in **minutes** (e.g. jj/hard serial ~190 s, concurrent ~318–471 s). This Composer 2.5 run completes the same ladder in **seconds** — different measurement conditions (local shell `integrate.sh` drive vs full IDE agent sessions, single model tier, serialized only), so the absolute numbers are not directly comparable. The **relative** jj-vs-git shape is informative: in 0000's revised serial runs, jj/hard (190 s) was slower than git/hard (132 s); here git/hard (11.4 s) is again faster than jj/hard (14.7 s), consistent in direction if not magnitude.
+Prior runs ([0000](../2026-06-06/0000-vcs-skill-conflict-resolution.md), [0001](../2026-06-06/0001-vcs-skill-branch-hygiene-and-tokens.md)) used Claude Opus/Sonnet/Haiku across serialized and concurrent patterns, reporting wall times in **minutes** (e.g. jj/hard serial ~190 s, concurrent ~318–471 s). This Composer 2.5 run completes the same ladder in **seconds** — different measurement conditions (local shell `integrate.sh` drive vs full IDE agent sessions, single model tier, serialized only), so the absolute numbers are not directly comparable. The **relative** jj-vs-git shape is informative: in 0000's revised serial runs, jj/hard (190 s) was slower than git/hard (132 s); here git/hard (11.4 s) is again faster than jj/hard (14.7 s), consistent in direction if not magnitude.
 
 ---
 

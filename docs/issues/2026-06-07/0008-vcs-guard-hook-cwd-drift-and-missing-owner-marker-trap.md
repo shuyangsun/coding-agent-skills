@@ -13,9 +13,9 @@
   workspace (`jj workspace add claude-improving-docs-harness-plan`), i.e. one that
   was never claimed via `session-start.sh`/`isolate.sh`.
 - **Observed:** 2026-06-07, while authoring `docs/plans/0002-improving-docs-skill-harness.md`.
-- **Related:** [0001](0001-20260606-jj-default-workspace-goes-stale-blocking-collaboration.md)
-  and [0002](0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md)
-  (working from the shared `default` workspace), [0006](0006-20260607-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md)
+- **Related:** [0001](../2026-06-06/0001-jj-default-workspace-goes-stale-blocking-collaboration.md)
+  and [0002](0002-agent-used-default-jj-workspace-instead-of-isolating.md)
+  (working from the shared `default` workspace), [0006](0006-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md)
   (cleanup scope), and `docs/plans/0001-vcs-guardrails-for-jj-workspace-isolation.md`
   (the guard being hardened here).
 
@@ -26,7 +26,7 @@ process's `$PWD`** (via `current_shared_reason` → `vcs_jj_workspace_name`). Th
 `$PWD` is the Bash tool's **persisted** working directory. Two independent
 problems follow:
 
-1. **cwd-drift false positive (the trap).** I ran one *read-only* command that
+1. **cwd-drift false positive (the trap).** I ran one _read-only_ command that
    `cd`-ed into the repo root (the `default` workspace) to `grep` something. The
    Bash tool persisted that cwd. From then on, **every** non-read-only,
    non-vetted Bash command — and every `Write`/`Edit` — was denied with:
@@ -37,7 +37,7 @@ problems follow:
    ```
 
    even though my actual work lives in my own workspace. The recommended recovery
-   (`cd to NEXT_CWD`) **cannot run**, because the hook evaluates cwd *before* the
+   (`cd to NEXT_CWD`) **cannot run**, because the hook evaluates cwd _before_ the
    `cd` in the command executes, so a `cd <my-workspace> && …` command is refused
    on the spot.
 
@@ -103,6 +103,7 @@ reading `vcs-check.sh`:
 
    (The persisted cwd only advances on **exit 0**, so the chained command must
    succeed.)
+
 3. **Claim the workspace's owner marker** by running the real helper from `main`'s
    copy (the stale workspace did not yet have the new scripts):
 
@@ -113,6 +114,7 @@ reading `vcs-check.sh`:
    When the current name already equals the argument, `rename-work.sh` takes its
    `current == new_name` branch: it only **records the owner marker**
    (`RENAMED=no`), with no rename and no destructive side effect.
+
 4. **Then** `jj rebase -d main`, `Write`/`Edit`, and `rm` of scratch all succeed.
 
 ## Suggested fixes (for `vcs` maintainers)
@@ -135,7 +137,7 @@ reading `vcs-check.sh`:
    first guarded action, or make the deny message point at
    `rename-work.sh <name>` — **not** `session-start.sh`, which from an
    already-owned session would spawn a redundant `<ide>-pending-*` workspace (the
-   anti-pattern in [0002](0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md)).
+   anti-pattern in [0002](0002-agent-used-default-jj-workspace-instead-of-isolating.md)).
 6. **Differentiate the deny guidance** between "you have no workspace, isolate
    first" and "your shell cwd drifted, just `cd` back" — they need opposite
    actions.
@@ -143,7 +145,7 @@ reading `vcs-check.sh`:
 ## Notes
 
 This was hit during normal use, not while stress-testing the guard. The guard's
-*intent* — stop edits/commits from the shared checkout — is right; the problem is
+_intent_ — stop edits/commits from the shared checkout — is right; the problem is
 that it infers "shared" from a volatile signal (persisted shell cwd) and offers no
 in-band recovery once that signal drifts. Keying on the durable owner marker, and
 letting a plain `cd` through, would remove the trap without weakening the guard.

@@ -24,7 +24,7 @@ revisions that move the numbers and revert the ones that don't.
 > firewall**, [SCENARIOS.md](SCENARIOS.md)).
 
 Full design rationale lives in
-[`docs/plans/0002-improving-docs-and-rag-skills.md`](../../../docs/plans/0002-improving-docs-and-rag-skills.md).
+[`docs/plans/2026-06-07/0002-improving-docs-and-rag-skills.md`](../../../docs/plans/2026-06-07/0002-improving-docs-and-rag-skills.md).
 This file is the operational entry point.
 
 ## Why one harness for two skills (the coupling thesis)
@@ -39,7 +39,7 @@ round may revise **either** skill while watching both.
 
 ## The keystone: no oracle, so three deterministic surrogates
 
-`vcs` works because the correct merge is *computable*. Doc/retrieval quality has
+`vcs` works because the correct merge is _computable_. Doc/retrieval quality has
 **no such oracle** — an LLM authors the corpus and the `rag` skill chooses the
 config. [`scripts/gold.py`](scripts/gold.py) (the `scenario.py` analog — it emits
 the labels **and** runs the scorers so they can't drift) replaces the oracle with
@@ -69,10 +69,10 @@ An LLM-as-judge is permitted **only** as an advisory, non-gating signal.
   - **corpus** ∈ {`N` = naive dump, `D` = `docs`-skill-authored}
   - **rag** ∈ {`b` = baseline config, `r` = `rag`-skill config}
 
-  |              | rag = `b`            | rag = `r`              |
-  | ------------ | -------------------- | ---------------------- |
-  | corpus = `N` | `Nb` (control)       | `Nr` (rag-only gain)   |
-  | corpus = `D` | `Db` (docs-only gain)| `Dr` (co-designed)     |
+  |              | rag = `b`             | rag = `r`            |
+  | ------------ | --------------------- | -------------------- |
+  | corpus = `N` | `Nb` (control)        | `Nr` (rag-only gain) |
+  | corpus = `D` | `Db` (docs-only gain) | `Dr` (co-designed)   |
 
   Computed **per query (paired)**:
   - **`docs` marginal** = `Db − Nb` and `Dr − Nr`
@@ -88,13 +88,13 @@ cross-round comparison and **FULL** as the corroborating arm.
 
 ## The five metrics (sliced by tier and difficulty)
 
-| Metric | Measures | Mostly driven by | Made objective by |
-| --- | --- | --- | --- |
-| **Precision** | of retrieved, how many relevant | docs + rag | graded `qrels` |
-| **Recall** | of relevant, how many retrieved (recall@20 headline) | docs + rag | graded `qrels` |
-| **Speed** | index time + per-query latency (p50/p95) | **rag** | per-stage timers, same-host |
-| **Factuality** | answer stays grounded in retrieved docs | docs + rag | sentinel containment + closed-book control + advisory judge |
-| **Token usage** | context/read tokens at equal correctness (↓) | **rag** (ctx) / **docs** (read) | read from transcripts, never self-reported |
+| Metric          | Measures                                             | Mostly driven by                | Made objective by                                           |
+| --------------- | ---------------------------------------------------- | ------------------------------- | ----------------------------------------------------------- |
+| **Precision**   | of retrieved, how many relevant                      | docs + rag                      | graded `qrels`                                              |
+| **Recall**      | of relevant, how many retrieved (recall@20 headline) | docs + rag                      | graded `qrels`                                              |
+| **Speed**       | index time + per-query latency (p50/p95)             | **rag**                         | per-stage timers, same-host                                 |
+| **Factuality**  | answer stays grounded in retrieved docs              | docs + rag                      | sentinel containment + closed-book control + advisory judge |
+| **Token usage** | context/read tokens at equal correctness (↓)         | **rag** (ctx) / **docs** (read) | read from transcripts, never self-reported                  |
 
 ## Two consumer modes
 
@@ -143,21 +143,21 @@ under `$DOCS_RAG_HARNESS_DIR` (default `$TMPDIR/docs-rag-harness`); only
 `metrics.tsv` persists. They require `python3`; Phase 0 needs **no** services and
 **no** eval-time LLM (match the `vcs` harness's restraint).
 
-| Script | Role |
-| --- | --- |
-| `gold.py` | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall. |
-| `docs-eval.py` | Phase-0 thin eval: given `(corpus, rag-config)`, chunk + index (BM25 + in-memory vectors), run gold queries, emit ranked results + per-stage timings. |
-| `check-retrieval.py` | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines. |
-| `check-convention.sh` | `docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE`. |
-| `check-rag-config.sh` | `rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline. |
-| `new-corpus.sh` | Provision a round: `--task read\|write`; build N/D (+ GOLD); seed the write convention trap. |
-| `apply-rag.sh` | Given a corpus + `rag-config.json`, chunk + (optionally) contextualize + snapshot + index per (corpus × config). |
-| `next-index.sh` | Globally-unique zero-padded index **per type folder**; shared by `docs` + the WRITE oracle. |
-| `record-metrics.sh` | One TSV row per `query × cell(corpus,rag) × mode × round`. |
-| `scoreboard.sh` | By round / by tier×mode / difficulty×tier **+ the 2×2 factorial view (marginal effects + interaction)**. |
-| `_score.py` | Glue: run oracles, parse `KEY=VALUE`, read per-agent output tokens **exactly** from transcript JSONLs (never `budget.spent()`, never self-reported). |
-| `_run-write.wf.js` / `_run-rag.wf.js` / `_run-read.wf.js` | Workflow runners for the three loops; `JSON.parse(args)`; blind to gold labels. |
-| `rm-corpus.sh` | Teardown, guarded to `$DOCS_RAG_HARNESS_DIR` only. |
+| Script                                                    | Role                                                                                                                                                  |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gold.py`                                                 | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall.                |
+| `docs-eval.py`                                            | Phase-0 thin eval: given `(corpus, rag-config)`, chunk + index (BM25 + in-memory vectors), run gold queries, emit ranked results + per-stage timings. |
+| `check-retrieval.py`                                      | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines.                                                                               |
+| `check-convention.sh`                                     | `docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE`.                                                                             |
+| `check-rag-config.sh`                                     | `rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline.                                                         |
+| `new-corpus.sh`                                           | Provision a round: `--task read\|write`; build N/D (+ GOLD); seed the write convention trap.                                                          |
+| `apply-rag.sh`                                            | Given a corpus + `rag-config.json`, chunk + (optionally) contextualize + snapshot + index per (corpus × config).                                      |
+| `next-index.sh`                                           | Globally-unique zero-padded index **per type folder**; shared by `docs` + the WRITE oracle.                                                           |
+| `record-metrics.sh`                                       | One TSV row per `query × cell(corpus,rag) × mode × round`.                                                                                            |
+| `scoreboard.sh`                                           | By round / by tier×mode / difficulty×tier **+ the 2×2 factorial view (marginal effects + interaction)**.                                              |
+| `_score.py`                                               | Glue: run oracles, parse `KEY=VALUE`, read per-agent output tokens **exactly** from transcript JSONLs (never `budget.spent()`, never self-reported).  |
+| `_run-write.wf.js` / `_run-rag.wf.js` / `_run-read.wf.js` | Workflow runners for the three loops; `JSON.parse(args)`; blind to gold labels.                                                                       |
+| `rm-corpus.sh`                                            | Teardown, guarded to `$DOCS_RAG_HARNESS_DIR` only.                                                                                                    |
 
 Run `bash <skill-dir>/scripts/<name>.sh --help` (or `python3 … --help`) for usage.
 Round procedure and the revise/revert discipline are in [LOOP.md](LOOP.md); metric

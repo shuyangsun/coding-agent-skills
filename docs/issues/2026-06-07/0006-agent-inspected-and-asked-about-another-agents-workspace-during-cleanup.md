@@ -7,7 +7,7 @@
 - **Area:** Multi-agent etiquette; scope of "clean up" instructions; `vcs` cleanup behavior
 - **Severity:** Medium — no data was lost (the agent correctly avoided deleting another agent's unmerged work), but it **over-reached the scope of the request**: it inspected a workspace that was clearly not its own, and then spent a user round-trip asking what to do about it. The default should have been to ignore it entirely.
 - **Environment:** Jujutsu (`jj`) on a Git backend, colocated `coding-agent-skills` repo. A Claude Code (Opus 4.8) session that had just finished its own `vcs` work; a pre-existing, unrelated `codex-optimize-git-worktrees-vcs` jj workspace/bookmark also present.
-- **Related:** [0005](0005-20260607-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md) (the inverse: an agent acting *on* another agent's work). Both stem from the same root rule: an agent should touch only its own work.
+- **Related:** [0005](0005-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md) (the inverse: an agent acting _on_ another agent's work). Both stem from the same root rule: an agent should touch only its own work.
 
 ## Summary
 
@@ -40,7 +40,7 @@ other agents' workspaces if I explicitly asked you to."
 ## Actual behavior
 
 1. After landing its work, the agent ran `jj workspace list` / `jj bookmark
-   list` and saw `codex-optimize-git-worktrees-vcs` alongside `default` and `main`.
+list` and saw `codex-optimize-git-worktrees-vcs` alongside `default` and `main`.
 2. It investigated that workspace's commit: ancestry vs `main`, remote backing,
    and `jj diff --stat` (finding ~543 lines of unmerged work).
 3. It then asked the user, via a question prompt, whether to leave or delete the
@@ -62,7 +62,7 @@ it didn't create and surfaced it rather than destroying it. The defect is purely
   [0005], from the other side).
 - **Cross-agent boundary.** Reinforces the core multi-agent rule: an agent reads
   and writes **only its own** workspaces/branches/commits unless told otherwise.
-  Even *inspecting* another agent's workspace is unnecessary and presumes
+  Even _inspecting_ another agent's workspace is unnecessary and presumes
   ownership it doesn't have.
 
 ## Suspected cause
@@ -72,7 +72,7 @@ it didn't create and surfaced it rather than destroying it. The defect is purely
    to entries it created.
 2. **No ownership filter.** It didn't filter the workspace/bookmark list to its
    own `claude-*` prefix before acting.
-3. **Diligence misapplied.** Caution that's correct *if* something is in scope
+3. **Diligence misapplied.** Caution that's correct _if_ something is in scope
    (don't delete unmerged work) was applied to something that was never in scope,
    producing an unnecessary question instead of a no-op.
 
@@ -84,7 +84,7 @@ it didn't create and surfaced it rather than destroying it. The defect is purely
 - **Don't inspect what you don't own.** Do not enumerate-and-investigate other
   agents' workspaces during a cleanup; skip them silently.
 - **Ask only to widen scope, not to narrow it.** Ask the user only if the cleanup
-  scope is genuinely ambiguous *within the agent's own work* — never to request
+  scope is genuinely ambiguous _within the agent's own work_ — never to request
   permission to touch another agent's artifacts (instead, just leave those alone).
 - **Encode in `vcs`.** Add a one-line cleanup-scope rule to the `vcs` skill:
   "clean up only the workspaces/bookmarks you created; leave other agents' alone
@@ -103,7 +103,7 @@ Encoded as an explicit scope rule in the `vcs` skill (the defect was behavioral,
 not mechanical — the helpers already scope by construction).
 
 - **SKILL.md §4 "Touch only your own work".** "Clean up only what you created. An
-  unqualified 'clean up' means *your own* `<ide>-<work>` workspaces/bookmarks. Do
+  unqualified 'clean up' means _your own_ `<ide>-<work>` workspaces/bookmarks. Do
   not inspect, reason about, or ask about another agent's workspace/bookmark —
   leave it untouched unless the user names it."
 - **ISOLATE.md cleanup section** now opens with "Scope your cleanup to your own
@@ -111,9 +111,9 @@ not mechanical — the helpers already scope by construction).
   enumerate-and-investigate, don't ask), and confines the one ownerless exception
   to a sibling jj workspace whose work has **already landed on `main`** during an
   explicit integration task — merged residue `integrate.sh` retires automatically
-  for the ref you integrate — never another agent's *unmerged* work.
+  for the ref you integrate — never another agent's _unmerged_ work.
 - **Mechanically reinforced.** `integrate.sh` only ever retires the workspace
-  matching the `work_ref` you pass and abandons *ownerless* empty side-heads (no
+  matching the `work_ref` you pass and abandons _ownerless_ empty side-heads (no
   bookmark, no workspace) — it never touches a named workspace it wasn't given, so
   the helper can't over-reach even if invoked broadly.
 

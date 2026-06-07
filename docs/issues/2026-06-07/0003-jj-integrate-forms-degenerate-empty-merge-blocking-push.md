@@ -21,7 +21,7 @@ commit orphaned above the `main` bookmark, producing a confusing graph.
 
 This was hit live while landing the `docs(vcs): tighten skill description and
 mandate isolate-first` change. It is the publish/land counterpart to the
-isolation gap in [0002](0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md).
+isolation gap in [0002](0002-agent-used-default-jj-workspace-instead-of-isolating.md).
 
 ## Expected behavior
 
@@ -108,7 +108,7 @@ split commit …
   orphaned above `main`. An operator inspecting `jj log` sees a "merge" that
   implies divergence that never happened.
 - **The skill can't self-recover.** `jj_publish_loop` treats `jj bookmark set
-  main -r @` succeeding as success and exits; it never notices that the pushed
+main -r @` succeeding as success and exits; it never notices that the pushed
   target is an empty, unpublishable commit. The failure only surfaces at
   `jj git push`, which is outside `integrate.sh`.
 - **Coverage gap.** The `improving-vcs-skill` harness exercises conflict
@@ -156,13 +156,13 @@ In the jj publish path, branch on whether a merge is actually needed:
    by an agent.)
 
 3. **Validate the publish target.** Before declaring success in
-   `jj_publish_loop`, assert the commit `main` now points at is non-empty *or*
+   `jj_publish_loop`, assert the commit `main` now points at is non-empty _or_
    described — i.e. would pass `jj git push` — and fail loudly with a clear hint
    otherwise, instead of exiting and letting the push fail later out of band.
 
 4. **Tidy on success.** After landing, ensure no orphaned empty merge/working-copy
    commits are left dangling above `main` (the post-land `jj new "$main_ref"` for
-   the fresh working copy is fine; an empty *merge* parent is not).
+   the fresh working copy is fine; an empty _merge_ parent is not).
 
 ## Acceptance criteria for a future fix
 
@@ -191,7 +191,7 @@ merge is actually needed:
 - **Described merge only on divergence.** When `main` moved independently,
   `jj_land` forms `jj new main work -m "$(jj_merge_message)"`, where
   `jj_merge_message` emits a `chore(merge): …` subject with an `Author:` trailer
-  per [COMMITS.md](../../.agents/skills/vcs/COMMITS.md), so it pushes cleanly.
+  per [COMMITS.md](../../../.agents/skills/vcs/COMMITS.md), so it pushes cleanly.
 - **Publish-target validation.** `jj_finish` calls `jj_is_pushable` and refuses
   to finish (exit 3, actionable message) if `main` would point at an empty,
   description-less commit, instead of letting `jj git push` fail out of band.

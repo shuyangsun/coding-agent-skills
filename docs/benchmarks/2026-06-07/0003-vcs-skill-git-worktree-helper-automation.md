@@ -2,11 +2,11 @@
 
 **Date:** 2026-06-07
 **Harness:** `improving-vcs-skill` (deterministic, pre-committed conflicting work; objective resolution oracle)
-**Under test:** the [`vcs`](../../.agents/skills/vcs/SKILL.md) Git-only worktree integration path.
+**Under test:** the [`vcs`](../../../.agents/skills/vcs/SKILL.md) Git-only worktree integration path.
 **Change tested:** move deterministic Git rebase conflict work into `integrate.sh`: safe additive text cleanup, structured JSON union by `id`, and higher-version scalar tie-breaks.
 **Scale:** 3 serialized Git/medium rounds, 9 sub-agent runs. Baseline = 1 round before the helper change; optimized = 2 consecutive rounds after the helper change. Tiers were large / mid / small (`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` in this Codex run).
 
-Raw metrics: [data/0003-git-worktree-helper-metrics.tsv](data/0003-git-worktree-helper-metrics.tsv)
+Raw metrics: [data/0003-git-worktree-helper-metrics.tsv](0003-git-worktree-helper-metrics.tsv)
 
 ---
 

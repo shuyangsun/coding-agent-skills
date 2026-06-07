@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-06
 **Harness:** `improving-vcs-skill` (deterministic, pre-committed conflicting work; objective resolution oracle)
-**Under test:** the [`vcs`](../../skills/vcs/SKILL.md) skill — after an agent lands its work on `main`, does it **clean up the now-merged branch/bookmark** (unless it backs an open PR), and does the added cleanup cost tokens or break resolution correctness?
+**Under test:** the [`vcs`](../../../.agents/skills/vcs/SKILL.md) skill — after an agent lands its work on `main`, does it **clean up the now-merged branch/bookmark** (unless it backs an open PR), and does the added cleanup cost tokens or break resolution correctness?
 **Follow-up to:** [0000 — multi-agent conflict resolution](0000-vcs-skill-conflict-resolution.md), which established correctness/speed. This round adds two metrics and iterates `vcs` against them.
 **Scale:** 12 rounds, 54 agent-runs (6 baseline + 48 revised), both VCS modes × {medium, hard} × {large, mid, small} tiers × {serialized, concurrent}. Tiers map to **large = Opus, mid = Sonnet, small = Haiku**.
 

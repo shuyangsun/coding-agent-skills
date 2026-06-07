@@ -3,7 +3,7 @@
 - **Status:** Implemented in `codex-vcs-guardrails-impl`; validation in progress
 - **Date:** 2026-06-07
 - **Working workspace:** `codex-vcs-guardrails-impl`
-- **Primary issues:** [0002](../issues/0002-20260607-agent-used-default-jj-workspace-instead-of-isolating.md), [0004](../issues/0004-20260607-benchmark-created-jj-workspace-but-never-used-it.md), [0005](../issues/0005-20260607-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md)
+- **Primary issues:** [0002](../../issues/2026-06-07/0002-agent-used-default-jj-workspace-instead-of-isolating.md), [0004](../../issues/2026-06-07/0004-benchmark-created-jj-workspace-but-never-used-it.md), [0005](../../issues/2026-06-07/0005-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md)
 
 ## Problem
 

@@ -9,9 +9,9 @@
   `coding-agent-skills` repo, multiple short-lived agent workspaces
 - **Observed:** 2026-06-07, after a previous `claude-streaming-export`
   workspace/bookmark lifecycle
-- **Related:** [0001](0001-20260606-jj-default-workspace-goes-stale-blocking-collaboration.md)
-  (workspace lifecycle), [0003](0003-20260607-jj-integrate-forms-degenerate-empty-merge-blocking-push.md)
-  (empty orphaned commits after jj integration), [0006](0006-20260607-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md)
+- **Related:** [0001](../2026-06-06/0001-jj-default-workspace-goes-stale-blocking-collaboration.md)
+  (workspace lifecycle), [0003](0003-jj-integrate-forms-degenerate-empty-merge-blocking-push.md)
+  (empty orphaned commits after jj integration), [0006](0006-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md)
   (cleanup scope)
 
 ## Summary
@@ -135,7 +135,7 @@ Fixed in `scripts/integrate.sh`; measured by the `improving-vcs-skill` harness.
   (`<name>@`). So real work, named commits, bookmarked commits, `main`, and active
   working copies are never touched, while the anonymous residue is removed.
 - **Stable anchor + cwd fix.** The sweep runs `jj -R <anchor>` against the
-  `default` workspace root resolved *before* the agent's own workspace is removed,
+  `default` workspace root resolved _before_ the agent's own workspace is removed,
   and `cd`s into that live root first — because retiring the agent's workspace
   `rm -rf`s the cwd. This also surfaced and fixed a latent bug: the retire step's
   cwd-guard compared the shell `PWD` (`/tmp/…`) against jj's canonical root
