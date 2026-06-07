@@ -10,6 +10,8 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "lint:code": "oxlint",
+    "lint:code:fix": "oxlint --fix",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "setup:hooks": "bash scripts/setup-vcs-hooks.sh",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "lefthook": "2.1.9",
     "markdownlint-cli2": "0.22.1",
+    "oxlint": "1.68.0",
     "prettier": "3.8.3"
   }
 }

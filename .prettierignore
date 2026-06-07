@@ -1,6 +1,19 @@
 # Dependencies
 node_modules/
 
+# Build outputs and framework caches
+dist/
+build/
+coverage/
+.output/
+.nitro/
+.tanstack/
+.vinxi/
+
+# Generated code (TanStack Router route tree, other *.gen files) — never hand-format
+**/routeTree.gen.ts
+**/*.gen.ts
+
 # Lockfiles (managed by the package manager)
 bun.lock
 bun.lockb
