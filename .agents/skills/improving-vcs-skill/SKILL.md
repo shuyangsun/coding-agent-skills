@@ -83,6 +83,12 @@ where mode integrity broke. **Verify this holds — never assert it.**
    the numbers; revert changes that don't, or that buy speed with botched merges.
 6. **Repeat** until the exit bar is met — [LOOP.md](LOOP.md) and [METRICS.md](METRICS.md).
 
+The loop above is the `--task integrate` flow (land work, resolve conflicts). A
+symmetric `--task start` flow measures the other bookend — **session-start
+isolation**: whether an agent carves out its own worktree/workspace before doing
+new work so co-located agents don't interfere. Run start rounds alongside
+integration rounds; details in [LOOP.md](LOOP.md) and [SCENARIOS.md](SCENARIOS.md).
+
 ## Bundled scripts
 
 Run these from this skill's own directory (the path the runtime loaded it from);
@@ -92,14 +98,15 @@ disposable work area outside any real repo (`$VCS_HARNESS_DIR`, default
 They require `python3` (the deterministic content engine) plus `git`, and `jj`
 for jj-mode rounds.
 
-| Script              | Purpose                                                                                                          |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `new-sandbox.sh`    | Provision one round for a mode + difficulty: fixtures, pre-committed per-agent work, `main`, integration briefs. |
-| `check-quality.sh`  | Objectively score an integrated round: mode integrity, no markers/unresolved, no lost work, correct resolution, **+ branch/bookmark hygiene** (`STALE_REFS`). |
-| `scenario.py`       | Deterministic content engine: seeds fixtures, applies each agent's diff, emits the plan, runs the oracle.        |
-| `record-metrics.sh` | Append one agent's measurements (time, conflict time, **tokens**, **stale refs**, retries, quality, **tier**, **difficulty**) to the log. |
-| `scoreboard.sh`     | Aggregate the log by round (trend) **and by model tier** (incl. `mean_tok`, `stale`, and a difficulty×tier pass-rate matrix). |
-| `rm-sandbox.sh`     | Tear down a round or the whole work area (guarded to the harness work area only).                                |
+| Script               | Purpose                                                                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new-sandbox.sh`     | Provision one round: `--task integrate` (fixtures + pre-committed per-agent work + integration briefs) or `--task start` (shared repo + a one-edit brief that tests session-start isolation).               |
+| `check-quality.sh`   | Objectively score an integrated round: mode integrity, no markers/unresolved, no lost work, correct resolution, **+ branch/bookmark hygiene** (`STALE_REFS`). Also scores a start round's change + cleanup. |
+| `check-isolation.sh` | Score a `--task start` round's **session-start isolation** (`ISOLATED`) — did the agent carve out its own worktree/workspace before working — from durable git-reflog / jj-op-log signals.                  |
+| `scenario.py`        | Deterministic content engine: seeds fixtures, applies each agent's diff, emits the plan, runs the oracle, and prints the start-task edit instructions.                                                      |
+| `record-metrics.sh`  | Append one agent's measurements (time, conflict time, **tokens**, **stale refs**, **isolation**, retries, quality, **tier**, **difficulty**) to the log.                                                    |
+| `scoreboard.sh`      | Aggregate the log by round (trend) **and by model tier** (incl. `mean_tok`, `stale`, and a difficulty×tier pass-rate matrix).                                                                               |
+| `rm-sandbox.sh`      | Tear down a round or the whole work area (guarded to the harness work area only).                                                                                                                           |
 
 Run `bash <skill-dir>/scripts/<name>.sh --help` for usage. Full round procedure,
 sub-agent briefing, and the revise/revert discipline are in [LOOP.md](LOOP.md).

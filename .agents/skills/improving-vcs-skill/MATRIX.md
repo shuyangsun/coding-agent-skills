@@ -45,6 +45,14 @@ models both Git + worktree teams and the cloud/PR publish flow in one shape, so
 there is no separate remote flag. jj mode is local: all workspaces share one
 repo and advance the `main` bookmark.
 
+The "Isolation" column above is what the **integration** task pre-provisions _for_
+the agent. The `--task start` task flips it: the agent must create that isolation
+**itself** before doing new work, and the two `--start-from` arms test the
+conditional — **main** (begins in the shared checkout → must isolate) and
+**worktree** (already isolated → must not double-isolate). Cross start rounds with
+the tier axis too, so e.g. a `small`-tier jj/start and a `large`-tier git/start
+both appear over a few rounds. See [SCENARIOS.md](SCENARIOS.md).
+
 ## Agents and environments to represent
 
 Sample several cells per round; rotate so that, over a few rounds, the

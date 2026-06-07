@@ -83,6 +83,48 @@ The **one** post-integration action the brief leaves room for is the VCS tidy-up
 has its own metric (next section), so the brief says "finish per your guidance,
 then stop" rather than "stop the instant your work is on `main`".
 
+## The start task: session-start isolation (the other bookend)
+
+`--task start` tests the FRONT of the multi-agent lifecycle, where `--task
+integrate` (everything above) tests the back. Same determinism principle, mirror
+image:
+
+- The agent is dropped into a **shared** repo and asked to author **one tiny,
+  fully-specified edit** (the `easy` CHANGELOG line + a per-agent notes file —
+  `scenario.py start-instructions` prints it verbatim into the brief, so there is
+  zero coding judgment), then land it on `main`. The work content and cleanup are
+  still scored by the same `scenario.py` oracle / hygiene scan via
+  `check-quality.sh`.
+- What's actually under test is whether the agent **isolates before working** —
+  carves out its own worktree (git) / workspace (jj) on its own branch/bookmark
+  instead of mutating the shared primary checkout — so several co-located agents
+  on one machine don't trample each other. That's a **per-agent** property, so a
+  start round is single-agent; cover tiers/modes/arms by running several.
+- Two arms (`--start-from`): **main** — the agent begins in the shared primary
+  checkout and must isolate; **worktree** — it is _given_ its own worktree/
+  workspace already and must work in place, **not** spawn a redundant nested one
+  (the don't-double-isolate conditional).
+
+`check-isolation.sh` scores it from **durable** signals (chosen so the agent's own
+cleanup — worktree removal, branch/bookmark deletion, `jj workspace forget` —
+can't erase the evidence):
+
+- **git** — the primary worktree's `HEAD` reflog (`$REPO/.git/logs/HEAD`) line
+  count. `git worktree add`, commits inside the new worktree, and the later
+  removal/branch-delete all leave it untouched, so it staying at the seed value
+  means the agent worked in its own worktree; growing means it used the shared
+  checkout (a `commit` or a `switch -c` in the primary). Live `worktree list`
+  corroborates and catches a redundant extra worktree in the worktree arm.
+- **jj** — the op log's append-only `add workspace '<name>'` entries. The seed
+  only ever adds the names in `SEED_WS`; any other workspace-add is the agent
+  carving out its own working copy (on-main arm) or over-isolating (worktree arm).
+
+Reported as `ISOLATED=pass/fail` (+ `ISO_FS` / `OVER_ISOLATE`), **separate** from
+both the correctness verdict and the hygiene line — "did the work, but in the
+shared checkout" is an isolation miss, not a correctness one. The `vcs` skill has
+**no** isolation guidance yet, so this bar starts _red_ by design; it exists for
+the iteration that makes it green. See [METRICS.md](METRICS.md).
+
 ## How quality is judged objectively
 
 `check-quality.sh` inspects the integrated `main` and combines VCS-level checks
@@ -111,7 +153,7 @@ serialized and concurrent rounds alike, across every model tier.
   a clean merge each `agent-K` ref is redundant and should be deleted unless it
   backs an open PR; `check-quality.sh` prints `STALE_REFS=N` for the merged refs
   left behind. Kept separate so a perfect resolution that forgot to clean up is
-  visibly a *hygiene* miss, not a *correctness* one. See [METRICS.md](METRICS.md).
+  visibly a _hygiene_ miss, not a _correctness_ one. See [METRICS.md](METRICS.md).
 
 ## Hazards these scenarios surface (watch for them)
 

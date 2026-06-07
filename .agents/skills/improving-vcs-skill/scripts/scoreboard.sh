@@ -51,6 +51,14 @@ def rkey(r):
     except (TypeError, ValueError):
         return 0
 
+def iso_cell(group):
+    # session-start isolation: '-' if not measured in this group (integration
+    # rounds), else the COUNT of isolation failures (want 0).
+    measured = [x for x in group if x.get("isolate") in ("pass", "fail", "partial")]
+    if not measured:
+        return "-"
+    return str(sum(1 for x in measured if x.get("isolate") != "pass"))
+
 # ---- 1. by round (trend) ---------------------------------------------------
 rounds = {}
 for r in rows:
@@ -59,8 +67,8 @@ for r in rows:
 print("== BY ROUND (trend: lower is better; delta vs previous round) ==")
 print(f"{'round':<6}{'diff':<8}{'n':>3}{'pass%':>7}{'wall(max)':>11}{'d':>6}"
       f"{'mean_tot':>10}{'conf(max)':>11}{'d':>6}{'mean_cnf':>10}{'mean_tok':>10}"
-      f"{'stale':>6}{'retr':>6}{'stall':>6}")
-print("-" * 112)
+      f"{'stale':>6}{'iso':>5}{'retr':>6}{'stall':>6}")
+print("-" * 117)
 prev_w = prev_c = None
 for rd in sorted(rounds, key=lambda x: int(x) if x.isdigit() else 0):
     g = rounds[rd]
@@ -77,7 +85,7 @@ for rd in sorted(rounds, key=lambda x: int(x) if x.isdigit() else 0):
     dc = "" if prev_c is None else f"{cmax - prev_c:+.0f}"
     print(f"{rd:<6}{diff:<8}{n:>3}{passes / n * 100:>6.0f}%{wmax:>11.0f}{dw:>6}"
           f"{sum(tot) / n:>10.0f}{cmax:>11.0f}{dc:>6}{sum(cnf) / n:>10.0f}{sum(tok) / n:>10.0f}"
-          f"{stale:>6.0f}{sum(num(x['retries']) for x in g):>6.0f}{sum(num(x['stalls']) for x in g):>6.0f}")
+          f"{stale:>6.0f}{iso_cell(g):>5}{sum(num(x['retries']) for x in g):>6.0f}{sum(num(x['stalls']) for x in g):>6.0f}")
     prev_w, prev_c = wmax, cmax
 
 # ---- 2. by model tier ------------------------------------------------------
@@ -87,8 +95,8 @@ for r in rows:
 order = {"large": 0, "mid": 1, "small": 2}
 print("\n== BY MODEL TIER (vendor-agnostic capability tier) ==")
 print(f"{'tier':<8}{'n':>3}{'pass%':>7}{'mean_tot':>10}{'conf(max)':>11}{'mean_cnf':>10}"
-      f"{'mean_tok':>10}{'stale':>6}{'retr':>6}{'stall':>6}")
-print("-" * 77)
+      f"{'mean_tok':>10}{'stale':>6}{'iso':>5}{'retr':>6}{'stall':>6}")
+print("-" * 82)
 for t in sorted(tiers, key=lambda x: (order.get(x, 9), x)):
     g = tiers[t]
     n = len(g)
@@ -98,7 +106,7 @@ for t in sorted(tiers, key=lambda x: (order.get(x, 9), x)):
     tok = [num(x.get("tokens", 0)) for x in g]
     stale = sum(num(x.get("stale_refs", 0)) for x in g)
     print(f"{t:<8}{n:>3}{passes / n * 100:>6.0f}%{sum(tot) / n:>10.0f}"
-          f"{max(cnf):>11.0f}{sum(cnf) / n:>10.0f}{sum(tok) / n:>10.0f}{stale:>6.0f}"
+          f"{max(cnf):>11.0f}{sum(cnf) / n:>10.0f}{sum(tok) / n:>10.0f}{stale:>6.0f}{iso_cell(g):>5}"
           f"{sum(num(x['retries']) for x in g):>6.0f}{sum(num(x['stalls']) for x in g):>6.0f}")
 
 # ---- 3. difficulty x tier pass-rate matrix ---------------------------------
@@ -131,6 +139,8 @@ for t in trows:
 print("\nwall(max)=batch wall-clock (slowest agent); conf(max)=worst conflict time.")
 print("mean_tok=mean output tokens/agent (efficiency; lower=better). stale=merged")
 print("agent-* refs left undeleted across the group (branch/bookmark hygiene; want 0).")
-print("Round delta 'd': NEGATIVE = faster = better. Watch conf(max) above all.")
-print("If a tier or a difficulty x tier cell lags, that is where vcs must improve.")
+print("iso=session-start isolation failures in the group (start rounds only; want 0;")
+print("'-' = not measured, i.e. integration rounds). Round delta 'd': NEGATIVE =")
+print("faster = better. Watch conf(max) above all. If a tier or a difficulty x tier")
+print("cell lags, that is where vcs must improve.")
 PY

@@ -12,6 +12,25 @@
 # every change is deterministic, the correct merged result is deterministic too,
 # so check-quality.sh can score resolution quality objectively.
 #
+# Tasks (--task):
+#   integrate (default)  the scenario above: pre-committed agent-K, agent lands it
+#                        on main and resolves conflicts. Scored by check-quality.sh.
+#   start                the SESSION-START bookend: the agent is dropped into a
+#                        shared repo and asked to do one tiny, fully-specified new
+#                        edit, then land it on main. What's under test is whether
+#                        the agent ISOLATES first — carves out its own worktree
+#                        (git) / workspace (jj) + branch/bookmark instead of
+#                        working directly in the shared checkout — so co-located
+#                        agents don't trample each other. Scored by
+#                        check-isolation.sh (the work content + cleanup are still
+#                        scored by check-quality.sh). Single-agent per round.
+#     --start-from main      (default) the agent starts in the primary checkout,
+#                            sitting on `main` — correct behavior is to isolate.
+#     --start-from worktree  the agent is GIVEN its own worktree/workspace already
+#                            — correct behavior is to work in place and NOT create
+#                            a redundant nested one (the don't-double-isolate
+#                            conditional).
+#
 # Modes (mode detection is the core thing `vcs` must get right):
 #   --mode git   plain Git, no .jj. Per-agent isolation via `git worktree`; the
 #                shared integration point is a bare `origin` the agents push to
@@ -36,6 +55,7 @@
 #
 # Usage:
 #   new-sandbox.sh --mode git|jj [--difficulty easy|medium|hard]
+#                  [--task integrate|start] [--start-from main|worktree]
 #                  [--agents N] [--round N] [--workdir DIR]
 #                  [--pr-backed "K K ..."]
 #
@@ -54,6 +74,8 @@ scenario="$here/scenario.py"
 # --- args ------------------------------------------------------------------
 mode=""
 difficulty="medium"
+task="integrate"
+start_from="main"
 agents=""
 round=""
 pr_backed=""
@@ -72,6 +94,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --mode) mode="${2:-}"; shift 2 ;;
     --difficulty) difficulty="${2:-}"; shift 2 ;;
+    --task) task="${2:-}"; shift 2 ;;
+    --start-from) start_from="${2:-}"; shift 2 ;;
     --agents) agents="${2:-}"; shift 2 ;;
     --round) round="${2:-}"; shift 2 ;;
     --pr-backed) pr_backed="${2:-}"; shift 2 ;;
@@ -82,11 +106,25 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$mode" == "git" || "$mode" == "jj" ]] || die "--mode must be git or jj"
+case "$task" in integrate | start) : ;; *) die "--task must be integrate or start" ;; esac
 case "$difficulty" in easy | medium | hard) : ;; *) die "--difficulty must be easy, medium, or hard" ;; esac
 command -v python3 >/dev/null 2>&1 || die "python3 required (drives the deterministic content engine)"
 [[ -f "$scenario" ]] || die "content engine not found: $scenario"
 if [[ "$mode" == "jj" ]] && ! command -v jj >/dev/null 2>&1; then
   die "jj not installed but --mode jj requested"
+fi
+
+# The start task measures a PER-AGENT property (does this agent isolate before
+# starting work), so it is single-agent and difficulty-independent — the work is
+# always the one trivial `easy` edit. Cover tiers/modes/arms by running several
+# start rounds, exactly as the integration side covers its matrix across rounds.
+if [[ "$task" == "start" ]]; then
+  case "$start_from" in main | worktree) : ;; *) die "--start-from must be main or worktree" ;; esac
+  [[ -z "$agents" || "$agents" == "1" ]] || die "--task start is single-agent (isolation is per-agent); omit --agents or pass 1"
+  agents=1
+  [[ "$difficulty" == "easy" ]] || echo "new-sandbox.sh: note: --task start ignores --difficulty (work is always the easy edit); using easy" >&2
+  difficulty="easy"
+  [[ -z "$pr_backed" ]] || { echo "new-sandbox.sh: note: --pr-backed ignored for --task start" >&2; pr_backed=""; }
 fi
 
 # Default agent count scales with difficulty (override with --agents).
@@ -185,12 +223,73 @@ EOF
   echo "$brief"
 }
 
+write_start_brief() {
+  # $1=k  $2=ticket  $3=feature  $4=start path (where the agent begins)  $5=start_from
+  local k="$1" ticket="$2" feature="$3" startpath="$4" from="$5"
+  local brief="$round_dir/briefs/agent-$k.md"
+  local instructions
+  instructions="$(python3 "$scenario" start-instructions --round "$round" --agent "$k")"
+  local context
+  if [[ "$from" == "main" ]]; then
+    context="Your starting point is the repository at:
+
+    $startpath
+
+This repository is **shared**: several teammates are each picking up their own
+ticket on this same machine right now and will be working at the same time. The
+checkout you are looking at sits on the team's mainline."
+  else
+    context="Your starting point is your own working area at:
+
+    $startpath
+
+Your teammates each have their own separate working area on this machine and are
+working on their own tickets at the same time; this one is yours."
+  fi
+  cat >"$brief" <<EOF
+# Ticket $ticket — implement "$feature"
+
+You are picking up a fresh ticket. Nothing is written yet — you author this one
+small change yourself, then land it on the shared \`main\` line using your team's
+standard version-control workflow.
+
+$context
+
+## The change to make
+
+$instructions
+
+When your team labels each person's in-flight work, this ticket's work goes on a
+branch/bookmark named \`agent-$k\`.
+
+## What to do
+
+Using your team's standard version-control workflow from start to finish:
+implement the change above, commit it, get it onto the shared \`main\` so mainline
+history contains it, and do whatever end-of-work tidy-up that guidance calls for.
+Then **stop**.
+
+**Stay disciplined about scope** — this is a version-control exercise:
+
+- Make **only** the one change described above. Do **not** edit, "improve", or
+  reformat any other file or line.
+- Do **not** add or modify tests, and do **not** run the app, a build, a
+  formatter, or any test suite to verify it.
+
+You are measured on a fast, clean change landed the right way — there is no other
+work to do.
+EOF
+  echo "$brief"
+}
+
 # --- build the repo in the requested mode -----------------------------------
 manifest_env="$round_dir/manifest.env"
 {
-  echo "# sourced by check-quality.sh and rm-sandbox.sh"
+  echo "# sourced by check-quality.sh, check-isolation.sh and rm-sandbox.sh"
   echo "MODE=$mode"
   echo "DIFFICULTY=$difficulty"
+  echo "TASK=$task"
+  echo "START_FROM=$start_from"
   echo "ROUND=$round"
   echo "ROUND_DIR=$round_dir"
   echo "REPO=$repo"
@@ -223,20 +322,37 @@ if [[ "$mode" == "git" ]]; then
   git -C "$repo" remote add origin "$bare"
   git -C "$repo" push -q origin main
 
-  for ((k = 1; k <= agents; k++)); do
-    ws="$round_dir/ws-agent-$k"
-    feature="$(feature_for "$k")"
-    git -C "$repo" worktree add -q "$ws" -b "agent-$k" main
-    python3 "$scenario" apply --dir "$ws" --difficulty "$difficulty" --agent "$k" --ticket "VCS-$round-$k"
-    git -C "$ws" add -A
-    git -C "$ws" commit -q -F <(agent_msg "$(slug_for "$k")" "$feature")
-  done
-  # PR-backed agents: publish their branch to the shared origin so it looks like
-  # an open PR head. The agent must KEEP its local agent-K (a remote branch backs
-  # it); every other agent-K is merged-and-orphaned and must be deleted.
-  for k in $pr_backed; do
-    git -C "$repo" push -q origin "agent-$k"
-  done
+  if [[ "$task" == "integrate" ]]; then
+    for ((k = 1; k <= agents; k++)); do
+      ws="$round_dir/ws-agent-$k"
+      feature="$(feature_for "$k")"
+      git -C "$repo" worktree add -q "$ws" -b "agent-$k" main
+      python3 "$scenario" apply --dir "$ws" --difficulty "$difficulty" --agent "$k" --ticket "VCS-$round-$k"
+      git -C "$ws" add -A
+      git -C "$ws" commit -q -F <(agent_msg "$(slug_for "$k")" "$feature")
+    done
+    # PR-backed agents: publish their branch to the shared origin so it looks like
+    # an open PR head. The agent must KEEP its local agent-K (a remote branch backs
+    # it); every other agent-K is merged-and-orphaned and must be deleted.
+    for k in $pr_backed; do
+      git -C "$repo" push -q origin "agent-$k"
+    done
+  else
+    # start task: NO pre-committed work — the agent authors the edit itself.
+    if [[ "$start_from" == "worktree" ]]; then
+      # Hand the agent an isolated worktree on its own branch already (the
+      # don't-double-isolate arm). No commit: the agent does the work here.
+      git -C "$repo" worktree add -q "$round_dir/ws-agent-1" -b "agent-1" main
+      echo "GIVEN_WS=$round_dir/ws-agent-1" >>"$manifest_env"
+      echo "GIVEN_BRANCH=agent-1" >>"$manifest_env"
+    fi
+    # Durable filesystem-isolation baseline: the primary worktree's HEAD reflog
+    # line count right now. If the agent isolates (works in its OWN worktree) this
+    # stays put; if it works in the shared primary checkout it grows. `worktree
+    # add` above does NOT touch the primary's HEAD log, so this is the seed value
+    # in both arms. check-isolation.sh compares against it (teardown-robust).
+    echo "SEED_HEAD_LINES=$(wc -l <"$repo/.git/logs/HEAD" 2>/dev/null | tr -d ' ')" >>"$manifest_env"
+  fi
   echo "SCORE_GITDIR=$bare" >>"$manifest_env"
   echo "SCORE_REF=main" >>"$manifest_env"
   echo "REMOTE_URL=$bare" >>"$manifest_env"
@@ -248,30 +364,63 @@ else
   jj --repository "$repo" bookmark create main -r @ >/dev/null 2>&1
   jj --repository "$repo" new >/dev/null 2>&1 # leave the repo working-copy clean on top of main
 
-  for ((k = 1; k <= agents; k++)); do
-    ws="$round_dir/ws-agent-$k"
-    feature="$(feature_for "$k")"
-    jj --repository "$repo" workspace add --name "agent-$k" -r main "$ws" >/dev/null 2>&1
-    python3 "$scenario" apply --dir "$ws" --difficulty "$difficulty" --agent "$k" --ticket "VCS-$round-$k"
-    # The edit auto-amends this workspace's working-copy commit; message it,
-    # pin it with the agent-K bookmark, then start a clean empty change on top.
-    jj --repository "$ws" describe -m "$(agent_msg "$(slug_for "$k")" "$feature")" >/dev/null 2>&1
-    jj --repository "$ws" bookmark create "agent-$k" -r @ >/dev/null 2>&1
-    jj --repository "$ws" new >/dev/null 2>&1
-  done
+  if [[ "$task" == "integrate" ]]; then
+    for ((k = 1; k <= agents; k++)); do
+      ws="$round_dir/ws-agent-$k"
+      feature="$(feature_for "$k")"
+      jj --repository "$repo" workspace add --name "agent-$k" -r main "$ws" >/dev/null 2>&1
+      python3 "$scenario" apply --dir "$ws" --difficulty "$difficulty" --agent "$k" --ticket "VCS-$round-$k"
+      # The edit auto-amends this workspace's working-copy commit; message it,
+      # pin it with the agent-K bookmark, then start a clean empty change on top.
+      jj --repository "$ws" describe -m "$(agent_msg "$(slug_for "$k")" "$feature")" >/dev/null 2>&1
+      jj --repository "$ws" bookmark create "agent-$k" -r @ >/dev/null 2>&1
+      jj --repository "$ws" new >/dev/null 2>&1
+    done
+    seed_ws="default"
+  else
+    # start task: NO pre-committed work. The durable filesystem-isolation signal
+    # for jj is the op log's `add workspace '<name>'` entries (append-only,
+    # survives `workspace forget`). The seed always adds `default`; in the
+    # worktree arm we also hand the agent one named workspace. check-isolation.sh
+    # flags any workspace-add NOT in SEED_WS as agent-created.
+    seed_ws="default"
+    if [[ "$start_from" == "worktree" ]]; then
+      jj --repository "$repo" workspace add --name "agent-1" -r main "$round_dir/ws-agent-1" >/dev/null 2>&1
+      echo "GIVEN_WS=$round_dir/ws-agent-1" >>"$manifest_env"
+      echo "GIVEN_BRANCH=agent-1" >>"$manifest_env"
+      seed_ws="default agent-1"
+    fi
+  fi
   jj --repository "$repo" git export >/dev/null 2>&1 || true
+  [[ "$task" == "start" ]] && echo "SEED_WS=\"$seed_ws\"" >>"$manifest_env"
   echo "SCORE_GITDIR=$repo/.git" >>"$manifest_env"
   echo "SCORE_REF=main" >>"$manifest_env"
 fi
 
 # --- briefs + tokens --------------------------------------------------------
+# Where each agent BEGINS. integrate: its own pre-made workspace ws-agent-K.
+# start/main: the shared primary checkout (it must isolate itself from there).
+# start/worktree: the one isolated workspace it was handed.
+ws_path_for() {
+  if [[ "$task" == "start" && "$start_from" == "main" ]]; then
+    echo "$repo"
+  else
+    echo "$round_dir/ws-agent-$1"
+  fi
+}
+
 tokens=""
 for ((k = 1; k <= agents; k++)); do
   ticket="VCS-$round-$k"
   tokens="${tokens:+$tokens }$ticket"
-  brief="$(write_brief "$k" "$ticket" "$(feature_for "$k")")"
+  ws_k="$(ws_path_for "$k")"
+  if [[ "$task" == "start" ]]; then
+    brief="$(write_start_brief "$k" "$ticket" "$(feature_for "$k")" "$ws_k" "$start_from")"
+  else
+    brief="$(write_brief "$k" "$ticket" "$(feature_for "$k")")"
+  fi
   {
-    echo "WS_$k=$round_dir/ws-agent-$k"
+    echo "WS_$k=$ws_k"
     echo "BRIEF_$k=$brief"
     echo "TICKET_$k=$ticket"
   } >>"$manifest_env"
@@ -284,20 +433,36 @@ manifest_txt="$round_dir/manifest.txt"
   echo "round     : $round"
   echo "mode      : $mode"
   echo "difficulty: $difficulty"
+  if [[ "$task" == "start" ]]; then echo "task      : start (start-from: $start_from)"; else echo "task      : integrate"; fi
   echo "repo      : $repo"
   echo "integrate : main"
   echo "agents    : $agents"
   echo "pr-backed : ${pr_backed:-<none>}  (these agent-K must be KEPT after merge; the rest deleted)"
   echo "tokens    : $tokens"
   echo ""
-  echo "per-agent (work is PRE-COMMITTED on agent-K; the agent only integrates it):"
-  for ((k = 1; k <= agents; k++)); do
-    echo "  agent-$k  ws=$round_dir/ws-agent-$k  brief=$round_dir/briefs/agent-$k.md  branch/bookmark=agent-$k  ticket=VCS-$round-$k"
-  done
+  if [[ "$task" == "start" ]]; then
+    echo "per-agent (NO pre-committed work — the agent authors one tiny edit and lands it):"
+    for ((k = 1; k <= agents; k++)); do
+      echo "  agent-$k  start=$(ws_path_for "$k")  brief=$round_dir/briefs/agent-$k.md  branch/bookmark=agent-$k  ticket=VCS-$round-$k"
+    done
+  else
+    echo "per-agent (work is PRE-COMMITTED on agent-K; the agent only integrates it):"
+    for ((k = 1; k <= agents; k++)); do
+      echo "  agent-$k  ws=$round_dir/ws-agent-$k  brief=$round_dir/briefs/agent-$k.md  branch/bookmark=agent-$k  ticket=VCS-$round-$k"
+    done
+  fi
 } >"$manifest_txt"
 
 cat "$manifest_txt"
 echo ""
-echo "next: hand each agent its brief + the vcs skill (and ONLY the vcs skill),"
-echo "      have it integrate agent-K onto main in its workspace, then run:"
-echo "      bash \"$here/check-quality.sh\" \"$round_dir\""
+if [[ "$task" == "start" ]]; then
+  echo "next: hand the agent its brief + the vcs skill (and ONLY the vcs skill),"
+  echo "      starting it at the 'start=' path above; have it author + land its"
+  echo "      change on main, then score with BOTH:"
+  echo "        bash \"$here/check-isolation.sh\" \"$round_dir\"   # session-start isolation"
+  echo "        bash \"$here/check-quality.sh\"   \"$round_dir\"   # the change + cleanup landed right"
+else
+  echo "next: hand each agent its brief + the vcs skill (and ONLY the vcs skill),"
+  echo "      have it integrate agent-K onto main in its workspace, then run:"
+  echo "      bash \"$here/check-quality.sh\" \"$round_dir\""
+fi

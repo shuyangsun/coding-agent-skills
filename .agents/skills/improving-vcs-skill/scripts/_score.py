@@ -80,8 +80,24 @@ for rd in rounds:
                 stale_total = int(s[len("STALE_REFS="):])
             except ValueError:
                 stale_total = 0
+    # session-start isolation (start rounds only). check-isolation.sh prints
+    # ISOLATED=pass/fail for a `--task start` round, or ISOLATED=n/a (exit 2) for
+    # an integration round — in which case the metric stays "-" (not measured).
+    _ic, iout, _ie = sh("bash", f"{HERE}/check-isolation.sh", rdir)
+    isolate = "-"
+    for line in iout.splitlines():
+        s = line.strip()
+        if s.startswith("ISOLATED="):
+            v = s[len("ISOLATED="):].strip()
+            isolate = v if v in ("pass", "fail") else "-"
+    iso_note = f", isolated={isolate}" if isolate != "-" else ""
     print(f"\n{'='*78}\n### round {rnum}  {mode}/{diff}  ->  {quality.upper()}  "
-          f"(stale_refs={stale_total})\n{'='*78}")
+          f"(stale_refs={stale_total}{iso_note})\n{'='*78}")
+    if isolate != "-":
+        for line in iout.splitlines():
+            s = line.strip()
+            if s.startswith(("ISOLATED", "ISO_FS", "OVER_ISOLATE", "WORK_LANDED")):
+                print("  " + s)
     # show the non-ok lines (failures) + the RESULT/HYGIENE lines
     for line in out.splitlines():
         s = line.strip()
@@ -102,13 +118,13 @@ for rd in rounds:
            "--difficulty", diff, "--tier", a["tier"], "--env", env_for.get(mode, "-"),
            "--total", str(r.get("total_seconds", 0) or 0),
            "--conflict", str(r.get("conflict_seconds", 0) or 0),
-           "--tokens", str(tokens), "--stale", str(stale),
+           "--tokens", str(tokens), "--stale", str(stale), "--isolate", isolate,
            "--retries", str(r.get("retries", 0) or 0),
            "--stalls", str(r.get("stalls", 0) or 0),
            "--quality", quality, "--notes", note)
         print(f"  - a{a['k']} {a['tier']:<5} {a['model']:<7} detect={mode_ok:<10} "
               f"tot={r.get('total_seconds')}s cnf={r.get('conflict_seconds')}s "
-              f"tok={tokens} stale={stale} retr={r.get('retries')} stall={r.get('stalls')} "
+              f"tok={tokens} stale={stale} iso={isolate} retr={r.get('retries')} stall={r.get('stalls')} "
               f"pub={r.get('published')}")
 
 print(f"\n{'#'*78}\n# SCOREBOARD\n{'#'*78}")

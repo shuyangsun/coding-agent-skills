@@ -18,8 +18,8 @@
 #   record-metrics.sh --round N --agent LABEL --mode git|jj \
 #     [--difficulty easy|medium|hard] [--tier large|mid|small] [--env ENV] \
 #     [--total SECONDS] [--conflict SECONDS] [--tokens N] [--stale N] \
-#     [--retries N] [--stalls N] [--quality pass|fail|partial] \
-#     [--notes "..."] [--file PATH]
+#     [--isolate pass|fail|-] [--retries N] [--stalls N] \
+#     [--quality pass|fail|partial] [--notes "..."] [--file PATH]
 #
 # --tokens  orchestrator-measured OUTPUT tokens the sub-agent spent on this run
 #           (a budget.spent() delta; lower = more efficient use of `vcs`). Exact
@@ -28,13 +28,17 @@
 # --stale   surviving merged `agent-*` refs the agent failed to delete (the
 #           branch/bookmark hygiene metric from check-quality.sh's STALE_REFS).
 #           0 = clean; PR-backed refs are excluded upstream.
+# --isolate session-START isolation verdict for a `--task start` round, from
+#           check-isolation.sh's ISOLATED line (pass = the agent carved out its
+#           own worktree/workspace before working / didn't over-isolate). Use the
+#           default `-` for integration rounds, where it isn't measured.
 #
 # Default log: $VCS_HARNESS_DIR/metrics.tsv (same work area new-sandbox.sh uses),
 # so it persists across rounds for scoreboard.sh to compare.
 set -euo pipefail
 
 round="" agent="" mode="" difficulty="-" tier="-" env="-"
-total=0 conflict=0 tokens=0 stale=0 retries=0 stalls=0 quality="-" notes="-"
+total=0 conflict=0 tokens=0 stale=0 isolate="-" retries=0 stalls=0 quality="-" notes="-"
 file="${VCS_HARNESS_DIR:-${TMPDIR:-/tmp}/vcs-harness}/metrics.tsv"
 
 die() {
@@ -55,6 +59,7 @@ while [[ $# -gt 0 ]]; do
     --conflict) conflict="$2"; shift 2 ;;
     --tokens) tokens="$2"; shift 2 ;;
     --stale) stale="$2"; shift 2 ;;
+    --isolate) isolate="$2"; shift 2 ;;
     --retries) retries="$2"; shift 2 ;;
     --stalls) stalls="$2"; shift 2 ;;
     --quality) quality="$2"; shift 2 ;;
@@ -71,16 +76,17 @@ done
 [[ -n "$round" && -n "$agent" && -n "$mode" ]] || die "--round, --agent, --mode are required"
 [[ "$mode" == "git" || "$mode" == "jj" ]] || die "--mode must be git or jj"
 case "$difficulty" in easy | medium | hard | -) : ;; *) die "--difficulty must be easy, medium, or hard" ;; esac
+case "$isolate" in pass | fail | partial | -) : ;; *) die "--isolate must be pass, fail, or -" ;; esac
 for n in "$round" "$total" "$conflict" "$tokens" "$stale" "$retries" "$stalls"; do
   [[ "$n" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "numeric field expected, got: $n"
 done
 
 mkdir -p "$(dirname "$file")"
 if [[ ! -f "$file" ]]; then
-  printf 'round\tagent\tmode\tdifficulty\ttier\tenv\ttotal_s\tconflict_s\ttokens\tstale_refs\tretries\tstalls\tquality\tnotes\n' >"$file"
+  printf 'round\tagent\tmode\tdifficulty\ttier\tenv\ttotal_s\tconflict_s\ttokens\tstale_refs\tisolate\tretries\tstalls\tquality\tnotes\n' >"$file"
 fi
-printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$round" "$(clean "$agent")" "$mode" "$difficulty" "$(clean "$tier")" "$(clean "$env")" \
-  "$total" "$conflict" "$tokens" "$stale" "$retries" "$stalls" "$quality" "$(clean "$notes")" >>"$file"
+  "$total" "$conflict" "$tokens" "$stale" "$isolate" "$retries" "$stalls" "$quality" "$(clean "$notes")" >>"$file"
 
-echo "recorded round $round / $agent ($mode, ${difficulty}, tier=${tier}) -> $file"
+echo "recorded round $round / $agent ($mode, ${difficulty}, tier=${tier}, iso=${isolate}) -> $file"

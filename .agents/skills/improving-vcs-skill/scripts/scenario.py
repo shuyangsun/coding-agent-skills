@@ -25,13 +25,20 @@ Difficulty ladder (realistic, escalating conflict pressure):
            overlapping, multi-file conflicts with many parallel agents.
 
 Subcommands:
-  seed   --repo DIR --difficulty D
-  apply  --dir DIR  --difficulty D --agent K --ticket T
-  spec   --difficulty D --agents N --round R [--out FILE]
-  check  --dir DIR  --spec FILE
+  seed                --repo DIR --difficulty D
+  apply               --dir DIR  --difficulty D --agent K --ticket T
+  spec                --difficulty D --agents N --round R [--out FILE]
+  check               --dir DIR  --spec FILE
+  start-instructions  --round R [--agent K]
 
 `apply` and `seed` produce files; `spec` emits a machine-readable plan;
 `check` reads an integrated working tree and verifies it against the plan.
+`start-instructions` prints the exact, fully-specified change a *start*-task
+agent must author by hand (so the brief embeds it verbatim) — same content the
+`easy` `apply`/`spec` path expects, so the SAME oracle scores the result. The
+start task tests session-START isolation (does the agent carve out its own
+worktree/workspace before doing new work), not conflict resolution, so the work
+itself is a single trivial, mechanical edit with no coding judgment.
 """
 from __future__ import annotations
 
@@ -272,6 +279,38 @@ def cmd_apply(args) -> int:
     m["ticket"] = args.ticket
     for region in agent_touches(args.difficulty, k):
         APPLIERS[region](args.dir, m)
+    return 0
+
+
+def cmd_start_instructions(args) -> int:
+    """Print the exact change a start-task agent must make (for the brief).
+
+    This is the `easy` contribution for one agent — a CHANGELOG line plus a
+    per-agent notes file — written out as literal, copy-exact instructions so
+    the agent does zero coding judgment. The matching `spec --difficulty easy
+    --agents 1` oracle then scores the integrated result, so what the brief asks
+    for and what `check` verifies can never drift.
+    """
+    k = args.agent
+    m = agent_meta(k, args.round)
+    m["ticket"] = f"VCS-{args.round}-{k}"
+    notes_rel, notes_body = notes_file(m)
+    print(
+        "Make exactly this one change — copy it verbatim, change nothing else:\n"
+        "\n"
+        f"1. In `docs/CHANGELOG.md`, directly under the `## Unreleased` heading\n"
+        f"   (as the FIRST item of that list, above the existing entries), insert\n"
+        f"   this line:\n"
+        f"\n"
+        f"       {changelog_line(m)}\n"
+        f"\n"
+        f"2. Create a new file `{notes_rel}` with exactly this content:\n"
+        f"\n"
+        + "".join(f"       {ln}\n" for ln in notes_body.splitlines())
+        + "\n"
+        "Do not touch any other file, and do not alter any other line. That one\n"
+        "two-part edit is the entire feature for this ticket."
+    )
     return 0
 
 
@@ -589,6 +628,11 @@ def main() -> int:
     ck.add_argument("--dir", required=True)
     ck.add_argument("--spec", required=True)
     ck.set_defaults(func=cmd_check)
+
+    si = sub.add_parser("start-instructions")
+    si.add_argument("--round", type=int, required=True)
+    si.add_argument("--agent", type=int, default=1)
+    si.set_defaults(func=cmd_start_instructions)
 
     args = p.parse_args()
     return args.func(args)

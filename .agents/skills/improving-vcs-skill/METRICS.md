@@ -42,7 +42,7 @@ numbers reflect `vcs`'s conflict etiquette alone, not the agent's coding ability
   `budget.spent()`, whose shared, batched counter mis-attributes per agent (a
   probe measured 1578 vs the transcript's true 4 for the same call). Because the
   source is the per-agent transcript, attribution is **exact in both serialized
-  and concurrent rounds**. Caveat: this counts *output* tokens only — it reflects
+  and concurrent rounds**. Caveat: this counts _output_ tokens only — it reflects
   agent effort, not `vcs`'s own size (the input cost of re-reading a bloated skill
   isn't captured here; keep `vcs` compact for that, per [LOOP.md](LOOP.md)).
 
@@ -53,11 +53,31 @@ numbers reflect `vcs`'s conflict etiquette alone, not the agent's coding ability
   the agent delete it (jj `bookmark delete`; git detach + `branch -d`) **unless it
   backs an open remote PR**, in which case it is kept on purpose. `check-quality.sh`
   reports `STALE_REFS=N` (and `STALE_LIST=` naming them) — the count of merged refs
-  left behind that should have been deleted, *excluding* the PR-backed allowlist;
+  left behind that should have been deleted, _excluding_ the PR-backed allowlist;
   it also fails the hygiene line if a PR-backed ref was wrongly deleted. This is
   reported **separately** from the correctness verdict so resolution quality and
   repo hygiene stay distinguishable, and it is attributed **per agent** so the
   by-tier `stale` column shows whether a tier (e.g. `small`) forgets to clean up.
+
+**Session-start isolation — `ISOLATED` (start rounds only; must be pass):**
+
+- **Did the agent isolate before doing new work?** A `--task start` round drops an
+  agent into a _shared_ repo and asks it to author one tiny change and land it on
+  `main`. For co-located agents on one machine not to trample each other, the
+  agent must do its work in its **own** worktree (git) / workspace (jj) on its own
+  branch/bookmark — not in the shared primary checkout. `check-isolation.sh`
+  reports `ISOLATED=pass/fail` (plus `ISO_FS` / `OVER_ISOLATE` detail), measured
+  from **durable** signals that survive the agent's own cleanup: git's primary
+  `HEAD` reflog line-count (unchanged ⇒ the agent worked elsewhere) and jj's
+  append-only op-log `add workspace` entries. Two arms: `--start-from main` (the
+  agent must isolate) and `--start-from worktree` (it was already given an
+  isolated area, so it must **not** create a redundant nested one — the
+  don't-double-isolate conditional). Reported **separately** from correctness and
+  hygiene — "did the work, but in the shared checkout" is an isolation miss, not a
+  correctness one — and **separately** from `check-quality.sh`, which still scores
+  that the change and the branch cleanup landed right on a start round. This is
+  the START bookend to the hygiene metric's FINISH: isolate cleanly, then clean up
+  cleanly.
 
 **Quality (must hold or improve):** the objective `check-quality.sh` verdict —
 mode integrity, no markers, no unresolved conflict, no lost work, and the
@@ -80,8 +100,11 @@ for the largest model on the easiest scenario.
    retries, stalls, and the effectiveness narrative.
 3. `check-quality.sh <round-dir>` → the correctness verdict (pass/fail + reasons)
    **plus** the hygiene line `STALE_REFS=N` / `STALE_LIST=…` (reported separately).
+   For a `--task start` round, also `check-isolation.sh <round-dir>` → the
+   `ISOLATED=pass/fail` session-start verdict (reported separately again).
 4. `record-metrics.sh` one row per agent (with `--tier`, `--difficulty`, plus
-   `--tokens` and `--stale`); `scoreboard.sh` to compare rounds and tiers.
+   `--tokens` and `--stale`, and `--isolate` on start rounds); `scoreboard.sh` to
+   compare rounds and tiers.
 
 ## Structured sub-agent report (paste this into each sub-agent prompt)
 
@@ -101,10 +124,14 @@ mishandled:      <any conflict you suspect you resolved wrong, or "none">
 ```
 
 The agent's self-reported fields are inputs; trust `check-quality.sh` over the
-agent for whether the result is actually correct. **Token usage and stale-ref
-count are deliberately absent from this report** — both are measured by the
-orchestrator (`budget.spent()` delta) and the oracle (`check-quality.sh`), because
-an agent can neither count its own tokens nor be trusted to grade its own cleanup.
+agent for whether the result is actually correct. **Token usage, stale-ref count,
+and the isolation verdict are deliberately absent from this report** — they're
+measured by the orchestrator (transcript output tokens) and the oracles
+(`check-quality.sh`, `check-isolation.sh`), because an agent can neither count its
+own tokens nor be trusted to grade its own cleanup or isolation. (`tier` appears
+in the template for **manual** runs, where you fill it from the cell you're
+standing in; the bundled workflow runners instead set it from the orchestrator and
+omit it from their `REPORT_SCHEMA`, so a runner-driven agent never reports it.)
 
 ## Recording and reading the scoreboard
 
@@ -115,6 +142,11 @@ bash <skill-dir>/scripts/record-metrics.sh --round 1 --agent agent-1 --mode jj \
   --total 180 --conflict 55 --tokens 24000 --stale 0 --retries 1 --stalls 0 \
   --quality pass
 
+# a START round adds the session-start isolation verdict (single agent)
+bash <skill-dir>/scripts/record-metrics.sh --round 9 --agent agent-1 --mode git \
+  --difficulty easy --tier small --env local-cli \
+  --total 40 --tokens 2600 --stale 0 --isolate pass --quality pass
+
 # compare all rounds AND tiers
 bash <skill-dir>/scripts/scoreboard.sh
 ```
@@ -122,12 +154,13 @@ bash <skill-dir>/scripts/scoreboard.sh
 `scoreboard.sh` prints three views:
 
 1. **By round** — agent count, pass%, `wall(max)` and `mean_tot`, `conflict(max)`
-   and `mean_cnf`, `mean_tok`, `stale`, retries/stalls, with the round-over-round
-   delta on the two headline costs. **Negative delta = faster = the direction you
-   want; `stale` should be 0.**
-2. **By model tier** — pass% and the same costs (incl. `mean_tok` and `stale`) per
-   tier, so you can see whether `vcs` works for `small` and `mid` or only `large`,
-   and whether a tier forgets to clean up its branch.
+   and `mean_cnf`, `mean_tok`, `stale`, `iso`, retries/stalls, with the
+   round-over-round delta on the two headline costs. **Negative delta = faster =
+   the direction you want; `stale` and `iso` should be 0** (`iso` shows `-` on
+   integration rounds, where isolation isn't measured).
+2. **By model tier** — pass% and the same costs (incl. `mean_tok`, `stale`, and
+   `iso`) per tier, so you can see whether `vcs` works for `small` and `mid` or
+   only `large`, and whether a tier forgets to isolate or to clean up its branch.
 3. **Difficulty × tier pass-rate matrix** — pinpoints exactly where things break
    (e.g. `small` passes `easy` but fails `hard`), which tells you what to fix next.
 
@@ -151,11 +184,17 @@ and across **model tiers**:
    modes and every tier — each agent deleted its merged `agent-K` ref, and any
    PR-backed ref was correctly kept. A merged ref left behind is a hygiene failure
    even when the resolution was perfect.
-7. **Token usage is low and stable (or trending down)**: `mean_tok` doesn't
+7. **Session-start isolation holds** (start rounds): every `--task start` agent
+   `ISOLATED=pass` — it carved out its own worktree/workspace before doing new
+   work (`--start-from main`) and did **not** create a redundant nested one when
+   already isolated (`--start-from worktree`), in both modes and every tier. The
+   `iso` column is **0** (no failures). This is the front bookend of "co-located
+   agents don't interfere"; the hygiene metric is the back one.
+8. **Token usage is low and stable (or trending down)**: `mean_tok` doesn't
    regress as `vcs` changes — a revision that resolves correctly but balloons the
    tokens an agent burns hasn't really improved the skill. Watch it per tier
    (smaller models thrash most when guidance is unclear).
-8. **No tier left behind**: the by-tier view and the difficulty×tier matrix show
+9. **No tier left behind**: the by-tier view and the difficulty×tier matrix show
    `small` and `mid` clearing the bar too — not just `large` — on quality, speed,
    hygiene, **and** tokens. A revision that only helps the largest model has not
    met the bar.

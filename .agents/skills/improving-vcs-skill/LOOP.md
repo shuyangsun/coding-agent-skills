@@ -86,6 +86,38 @@ and **model tier** so a few rounds sample the whole space ([MATRIX.md](MATRIX.md
 9. **Tear down** finished rounds with `rm-sandbox.sh <round-dir>` (or `--all` at
    the end). Sandboxes are disposable; the metrics log persists for comparison.
 
+## Start rounds (session-start isolation)
+
+The procedure above drives `--task integrate` rounds (land pre-committed work,
+resolve conflicts). The symmetric front bookend is `--task start`, which measures
+whether an agent **isolates before doing new work** so co-located agents on one
+machine don't interfere ([SCENARIOS.md](SCENARIOS.md)). Run these alongside
+integration rounds; they're single-agent, so cover the space by repetition.
+
+1. **Provision.** `new-sandbox.sh --mode <git|jj> --task start --start-from
+<main|worktree>`. `main` = the agent begins in the shared primary checkout and
+   must isolate; `worktree` = it's handed its own worktree/workspace and must
+   **not** create a redundant nested one. (Difficulty is fixed to the `easy` edit;
+   the round is single-agent.)
+2. **Brief & spawn one sub-agent**, exactly as in step 2 above — only `vcs` + its
+   brief + its **start** path (the `start=` line in the manifest). Withhold the
+   harness, the mode, and the fact that isolation is under test. The brief asks
+   for one tiny, fully-specified edit landed on `main` — the isolation decision
+   must come from `vcs` alone.
+3. **Score with BOTH** `check-isolation.sh <round-dir>` (the `ISOLATED=pass/fail`
+   session-start verdict) **and** `check-quality.sh <round-dir>` (that the change
+   and the branch cleanup landed right — start rounds carry the hygiene metric
+   too). Both report **separately**, so isolation, correctness, and cleanup stay
+   distinguishable.
+4. **Record** with `record-metrics.sh … --isolate <pass|fail>` and read the `iso`
+   column on the scoreboard (want 0; `-` on integration rounds).
+
+`vcs` has no isolation guidance yet, so baseline start rounds will mostly fail —
+that's the point. When you iterate, add the rule to `vcs` (isolate into your own
+worktree/workspace + branch/bookmark before new work on a shared repo; if you're
+already in one, work in place) and re-measure `iso` round-over-round, just like
+the cleanup rule was driven by `stale`.
+
 ## What to change in `vcs` (and what not to)
 
 Drive `vcs` toward the properties in the kick-start prompt, but only via changes
