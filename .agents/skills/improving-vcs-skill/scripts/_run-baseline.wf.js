@@ -37,9 +37,11 @@ focused on integration quality:
 - Do **not** run the app, a build, formatters, or any test suite to verify it.
 - Do **not** amend the contents of your committed change.
 
-Resolve the conflicts correctly and **stop** as soon as your work is on \`main\`
-with no markers. You are measured on a fast, correct conflict resolution
-*immediately* after integrating — there is no work to do afterward.`
+Follow your version-control guidance all the way through to a clean finished
+state — integrate, resolve every conflict by union, publish onto \`main\`, and do
+whatever end-of-integration tidy-up that guidance calls for — then **stop**. You
+are measured on a fast, correct integration; there is no coding work to do
+afterward.`
 }
 
 const REPORT_SCHEMA = {
@@ -86,6 +88,10 @@ phase('Integrate')
 // Each round = a serial chain (later agents meet earlier agents' conflicts).
 // Rounds run concurrently (independent sandboxes). parallel() is the barrier
 // that collects all rounds; within a thunk we await agents one-by-one.
+// Per-agent OUTPUT tokens are NOT measured here: budget.spent() is a shared,
+// batched counter that mis-attributes per agent. _score.py instead reads each
+// agent's transcript JSONL (exact output_tokens, mapped by its ws-agent path),
+// which is concurrency-independent — so this runner needs no token plumbing.
 const rounds = await parallel(A.rounds.map((rd) => async () => {
   const reports = []
   const n = rd.tiers.length

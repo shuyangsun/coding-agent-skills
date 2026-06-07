@@ -26,10 +26,12 @@ fast. So the harness removes coding-ability variance entirely:
   sub-agent **writes no code**; its sole job is to integrate `agent-K` onto the
   shared `main`, resolving the conflicts that arise because teammates touched
   the same files and lines.
-- Sub-agents are told **not to do any work after integrating** — no new code, no
-  tests, no running the app, no "make it work" verification. We measure the
-  quality and speed of the conflict resolution **immediately** after the
+- Sub-agents are told **not to do any coding work after integrating** — no new
+  code, no tests, no running the app, no "make it work" verification. We measure
+  the quality and speed of the conflict resolution **immediately** after the
   merge/rebase, because that — not downstream patching — is what `vcs` governs.
+  The one allowed finish step is the VCS tidy-up `vcs` prescribes (deleting the
+  merged `agent-K` branch/bookmark), which has its own hygiene metric.
 - Because the inputs are deterministic, the **correct merged result is
   deterministic too**, so `check-quality.sh` scores resolution quality
   objectively (union preserved, tie-break value correct, files still parse,
@@ -73,8 +75,9 @@ where mode integrity broke. **Verify this holds — never assert it.**
 3. **Run** them: each resolves conflicts, publishes, **stops**, and returns a
    structured report.
 4. **Measure** with `check-quality.sh` (objective pass/fail incl. the resolution
-   oracle) and `record-metrics.sh` / `scoreboard.sh` (speed + conflict cost,
-   broken down by round and by tier) — [METRICS.md](METRICS.md).
+   oracle, plus the `STALE_REFS` hygiene line) and `record-metrics.sh` /
+   `scoreboard.sh` (speed, conflict cost, **output tokens**, and **stale-ref
+   hygiene**, broken down by round and by tier) — [METRICS.md](METRICS.md).
 5. **Revise** `vcs` (its `SKILL.md`, referenced files, helper scripts, `COMMITS.md`)
    to fix what stalled, then **re-run and re-measure**. Keep changes that improve
    the numbers; revert changes that don't, or that buy speed with botched merges.
@@ -92,10 +95,10 @@ for jj-mode rounds.
 | Script              | Purpose                                                                                                          |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `new-sandbox.sh`    | Provision one round for a mode + difficulty: fixtures, pre-committed per-agent work, `main`, integration briefs. |
-| `check-quality.sh`  | Objectively score an integrated round: mode integrity, no markers/unresolved, no lost work, correct resolution.  |
+| `check-quality.sh`  | Objectively score an integrated round: mode integrity, no markers/unresolved, no lost work, correct resolution, **+ branch/bookmark hygiene** (`STALE_REFS`). |
 | `scenario.py`       | Deterministic content engine: seeds fixtures, applies each agent's diff, emits the plan, runs the oracle.        |
-| `record-metrics.sh` | Append one agent's measurements (time, conflict time, retries, quality, **tier**, **difficulty**) to the log.    |
-| `scoreboard.sh`     | Aggregate the log by round (trend) **and by model tier** (incl. a difficulty×tier pass-rate matrix).             |
+| `record-metrics.sh` | Append one agent's measurements (time, conflict time, **tokens**, **stale refs**, retries, quality, **tier**, **difficulty**) to the log. |
+| `scoreboard.sh`     | Aggregate the log by round (trend) **and by model tier** (incl. `mean_tok`, `stale`, and a difficulty×tier pass-rate matrix). |
 | `rm-sandbox.sh`     | Tear down a round or the whole work area (guarded to the harness work area only).                                |
 
 Run `bash <skill-dir>/scripts/<name>.sh --help` for usage. Full round procedure,

@@ -77,6 +77,12 @@ work" effort is exactly the coding-ability variance we are removing. The oracle'
 "untouched files must equal baseline" check turns that instruction into an
 objective signal — an agent that wandered off and edited unrelated code fails it.
 
+The **one** post-integration action the brief leaves room for is the VCS tidy-up
+`vcs` itself prescribes — deleting the now-merged `agent-K` branch/bookmark
+(unless it backs an open PR). That's version-control hygiene, not coding, and it
+has its own metric (next section), so the brief says "finish per your guidance,
+then stop" rather than "stop the instant your work is on `main`".
+
 ## How quality is judged objectively
 
 `check-quality.sh` inspects the integrated `main` and combines VCS-level checks
@@ -100,6 +106,12 @@ round's `spec.json`):
 A round PASSes only if all hold. This is a strong, order-independent oracle: the
 correct union is the same no matter what order agents integrated in, so it scores
 serialized and concurrent rounds alike, across every model tier.
+
+- **Branch/bookmark hygiene** (reported alongside, not folded into PASS) — after
+  a clean merge each `agent-K` ref is redundant and should be deleted unless it
+  backs an open PR; `check-quality.sh` prints `STALE_REFS=N` for the merged refs
+  left behind. Kept separate so a perfect resolution that forgot to clean up is
+  visibly a *hygiene* miss, not a *correctness* one. See [METRICS.md](METRICS.md).
 
 ## Hazards these scenarios surface (watch for them)
 

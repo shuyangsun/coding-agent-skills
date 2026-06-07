@@ -30,8 +30,10 @@ To get your committed work onto a shared `main` — and pull in teammates' work
 that landed first — follow **[INTEGRATE.md](INTEGRATE.md)**. It has the exact
 integrate-and-publish steps for each mode, the conflict etiquette (union every
 additive change; keep the higher value for a single-valued field; leave no
-markers), and the jj rule that **no conflicted commit may remain in `main`'s
-history** before you advance the bookmark.
+markers), the jj rule that **no conflicted commit may remain in `main`'s
+history** before you advance the bookmark, and the final tidy-up — **delete your
+merged branch/bookmark** (unless it backs an open PR) so it doesn't linger as a
+stale ref.
 
 ## 3. Write the commit message
 

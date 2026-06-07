@@ -54,14 +54,21 @@ and **model tier** so a few rounds sample the whole space ([MATRIX.md](MATRIX.md
    conflict, every sentinel present, and the **resolution oracle** green (union
    preserved with no dups/loss, tie-break value correct, structured files still
    parse, untouched files byte-identical to baseline). That last clause also
-   catches an agent that did forbidden "extra work".
+   catches an agent that did forbidden "extra work". It also prints, **separately
+   from that verdict**, the branch/bookmark **hygiene** metric (`STALE_REFS=N` —
+   merged `agent-K` refs the agent failed to delete, excluding any `--pr-backed`
+   ones); the exit bar wants this at 0.
 
 6. **Record + compare.** For each agent, `record-metrics.sh` the time/conflict/
-   retry numbers, the quality verdict, **and `--tier` / `--difficulty`**; then
+   retry numbers, the quality verdict, the **`--tokens`** (output-token) and
+   **`--stale`** (hygiene) counts, **and `--tier` / `--difficulty`**; then
    `scoreboard.sh` to see this round against prior rounds **and** the per-tier
    breakdown. Headline costs: **batch wall-clock** and, above all,
    **conflict-resolution time** — watch their round-over-round deltas and whether
-   any tier or difficulty×tier cell lags.
+   any tier or difficulty×tier cell lags. `stale` must be 0; `mean_tok` must not
+   balloon. (When driven by the bundled runners, `_score.py` fills `--stale` from
+   the oracle and `--tokens` from each agent's transcript JSONL — pass the
+   workflow's transcript dir as `_score.py`'s third argument.)
 
 7. **Diagnose, then revise `vcs`.** Read the narratives _through the lens of the
    numbers_: find what actually cost time or caused a `check-quality` failure
@@ -133,5 +140,9 @@ When done, report back exactly in this format:
 <PASTE THE STRUCTURED REPORT TEMPLATE FROM METRICS.md>
 ```
 
-The brief itself already forbids writing code, adding tests, or running the app
-to "verify" — the test is the integration and conflict resolution, nothing after.
+The brief forbids writing code, adding tests, or running the app to "verify" —
+the test is the integration and conflict resolution. It does **not** forbid the
+end-of-integration **tidy-up** `vcs` calls for (deleting the merged branch/
+bookmark); that step is part of a clean finish and is measured by the hygiene
+metric, so leave room for it rather than telling the agent to stop the instant
+its work hits `main`.

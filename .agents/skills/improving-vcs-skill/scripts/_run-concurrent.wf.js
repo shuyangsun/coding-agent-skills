@@ -37,9 +37,11 @@ focused on integration quality:
 - Do **not** run the app, a build, formatters, or any test suite to verify it.
 - Do **not** amend the contents of your committed change.
 
-Resolve the conflicts correctly and **stop** as soon as your work is on \`main\`
-with no markers. You are measured on a fast, correct conflict resolution
-*immediately* after integrating — there is no work to do afterward.`
+Follow your version-control guidance all the way through to a clean finished
+state — integrate, resolve every conflict by union, publish onto \`main\`, and do
+whatever end-of-integration tidy-up that guidance calls for — then **stop**. You
+are measured on a fast, correct integration; there is no coding work to do
+afterward.`
 }
 
 const REPORT_SCHEMA = {
@@ -97,6 +99,10 @@ function runAgent(rd, k) {
     label, phase: 'Integrate', model: MODEL[tier], schema: REPORT_SCHEMA, agentType: 'general-purpose',
   }).then((report) => ({ round: rd.round, mode: rd.mode, difficulty: rd.difficulty, k, tier, model: MODEL[tier], label, report }))
 }
+// Rounds run concurrently; agents WITHIN a round run concurrently too (the
+// contention test). Per-agent OUTPUT tokens come from each agent's transcript
+// JSONL in _score.py (exact, mapped by ws-agent path) — concurrency-independent,
+// so no budget plumbing here.
 const rounds = await parallel(A.rounds.map((rd) => async () => {
   const n = rd.tiers.length
   const reports = await parallel(

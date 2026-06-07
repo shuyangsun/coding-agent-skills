@@ -37,6 +37,12 @@
 # Usage:
 #   new-sandbox.sh --mode git|jj [--difficulty easy|medium|hard]
 #                  [--agents N] [--round N] [--workdir DIR]
+#                  [--pr-backed "K K ..."]
+#
+# --pr-backed lists agent numbers whose branch backs an OPEN remote PR, so its
+# local ref must be KEPT after merge (the hygiene metric's carve-out). Git mode
+# only: each listed agent-K is pushed to the shared origin to model the PR head;
+# jj sandboxes are local (no remote) so the flag is ignored there.
 #
 # Prints a manifest (also written to <round>/manifest.txt and a shell-sourceable
 # <round>/manifest.env that check-quality.sh / rm-sandbox.sh consume).
@@ -50,6 +56,7 @@ mode=""
 difficulty="medium"
 agents=""
 round=""
+pr_backed=""
 workdir="${VCS_HARNESS_DIR:-${TMPDIR:-/tmp}/vcs-harness}"
 
 die() {
@@ -67,6 +74,7 @@ while [[ $# -gt 0 ]]; do
     --difficulty) difficulty="${2:-}"; shift 2 ;;
     --agents) agents="${2:-}"; shift 2 ;;
     --round) round="${2:-}"; shift 2 ;;
+    --pr-backed) pr_backed="${2:-}"; shift 2 ;;
     --workdir) workdir="${2:-}"; shift 2 ;;
     -h | --help) usage 0 ;;
     *) die "unknown arg: $1 (try --help)" ;;
@@ -86,6 +94,19 @@ if [[ -z "$agents" ]]; then
   case "$difficulty" in easy) agents=3 ;; medium) agents=4 ;; hard) agents=6 ;; esac
 fi
 [[ "$agents" =~ ^[1-9][0-9]*$ ]] || die "--agents must be a positive integer"
+
+# Validate --pr-backed (space-separated agent numbers within range). jj is local
+# (no remote PR concept here), so the flag is ignored in jj mode.
+if [[ -n "$pr_backed" ]]; then
+  for k in $pr_backed; do
+    [[ "$k" =~ ^[1-9][0-9]*$ ]] || die "--pr-backed values must be positive integers (got '$k')"
+    ((k <= agents)) || die "--pr-backed agent $k exceeds --agents $agents"
+  done
+  if [[ "$mode" == "jj" ]]; then
+    echo "new-sandbox.sh: note: --pr-backed ignored in jj mode (local repo, no remote PR)" >&2
+    pr_backed=""
+  fi
+fi
 
 # Neutral sandbox identity (NOT a real person); also feeds the vcs skill's
 # Author-trailer logic, which reads user.name / user.email from the repo.
@@ -155,9 +176,11 @@ focused on integration quality:
 - Do **not** run the app, a build, formatters, or any test suite to verify it.
 - Do **not** amend the contents of your committed change.
 
-Resolve the conflicts correctly and **stop** as soon as your work is on \`main\`
-with no markers. You are measured on a fast, correct conflict resolution
-*immediately* after integrating — there is no work to do afterward.
+Follow your version-control guidance all the way through to a clean finished
+state — integrate, resolve every conflict by union, publish onto \`main\`, and do
+whatever end-of-integration tidy-up that guidance calls for — then **stop**. You
+are measured on a fast, correct integration; there is no coding work to do
+afterward.
 EOF
   echo "$brief"
 }
@@ -173,6 +196,7 @@ manifest_env="$round_dir/manifest.env"
   echo "REPO=$repo"
   echo "INTEGRATION_REF=main"
   echo "AGENTS=$agents"
+  echo "PR_BACKED=\"$pr_backed\""
   echo "SPEC=$round_dir/spec.json"
 } >"$manifest_env"
 
@@ -206,6 +230,12 @@ if [[ "$mode" == "git" ]]; then
     python3 "$scenario" apply --dir "$ws" --difficulty "$difficulty" --agent "$k" --ticket "VCS-$round-$k"
     git -C "$ws" add -A
     git -C "$ws" commit -q -F <(agent_msg "$(slug_for "$k")" "$feature")
+  done
+  # PR-backed agents: publish their branch to the shared origin so it looks like
+  # an open PR head. The agent must KEEP its local agent-K (a remote branch backs
+  # it); every other agent-K is merged-and-orphaned and must be deleted.
+  for k in $pr_backed; do
+    git -C "$repo" push -q origin "agent-$k"
   done
   echo "SCORE_GITDIR=$bare" >>"$manifest_env"
   echo "SCORE_REF=main" >>"$manifest_env"
@@ -257,6 +287,7 @@ manifest_txt="$round_dir/manifest.txt"
   echo "repo      : $repo"
   echo "integrate : main"
   echo "agents    : $agents"
+  echo "pr-backed : ${pr_backed:-<none>}  (these agent-K must be KEPT after merge; the rest deleted)"
   echo "tokens    : $tokens"
   echo ""
   echo "per-agent (work is PRE-COMMITTED on agent-K; the agent only integrates it):"

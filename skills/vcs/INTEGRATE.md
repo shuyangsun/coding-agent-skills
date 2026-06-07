@@ -53,6 +53,10 @@ often checked out elsewhere and the checkout fails. Publish by pushing `HEAD:mai
    push again. Repeat until it lands.
 6. **Verify:** `git show origin/main:docs/CHANGELOG.md` (or `git log origin/main`)
    shows your change *and* the teammates' already there, with no markers.
+7. **Finish:** delete `agent-K` *unless a remote branch backs it* — if
+   `git ls-remote --heads origin agent-K` prints nothing, `git switch --detach &&
+   git branch -d agent-K`; if it prints a ref, keep it (open PR). Details in
+   [Finish](#finish-delete-the-merged-branch-then-stop).
 
 ## jj mode (Jujutsu, usually on a Git backend)
 
@@ -78,9 +82,22 @@ conflict — you must resolve it *in the commit*, not paper over it in a child.
    (it must print nothing). A clean working tree on top of a still-conflicted
    commit is the #1 jj integration failure — fix the conflict *in* the commit
    (step 3), don't leave it behind.
-5. Advance `main` to the resolved merge: `jj bookmark set main -r @`
-   (use `--allow-backwards` only if jj asks and you've confirmed it's correct).
-   Then `jj new` to leave yourself a clean empty working copy on top.
+5. Advance `main` to your resolved merge — **but first re-check that `main` didn't
+   move under you.** With no server to reject a bad update, `jj bookmark set` will
+   silently **clobber** a teammate who advanced `main` after your step 2. Look at
+   `main` now (`jj log -r main`): your merge `@` must be a **descendant of the
+   current `main`** (it already contains main's latest commit). If `main` moved and
+   `@` no longer descends from it, your merge is stale — **re-form** it against the
+   new `main` with `jj new main agent-K` (re-merging your `agent-K` work with the
+   updated `main`), then re-resolve any conflict and re-run the step-4 check before
+   advancing. Do **not** try to recover with `jj rebase -r @ -d main`: if `@` is a
+   bare merge with no changes of its own, rebasing just that commit drops your
+   `agent-K` parent's work — re-forming from `agent-K` keeps it. Only when `@`
+   descends from the current `main`:
+   `jj bookmark set main -r @` (use `--allow-backwards` only if jj asks and you've
+   confirmed it's correct), then `jj new` for a clean working copy. Under
+   contention, loop this re-check until `main` is unchanged at the moment you set
+   it — this is the jj equivalent of Git's non-fast-forward retry.
 6. If the repo is colocated with Git tooling, run `jj git export` so the Git
    `main` ref matches.
 7. **Verify** with jj (not git): `jj log -r '::main'` shows no conflicted commit;
@@ -88,9 +105,45 @@ conflict — you must resolve it *in the commit*, not paper over it in a child.
    `jj resolve --list` reports nothing to resolve. In a local (non-colocated) jj
    repo the `main` *bookmark* is the shared line — a missing plain-git `main` ref
    is expected, not a publish failure.
+8. **Finish:** delete `agent-K` *unless a **real** remote backs it* (`jj git
+   remote list` is non-empty and the bookmark tracks one of those — `agent-K@git`
+   is the local backend, **not** a remote, so it doesn't count):
+   `jj bookmark delete agent-K` then `jj git export`. Details in
+   [Finish](#finish-delete-the-merged-branch-then-stop).
 
-## Stop after integrating
+## Finish: delete the merged branch, then stop
 
-You are done the moment your work is on `main`, the union is preserved, and the
-verify step is clean. Do not write new code, run builds/tests/formatters, or amend
-the committed change — integration quality is the whole job.
+Once your work is verified on `main`, your `agent-K` branch/bookmark is merged and
+redundant — leaving it behind is a **stale ref** that clutters the repo. Decide
+its fate with **one check, run first**: does a branch of that name still exist on a
+remote?
+
+- **git:** `git ls-remote --heads origin agent-K`
+- **jj:** first list real remotes with `jj git remote list`; a branch is
+  remote-backed only if it tracks one of *those* — `agent-K@<remote-name>` in
+  `jj bookmark list`. **`agent-K@git` does NOT count:** `@git` is jj's local
+  colocated Git backend, not a network remote, and it's present for *every*
+  bookmark in a git-backed repo. If `jj git remote list` is empty, there is **no**
+  remote, so nothing is remote-backed — always delete.
+
+**If a real remote ref backs it → KEEP the local branch.** A remote branch is
+what a pull request is built on, so deleting your local copy throws away a ref a
+reviewer may still need. A bare / self-hosted remote still counts — don't try to
+judge whether a PR is "really" open (you usually can't from the CLI, and the
+remote branch itself *is* the PR's head). But a purely local backend (`@git`, or a
+jj repo with no remotes at all) is **not** a remote — delete in that case.
+
+**If it prints nothing → the branch is purely local and merged, so DELETE it:**
+
+- **git:** detach first (the branch is checked out in your worktree), then delete:
+  `git switch --detach && git branch -d agent-K` (or `git checkout --detach`). The
+  lowercase `-d` refuses a branch that isn't fully merged — a safety net; if it
+  refuses, the branch didn't land, so fix the integration rather than forcing `-D`.
+- **jj:** `jj bookmark delete agent-K`; in a colocated repo follow with
+  `jj git export` so the Git ref disappears too.
+
+Then **stop.** You are done the moment your work is on `main`, the union is
+preserved, the verify step is clean, and the merged branch is resolved (deleted,
+or kept because a remote backs it). Do not write new code, run
+builds/tests/formatters, or amend the committed change — integration is the whole
+job.

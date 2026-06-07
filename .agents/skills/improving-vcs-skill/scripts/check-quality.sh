@@ -24,8 +24,15 @@
 #
 # The round PASSES only if every check AND the oracle pass.
 #
+# Separately, a branch/bookmark HYGIENE metric is reported (not folded into the
+# correctness RESULT): after a clean merge each `agent-K` ref is redundant and vcs
+# should delete it unless it backs an open PR (PR_BACKED). The script prints
+# `STALE_REFS=N` and a HYGIENE PASS/FAIL line so resolution quality and repo
+# hygiene stay separable on the scoreboard; the exit bar (METRICS.md) wants both.
+#
 # Usage: check-quality.sh <round-dir>
-# Exit:  0 = PASS, 1 = FAIL, 2 = usage / setup error.
+# Exit:  0 = PASS, 1 = FAIL, 2 = usage / setup error.  (RESULT = correctness only;
+#        STALE_REFS / HYGIENE are reported for the metrics layer to record.)
 set -uo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -153,6 +160,47 @@ if [[ -f "$spec" ]]; then
   fi
 else
   note_fail "spec.json not found at $spec — cannot run the resolution oracle."
+fi
+
+# 6. branch/bookmark hygiene (stale-ref metric) -----------------------------
+# After a clean integration each agent's `agent-K` branch/bookmark is merged into
+# main and redundant; vcs tells the agent to delete it UNLESS it backs an open PR
+# (listed in PR_BACKED — kept on purpose). We report this as its own metric
+# (STALE_REFS=N + a HYGIENE verdict), independent of the correctness RESULT above,
+# so resolution quality and repo hygiene stay separable on the scoreboard.
+#
+# Scan local agent-* refs in the repo's own .git. jj is colocated and we ran
+# `jj git export` up top, so a deleted bookmark has no ref here either — the same
+# git-ref scan is authoritative in both modes.
+pr_backed=" ${PR_BACKED:-} "
+surviving=()
+while IFS= read -r b; do
+  [[ -n "$b" ]] && surviving+=("$b")
+done < <(git --git-dir="$repo/.git" for-each-ref --format='%(refname:short)' 'refs/heads/agent-*' 2>/dev/null |
+  grep -E '^agent-[0-9]+$' || true)
+stale=0 kept_pr=0 missing_pr=0
+stale_list="" missing_list=""
+for b in "${surviving[@]:-}"; do
+  [[ -n "$b" ]] || continue
+  k="${b#agent-}"
+  if [[ "$pr_backed" == *" $k "* ]]; then
+    kept_pr=$((kept_pr + 1))
+  else
+    stale=$((stale + 1)); stale_list="${stale_list:+$stale_list }$b"
+  fi
+done
+for k in ${PR_BACKED:-}; do
+  printf '%s\n' "${surviving[@]:-}" | grep -qxF "agent-$k" ||
+    { missing_pr=$((missing_pr + 1)); missing_list="${missing_list:+$missing_list }agent-$k"; }
+done
+echo "  -- branch/bookmark hygiene (stale-ref metric) --"
+echo "  STALE_REFS=$stale"
+echo "  STALE_LIST=$stale_list"  # machine-readable: which agent-K were left behind
+if [[ "$stale" -eq 0 && "$missing_pr" -eq 0 ]]; then
+  echo "  HYGIENE: PASS — no merged agent-* ref left behind${PR_BACKED:+ ($kept_pr PR-backed ref(s) correctly kept)}"
+else
+  [[ "$stale" -gt 0 ]] && echo "  HYGIENE: FAIL — $stale merged branch/bookmark(s) not deleted: $stale_list"
+  [[ "$missing_pr" -gt 0 ]] && echo "  HYGIENE: FAIL — PR-backed ref(s) wrongly deleted: $missing_list"
 fi
 
 # history shape (informational) ---------------------------------------------
