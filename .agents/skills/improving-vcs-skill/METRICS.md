@@ -79,6 +79,26 @@ numbers reflect `vcs`'s conflict etiquette alone, not the agent's coding ability
   the START bookend to the hygiene metric's FINISH: isolate cleanly, then clean up
   cleanly.
 
+**Workspace naming — `NAME_OK` (start main-arm only; want pass):**
+
+- **Did the agent name its working copy `<ide>-<work>`?** When the agent carves
+  out its own worktree/workspace on the `main` arm, `vcs` (ISOLATE.md) tells it to
+  name that worktree/workspace **and** its branch/bookmark `<ide>-<work>` — an
+  IDE/model token (`claude`, `codex`, `agy`, `cursor`, `opus`, …) plus a short
+  work slug, e.g. `claude-streaming-export` — so it's obvious which agent owns
+  which working copy on a shared machine. `check-isolation.sh` reports
+  `NAME_OK=pass/fail` (with `WS_NAME` / `NAME_PREFIX`) from **durable** signals:
+  for **git**, the seed installs a `reference-transaction` hook that logs every
+  branch the agent creates (`CREATED_REFS_LOG`, teardown-robust — git keeps no
+  other record once the branch is deleted); for **jj**, the op-log `add workspace
+  '<name>'` entry. Scored **only on the `main` arm**, where the agent _chooses_
+  the name — on the `worktree` arm the name was handed to it (`n/a`), and on
+  integration rounds it isn't measured (`-`). Reported **separately** from the
+  `ISOLATED` verdict: a correctly-isolated but poorly-named working copy is a
+  _naming_ miss, not an isolation one. The IDE/model token allowlist is
+  overridable via `NAME_IDE_TOKENS`. The scoreboard's `name` column counts misses
+  per round and per tier (want 0).
+
 **Quality (must hold or improve):** the objective `check-quality.sh` verdict —
 mode integrity, no markers, no unresolved conflict, no lost work, and the
 **resolution oracle** (union exactly-once, correct tie-break value, structured
@@ -142,10 +162,11 @@ bash <skill-dir>/scripts/record-metrics.sh --round 1 --agent agent-1 --mode jj \
   --total 180 --conflict 55 --tokens 24000 --stale 0 --retries 1 --stalls 0 \
   --quality pass
 
-# a START round adds the session-start isolation verdict (single agent)
+# a START round adds the session-start isolation verdict AND the <ide>-<work>
+# naming verdict (single agent; main arm carries name pass/fail, worktree arm n/a)
 bash <skill-dir>/scripts/record-metrics.sh --round 9 --agent agent-1 --mode git \
   --difficulty easy --tier small --env local-cli \
-  --total 40 --tokens 2600 --stale 0 --isolate pass --quality pass
+  --total 40 --tokens 2600 --stale 0 --isolate pass --name-ok pass --quality pass
 
 # compare all rounds AND tiers
 bash <skill-dir>/scripts/scoreboard.sh
@@ -154,13 +175,15 @@ bash <skill-dir>/scripts/scoreboard.sh
 `scoreboard.sh` prints three views:
 
 1. **By round** — agent count, pass%, `wall(max)` and `mean_tot`, `conflict(max)`
-   and `mean_cnf`, `mean_tok`, `stale`, `iso`, retries/stalls, with the
+   and `mean_cnf`, `mean_tok`, `stale`, `iso`, `name`, retries/stalls, with the
    round-over-round delta on the two headline costs. **Negative delta = faster =
-   the direction you want; `stale` and `iso` should be 0** (`iso` shows `-` on
-   integration rounds, where isolation isn't measured).
-2. **By model tier** — pass% and the same costs (incl. `mean_tok`, `stale`, and
-   `iso`) per tier, so you can see whether `vcs` works for `small` and `mid` or
-   only `large`, and whether a tier forgets to isolate or to clean up its branch.
+   the direction you want; `stale`, `iso`, and `name` should be 0** (`iso` and
+   `name` show `-` on integration rounds, where they aren't measured; `name` also
+   shows `-` on the start worktree arm, where the agent didn't choose the name).
+2. **By model tier** — pass% and the same costs (incl. `mean_tok`, `stale`, `iso`,
+   and `name`) per tier, so you can see whether `vcs` works for `small` and `mid`
+   or only `large`, and whether a tier forgets to isolate, to name its working
+   copy `<ide>-<work>`, or to clean up its branch.
 3. **Difficulty × tier pass-rate matrix** — pinpoints exactly where things break
    (e.g. `small` passes `easy` but fails `hard`), which tells you what to fix next.
 
@@ -190,14 +213,18 @@ and across **model tiers**:
    already isolated (`--start-from worktree`), in both modes and every tier. The
    `iso` column is **0** (no failures). This is the front bookend of "co-located
    agents don't interfere"; the hygiene metric is the back one.
-8. **Token usage is low and stable (or trending down)**: `mean_tok` doesn't
+8. **Workspace naming holds** (start main-arm rounds): every agent that carves out
+   its own working copy names it `<ide>-<work>` — `NAME_OK=pass`, so the `name`
+   column is **0** (no misses) in both modes and every tier. A correctly-isolated
+   but conventionally-misnamed working copy still counts against this bar.
+9. **Token usage is low and stable (or trending down)**: `mean_tok` doesn't
    regress as `vcs` changes — a revision that resolves correctly but balloons the
    tokens an agent burns hasn't really improved the skill. Watch it per tier
    (smaller models thrash most when guidance is unclear).
-9. **No tier left behind**: the by-tier view and the difficulty×tier matrix show
-   `small` and `mid` clearing the bar too — not just `large` — on quality, speed,
-   hygiene, **and** tokens. A revision that only helps the largest model has not
-   met the bar.
+10. **No tier left behind**: the by-tier view and the difficulty×tier matrix show
+    `small` and `mid` clearing the bar too — not just `large` — on quality, speed,
+    hygiene, **and** tokens. A revision that only helps the largest model has not
+    met the bar.
 
 A revision that speeds things up but breaks a quality dimension, leaves stale
 refs, balloons tokens, regresses a tier, or doesn't move the numbers fails the

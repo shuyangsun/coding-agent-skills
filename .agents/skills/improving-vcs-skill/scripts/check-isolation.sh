@@ -28,9 +28,17 @@
 #   worktree  the agent was GIVEN its own worktree/workspace already → it must
 #             work in place and NOT create a redundant nested one (over-isolate).
 #
+# It also reports, SEPARATELY (never folded into the ISOLATED verdict or its exit
+# code), the NAMING metric: whether the work-copy/branch the agent created on the
+# `main` arm is named `<ide>-<work>` — an IDE/model token (claude, codex, agy,
+# cursor, opus, …) + a work slug, as vcs's ISOLATE.md teaches. git names are read
+# from the seed's reference-transaction hook log (CREATED_REFS_LOG, teardown-
+# robust); jj names from the op log's `add workspace` entries.
+#
 # Usage: check-isolation.sh <round-dir>
 # Exit:  0 = ISOLATED pass, 1 = fail, 2 = usage / not a start round.
-#        (Prints ISOLATED / ISO_FS / OVER_ISOLATE lines for the metrics layer.)
+#        (Prints ISOLATED / ISO_FS / OVER_ISOLATE + WS_NAME / NAME_PREFIX /
+#        NAME_OK lines for the metrics layer.)
 set -uo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -152,6 +160,52 @@ else
   fi
 fi
 
+# --- name convention: <ide>-<work> -----------------------------------------
+# Separate, measurable metric (NOT folded into the ISOLATED verdict): did the
+# agent NAME the working copy / branch it created for who+what — an IDE/model
+# token (claude, codex, agy, cursor, opus, …) followed by a short work slug, as
+# vcs's ISOLATE.md teaches? Only meaningful on the `main` arm, where the agent
+# CHOOSES the name; on the `worktree` arm the name was handed to it (n/a).
+#   git: the agent's branch name(s), captured durably by the seed's
+#        reference-transaction hook (CREATED_REFS_LOG), minus seed refs.
+#   jj:  the agent-created workspace name(s) ($agent_ws, from the op log).
+name_ok="n/a"
+ws_name="-"
+name_prefix="-"
+ide_tokens="${NAME_IDE_TOKENS:-claude codex agy cursor copilot aider cline windsurf zed cody continue devin opus sonnet haiku gpt o1 o3 gemini llama qwen mistral grok deepseek}"
+if [[ "$arm" == "main" ]]; then
+  cand=""
+  if [[ "$MODE" == "git" ]]; then
+    if [[ -n "${CREATED_REFS_LOG:-}" && -f "$CREATED_REFS_LOG" ]]; then
+      while IFS= read -r b; do
+        [[ -z "$b" || "$b" == "main" || "$b" == "${GIVEN_BRANCH:-}" ]] && continue
+        cand="$b"; break
+      done <"$CREATED_REFS_LOG"
+    fi
+  else
+    for w in $agent_ws; do cand="$w"; break; done
+  fi
+  if [[ -n "$cand" ]]; then
+    ws_name="$cand"
+    name_prefix="${cand%%-*}"
+    lc_prefix="$(printf '%s' "$name_prefix" | tr '[:upper:]' '[:lower:]')"
+    # require a real <prefix>-<work> shape (a hyphen with a non-empty suffix)
+    if [[ "$cand" == *-* && -n "${cand#*-}" ]]; then
+      name_ok="fail"
+      for t in $ide_tokens; do
+        [[ "$lc_prefix" == "$t" ]] && { name_ok="pass"; break; }
+      done
+    else
+      name_ok="fail" # no <ide>-<work> structure at all
+    fi
+    detail+=("work-copy/branch name '$ws_name' -> prefix '$name_prefix' -> NAME_OK=$name_ok (convention: <ide>-<work>)")
+  else
+    # main arm but no agent-created name found (e.g. it didn't isolate) — can't
+    # assess naming; leave n/a so it reads as "not applicable", not a name miss.
+    detail+=("no agent-created branch/workspace name captured — name convention not assessed")
+  fi
+fi
+
 # --- overall verdict --------------------------------------------------------
 # pass requires: the change landed, AND (on-main) the agent isolated, AND
 # (worktree) it did not redundantly over-isolate.
@@ -167,6 +221,9 @@ for d in "${detail[@]:-}"; do [[ -n "$d" ]] && echo "  - $d"; done
 echo "  WORK_LANDED=$work_landed"
 echo "  ISO_FS=$iso_fs"
 echo "  OVER_ISOLATE=$over_isolate"
+echo "  WS_NAME=$ws_name"
+echo "  NAME_PREFIX=$name_prefix"
+echo "  NAME_OK=$name_ok"
 if [[ "$verdict_fail" -eq 0 ]]; then
   echo "  ISOLATED=pass"
   exit 0

@@ -229,7 +229,7 @@ write_start_brief() {
   local brief="$round_dir/briefs/agent-$k.md"
   local instructions
   instructions="$(python3 "$scenario" start-instructions --round "$round" --agent "$k")"
-  local context
+  local context naming
   if [[ "$from" == "main" ]]; then
     context="Your starting point is the repository at:
 
@@ -238,6 +238,12 @@ write_start_brief() {
 This repository is **shared**: several teammates are each picking up their own
 ticket on this same machine right now and will be working at the same time. The
 checkout you are looking at sits on the team's mainline."
+    # Deliberately do NOT prescribe a name — how the agent labels/names its own
+    # in-flight work (branch/bookmark, and any working copy it carves out) is
+    # exactly what its version-control guidance must decide. check-isolation.sh
+    # measures whether that name follows the convention the guidance teaches.
+    naming="If your version-control workflow has you set up a place to work and/or a
+branch/bookmark for this ticket, name it however that guidance tells you to."
   else
     context="Your starting point is your own working area at:
 
@@ -245,6 +251,7 @@ checkout you are looking at sits on the team's mainline."
 
 Your teammates each have their own separate working area on this machine and are
 working on their own tickets at the same time; this one is yours."
+    naming="Your working area is already set up for this ticket; do the work there."
   fi
   cat >"$brief" <<EOF
 # Ticket $ticket — implement "$feature"
@@ -259,8 +266,7 @@ $context
 
 $instructions
 
-When your team labels each person's in-flight work, this ticket's work goes on a
-branch/bookmark named \`agent-$k\`.
+$naming
 
 ## What to do
 
@@ -352,6 +358,32 @@ if [[ "$mode" == "git" ]]; then
     # add` above does NOT touch the primary's HEAD log, so this is the seed value
     # in both arms. check-isolation.sh compares against it (teardown-robust).
     echo "SEED_HEAD_LINES=$(wc -l <"$repo/.git/logs/HEAD" 2>/dev/null | tr -d ' ')" >>"$manifest_env"
+    # Durable capture of the NAME the agent gives its own branch/worktree. Git
+    # keeps no teardown-robust record of a branch name (`git branch -d` deletes
+    # its reflog; `git worktree remove` deletes the worktree), so we install a
+    # reference-transaction hook in the shared .git: it fires for every branch
+    # CREATE — including those done from a linked worktree, which run hooks from
+    # the common dir — and appends the new branch's short name to a log OUTSIDE
+    # the repo, where it survives any cleanup. Installed AFTER the seed refs
+    # (main, and the worktree-arm agent-1) already exist, so only the agent's own
+    # `switch -c` / `worktree add -b` names land here. jj needs no equivalent —
+    # its op log's `add workspace '<name>'` entries are already durable.
+    created_log="$round_dir/created-refs.log"
+    : >"$created_log"
+    hook="$repo/.git/hooks/reference-transaction"
+    cat >"$hook" <<HOOK
+#!/bin/sh
+# harness: log newly-created local branch names (durably, for the name metric)
+[ "\$1" = committed ] || exit 0
+while read -r old new ref; do
+  case "\$ref" in refs/heads/*) : ;; *) continue ;; esac
+  case "\$old" in *[!0]*) continue ;; esac   # non-zero old = update/delete, not create
+  printf '%s\n' "\${ref#refs/heads/}" >>"$created_log"
+done
+exit 0
+HOOK
+    chmod +x "$hook"
+    echo "CREATED_REFS_LOG=$created_log" >>"$manifest_env"
   fi
   echo "SCORE_GITDIR=$bare" >>"$manifest_env"
   echo "SCORE_REF=main" >>"$manifest_env"

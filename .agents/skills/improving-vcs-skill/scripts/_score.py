@@ -85,18 +85,25 @@ for rd in rounds:
     # an integration round — in which case the metric stays "-" (not measured).
     _ic, iout, _ie = sh("bash", f"{HERE}/check-isolation.sh", rdir)
     isolate = "-"
+    name_ok = "-"
     for line in iout.splitlines():
         s = line.strip()
         if s.startswith("ISOLATED="):
             v = s[len("ISOLATED="):].strip()
             isolate = v if v in ("pass", "fail") else "-"
+        elif s.startswith("NAME_OK="):
+            v = s[len("NAME_OK="):].strip()
+            name_ok = v if v in ("pass", "fail", "n/a") else "-"
     iso_note = f", isolated={isolate}" if isolate != "-" else ""
+    if name_ok in ("pass", "fail"):
+        iso_note += f", name={name_ok}"
     print(f"\n{'='*78}\n### round {rnum}  {mode}/{diff}  ->  {quality.upper()}  "
           f"(stale_refs={stale_total}{iso_note})\n{'='*78}")
     if isolate != "-":
         for line in iout.splitlines():
             s = line.strip()
-            if s.startswith(("ISOLATED", "ISO_FS", "OVER_ISOLATE", "WORK_LANDED")):
+            if s.startswith(("ISOLATED", "ISO_FS", "OVER_ISOLATE", "WORK_LANDED",
+                             "WS_NAME", "NAME_PREFIX", "NAME_OK")):
                 print("  " + s)
     # show the non-ok lines (failures) + the RESULT/HYGIENE lines
     for line in out.splitlines():
@@ -119,12 +126,13 @@ for rd in rounds:
            "--total", str(r.get("total_seconds", 0) or 0),
            "--conflict", str(r.get("conflict_seconds", 0) or 0),
            "--tokens", str(tokens), "--stale", str(stale), "--isolate", isolate,
+           "--name-ok", name_ok,
            "--retries", str(r.get("retries", 0) or 0),
            "--stalls", str(r.get("stalls", 0) or 0),
            "--quality", quality, "--notes", note)
         print(f"  - a{a['k']} {a['tier']:<5} {a['model']:<7} detect={mode_ok:<10} "
               f"tot={r.get('total_seconds')}s cnf={r.get('conflict_seconds')}s "
-              f"tok={tokens} stale={stale} iso={isolate} retr={r.get('retries')} stall={r.get('stalls')} "
+              f"tok={tokens} stale={stale} iso={isolate} name={name_ok} retr={r.get('retries')} stall={r.get('stalls')} "
               f"pub={r.get('published')}")
 
 print(f"\n{'#'*78}\n# SCOREBOARD\n{'#'*78}")

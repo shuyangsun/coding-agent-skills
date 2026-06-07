@@ -121,9 +121,18 @@ can't erase the evidence):
 
 Reported as `ISOLATED=pass/fail` (+ `ISO_FS` / `OVER_ISOLATE`), **separate** from
 both the correctness verdict and the hygiene line — "did the work, but in the
-shared checkout" is an isolation miss, not a correctness one. The `vcs` skill has
-**no** isolation guidance yet, so this bar starts _red_ by design; it exists for
-the iteration that makes it green. See [METRICS.md](METRICS.md).
+shared checkout" is an isolation miss, not a correctness one. See
+[METRICS.md](METRICS.md).
+
+On the `main` arm `check-isolation.sh` also scores, **separately again**, the
+**naming convention** (`NAME_OK`): whether the working copy/branch the agent
+carved out is named `<ide>-<work>` — an IDE/model token (`claude`, `codex`, `agy`,
+`cursor`, `opus`, …) + a work slug — as `vcs`'s ISOLATE.md teaches. Because the
+start brief deliberately stops prescribing the branch name, the name the agent
+picks comes purely from `vcs`, so this measures whether the convention landed. The
+name is read from **durable** signals (git: a seed-installed `reference-transaction`
+hook log that survives branch deletion; jj: the op-log `add workspace '<name>'`
+entry), and the IDE/model token set is overridable via `NAME_IDE_TOKENS`.
 
 ## How quality is judged objectively
 

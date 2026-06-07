@@ -105,18 +105,21 @@ integration rounds; they're single-agent, so cover the space by repetition.
    for one tiny, fully-specified edit landed on `main` — the isolation decision
    must come from `vcs` alone.
 3. **Score with BOTH** `check-isolation.sh <round-dir>` (the `ISOLATED=pass/fail`
-   session-start verdict) **and** `check-quality.sh <round-dir>` (that the change
-   and the branch cleanup landed right — start rounds carry the hygiene metric
-   too). Both report **separately**, so isolation, correctness, and cleanup stay
+   session-start verdict **and** the `NAME_OK` `<ide>-<work>` naming verdict on the
+   main arm) **and** `check-quality.sh <round-dir>` (that the change and the branch
+   cleanup landed right — start rounds carry the hygiene metric too). All report
+   **separately**, so isolation, naming, correctness, and cleanup stay
    distinguishable.
-4. **Record** with `record-metrics.sh … --isolate <pass|fail>` and read the `iso`
-   column on the scoreboard (want 0; `-` on integration rounds).
+4. **Record** with `record-metrics.sh … --isolate <pass|fail> --name-ok
+   <pass|fail|n/a>` and read the `iso` and `name` columns on the scoreboard (want
+   0; `-` on integration rounds, and `name` is `-`/`n/a` on the worktree arm).
 
-`vcs` has no isolation guidance yet, so baseline start rounds will mostly fail —
-that's the point. When you iterate, add the rule to `vcs` (isolate into your own
+When you iterate on isolation, drive `iso` round-over-round (isolate into your own
 worktree/workspace + branch/bookmark before new work on a shared repo; if you're
-already in one, work in place) and re-measure `iso` round-over-round, just like
-the cleanup rule was driven by `stale`.
+already in one, work in place) and the `<ide>-<work>` naming via `name`, just like
+the cleanup rule was driven by `stale`. (To make naming a real test, the start
+brief deliberately does **not** prescribe a branch name — the name comes from
+`vcs` alone.)
 
 ## What to change in `vcs` (and what not to)
 
