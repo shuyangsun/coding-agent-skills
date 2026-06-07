@@ -13,6 +13,7 @@ Thumbs.db
 # Local LLM coding agent settings
 *.local.json
 *.local.md
+.claude/scheduled_tasks.lock
 
 # Node / Bun
 node_modules/
