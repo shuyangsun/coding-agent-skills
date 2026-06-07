@@ -14,7 +14,7 @@
 
 ## Assistant
 
-Explored the harness (`.agents/skills/improving-vcs-skill/`) and the `vcs` skill. Identified that the relevant flow is `--task start` (session-start isolation), scored by `check-isolation.sh` from durable signals (git: primary `HEAD` reflog line count; jj: op-log `add workspace` entries). The harness force-loads `vcs` into each sub-agent, so it tests the skill's *content*, not description-triggered loading.
+Explored the harness (`.agents/skills/improving-vcs-skill/`) and the `vcs` skill. Identified that the relevant flow is `--task start` (session-start isolation), scored by `check-isolation.sh` from durable signals (git: primary `HEAD` reflog line count; jj: op-log `add workspace` entries). The harness force-loads `vcs` into each sub-agent, so it tests the skill's _content_, not description-triggered loading.
 
 Provisioned 8 single-agent start rounds with `new-sandbox.sh`: the `main` arm (agent must isolate) across large/mid/small tiers in both git and jj, plus the `worktree` arm (must not over-isolate) in both modes. Each sub-agent sees only `vcs` + a brief asking for one tiny edit in a shared repo with concurrent teammates — the isolation decision must come from `vcs` alone. Launched the baseline workflow.
 

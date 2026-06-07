@@ -79,7 +79,8 @@ objective signal — an agent that wandered off and edited unrelated code fails 
 
 The **one** post-integration action the brief leaves room for is the VCS tidy-up
 `vcs` itself prescribes — deleting the now-merged `agent-K` branch/bookmark
-(unless it backs an open PR). That's version-control hygiene, not coding, and it
+(unless it backs an open PR), recovering/parking jj `default`, and retiring a jj
+workspace whose work landed. That's version-control hygiene, not coding, and it
 has its own metric (next section), so the brief says "finish per your guidance,
 then stop" rather than "stop the instant your work is on `main`".
 
@@ -163,6 +164,15 @@ serialized and concurrent rounds alike, across every model tier.
   backs an open PR; `check-quality.sh` prints `STALE_REFS=N` for the merged refs
   left behind. Kept separate so a perfect resolution that forgot to clean up is
   visibly a _hygiene_ miss, not a _correctness_ one. See [METRICS.md](METRICS.md).
+- **jj default lifecycle** (reported alongside, not folded into PASS) — jj
+  integration rounds deliberately rewrite `default@` from a sibling workspace,
+  making `default` stale in the same way real multi-workspace consolidation can.
+  `check-quality.sh` prints `DEFAULT_OK=pass/fail`; pass means a plain jj command
+  in `default` works and `default@` is parked on current `main`.
+- **Retired jj workspace cleanup** (reported alongside, not folded into PASS) —
+  after `agent-K` lands and its bookmark is gone, the matching sibling workspace
+  is retired. `check-quality.sh` prints `ORPHAN_WS=N` for still-registered
+  workspaces and `ORPHAN_DIRS=N` for their directories still present on disk.
 
 ## Hazards these scenarios surface (watch for them)
 
@@ -175,6 +185,12 @@ what `vcs` must teach:
   letting jj update the working copy gets your edit clobbered. `vcs` should tell
   jj agents to let the working copy settle (run a `jj` command / `jj resolve`)
   before hand-editing.
+- **Stale `default` after sibling workspace operations** — when another workspace
+  rewrites `default@`, the next plain jj command in `default` fails until
+  `jj workspace update-stale` is run there. The fixture now forces this state in
+  jj integration rounds; `DEFAULT_OK` catches agents that leave consolidation
+  blocked, and `ORPHAN_WS` / `ORPHAN_DIRS` catch the retired workspaces that keep
+  the problem recurring.
 - **Duplicate-paste resolution** — an agent that "resolves" by keeping both whole
   sides duplicates a teammate's entry; the oracle's exactly-once check catches it.
 - **Silent clobber on the same-line field** — taking only one side drops the

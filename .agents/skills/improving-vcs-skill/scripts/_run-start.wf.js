@@ -1,12 +1,13 @@
 export const meta = {
-  name: 'vcs-eval-start-round',
-  description: 'Drive vcs-skill SESSION-START isolation sub-agents (single agent per mode x arm x tier cell)',
-  phases: [{ title: 'Start' }],
-}
+  name: "vcs-eval-start-round",
+  description:
+    "Drive vcs-skill SESSION-START isolation sub-agents (single agent per mode x arm x tier cell)",
+  phases: [{ title: "Start" }],
+};
 // args arrives as a JSON STRING from the Workflow tool — parse defensively.
-const A = typeof args === 'string' ? JSON.parse(args) : args
+const A = typeof args === "string" ? JSON.parse(args) : args;
 
-const MODEL = { large: 'opus', mid: 'sonnet', small: 'haiku' }
+const MODEL = { large: "opus", mid: "sonnet", small: "haiku" };
 
 // Each start round is SINGLE-agent: the agent is dropped into a shared repo, must
 // author one tiny specified edit and land it on `main`, and (the thing under
@@ -17,23 +18,64 @@ const MODEL = { large: 'opus', mid: 'sonnet', small: 'haiku' }
 // check-quality.sh (or _score.py, which runs both).
 
 const REPORT_SCHEMA = {
-  type: 'object',
+  type: "object",
   additionalProperties: false,
-  required: ['mode_detected','how_detected','total_seconds','conflict_seconds','conflicts_hit','retries','stalls','published','clear','ambiguous','mishandled'],
+  required: [
+    "mode_detected",
+    "how_detected",
+    "total_seconds",
+    "conflict_seconds",
+    "conflicts_hit",
+    "retries",
+    "stalls",
+    "published",
+    "clear",
+    "ambiguous",
+    "mishandled",
+  ],
   properties: {
-    mode_detected: { type: 'string', description: 'jj or git — what you concluded the repo uses' },
-    how_detected: { type: 'string', description: 'how you determined the VCS mode (the signal you used)' },
-    total_seconds: { type: 'integer', description: 'END-START wall seconds for your whole run' },
-    conflict_seconds: { type: 'integer', description: 'seconds resolving any conflict, 0 if none (start rounds rarely conflict)' },
-    conflicts_hit: { type: 'integer' },
-    retries: { type: 'integer', description: 'VCS steps you had to repeat' },
-    stalls: { type: 'integer', description: 'times you were stuck / had to re-read guidance' },
-    published: { type: 'boolean', description: 'true ONLY if you verified your change is actually on the shared main' },
-    clear: { type: 'string', description: 'what in the vcs skill was clear and worked' },
-    ambiguous: { type: 'string', description: 'what was unclear, missing, or slow in the vcs skill' },
-    mishandled: { type: 'string', description: 'anything you suspect you did wrong, or "none"' },
+    mode_detected: {
+      type: "string",
+      description: "jj or git — what you concluded the repo uses",
+    },
+    how_detected: {
+      type: "string",
+      description: "how you determined the VCS mode (the signal you used)",
+    },
+    total_seconds: {
+      type: "integer",
+      description: "END-START wall seconds for your whole run",
+    },
+    conflict_seconds: {
+      type: "integer",
+      description:
+        "seconds resolving any conflict, 0 if none (start rounds rarely conflict)",
+    },
+    conflicts_hit: { type: "integer" },
+    retries: { type: "integer", description: "VCS steps you had to repeat" },
+    stalls: {
+      type: "integer",
+      description: "times you were stuck / had to re-read guidance",
+    },
+    published: {
+      type: "boolean",
+      description:
+        "true ONLY if you verified your change is actually on the shared main",
+    },
+    clear: {
+      type: "string",
+      description: "what in the vcs skill was clear and worked",
+    },
+    ambiguous: {
+      type: "string",
+      description: "what was unclear, missing, or slow in the vcs skill",
+    },
+    mishandled: {
+      type: "string",
+      description: 'anything you suspect you did wrong, or "none"',
+    },
   },
-}
+};
 
 // `startPath` is baked into the prompt so _score.py can map the agent's transcript
 // back to its round for the per-agent token count (same `round-<N>/ws-agent-<k>`
@@ -55,20 +97,28 @@ Timing — follow exactly so your run can be measured:
 Your task:
 ${brief}
 
-When finished, return the structured report fields. Be strictly honest: set published=true only if you verified your change is actually on the shared main line. Your returned fields ARE the result — there is no human reading a prose reply.`
+When finished, return the structured report fields. Be strictly honest: set published=true only if you verified your change is actually on the shared main line. Your returned fields ARE the result — there is no human reading a prose reply.`;
 }
 
-phase('Start')
+phase("Start");
 // Single agent per round; rounds run concurrently with each other. Each round:
 //   { round, mode, tier, startPath, brief }
-const rounds = await parallel(A.rounds.map((rd) => async () => {
-  const label = `r${rd.round}-${rd.mode}-start-${rd.startFrom || 'main'}-${rd.tier}`
-  const report = await agent(buildPrompt(rd.startPath, rd.brief), {
-    label, phase: 'Start', model: MODEL[rd.tier], schema: REPORT_SCHEMA, agentType: 'general-purpose',
-  })
-  return {
-    round: rd.round, mode: rd.mode, difficulty: 'easy',
-    reports: [{ k: 1, tier: rd.tier, model: MODEL[rd.tier], label, report }],
-  }
-}))
-return rounds
+const rounds = await parallel(
+  A.rounds.map((rd) => async () => {
+    const label = `r${rd.round}-${rd.mode}-start-${rd.startFrom || "main"}-${rd.tier}`;
+    const report = await agent(buildPrompt(rd.startPath, rd.brief), {
+      label,
+      phase: "Start",
+      model: MODEL[rd.tier],
+      schema: REPORT_SCHEMA,
+      agentType: "general-purpose",
+    });
+    return {
+      round: rd.round,
+      mode: rd.mode,
+      difficulty: "easy",
+      reports: [{ k: 1, tier: rd.tier, model: MODEL[rd.tier], label, report }],
+    };
+  }),
+);
+return rounds;

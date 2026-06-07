@@ -20,7 +20,7 @@ Use the /improving-vcs-skill to iteratively work on the /vcs skill, so multiple 
 
 Loaded the `improving-vcs-skill` meta-skill and read its full surface — `LOOP.md`, `METRICS.md`, `MATRIX.md`, `SCENARIOS.md`, and every script (`new-sandbox.sh`, `check-quality.sh`, `scenario.py`, `record-metrics.sh`, `scoreboard.sh`, `rm-sandbox.sh`) — plus the target `vcs` skill (`SKILL.md` + `COMMITS.md`). Found `vcs` was a **stub covering only commit-message formatting**. Confirmed the environment: git 2.54, jj 0.41, python3.13.
 
-Set up task tracking and made the first move the user's actual concern — *is the harness measuring real problems?* Provisioned `git/medium` and `jj/medium` sandboxes and verified the resolution oracle is a genuine discriminator: built the canonical correct union+tie-break tree (PASS) and five deliberately-broken trees — dropped entry, duplicate-paste, wrong tie-break (kept lower version), forbidden edit to an untouched file, broken JSON — and confirmed the oracle **FAILs every defect class**.
+Set up task tracking and made the first move the user's actual concern — _is the harness measuring real problems?_ Provisioned `git/medium` and `jj/medium` sandboxes and verified the resolution oracle is a genuine discriminator: built the canonical correct union+tie-break tree (PASS) and five deliberately-broken trees — dropped entry, duplicate-paste, wrong tie-break (kept lower version), forbidden edit to an untouched file, broken JSON — and confirmed the oracle **FAILs every defect class**.
 
 Then probed a suspected hole: integrated a **jj-mode** sandbox using **pure git** (the wrong tool in a colocated repo). The jj op-count was unchanged, proving jj was never used — yet `check-quality.sh` returned a clean **PASS**. The harness asserted invariant #2 ("a jj agent must use jj throughout") but never verified it — exactly the "imaginary success" the user warned about.
 
@@ -46,7 +46,7 @@ Is the agent stuck? Why hasn't it finished yet? Kill it if it's stuck on somethi
 
 ## Assistant
 
-Confirmed **not stuck** — actively progressing (8→12 done between checks). One agent's transcript was 481 KB (3–4× the others) and still being written every 1–3 seconds: a small/Haiku model *thrashing* on a hard case because the stub skill gave it no conflict procedure — itself a baseline signal. Ran a bounded watch; the heavy agent finished and the final agent drained out. No kill needed (killing would have discarded 12/14 results, and resume-from-cache was available anyway).
+Confirmed **not stuck** — actively progressing (8→12 done between checks). One agent's transcript was 481 KB (3–4× the others) and still being written every 1–3 seconds: a small/Haiku model _thrashing_ on a hard case because the stub skill gave it no conflict procedure — itself a baseline signal. Ran a bounded watch; the heavy agent finished and the final agent drained out. No kill needed (killing would have discarded 12/14 results, and resume-from-cache was available anyway).
 
 ## Assistant
 
@@ -57,7 +57,7 @@ Baseline completed (14 agents). Scored every round objectively and recorded per-
 - round 3 git/medium → **PASS** (repeated git-worktree-checkout stalls)
 - round 4 jj/medium → **FAIL** — content was actually correct (union + tie-break 1.5.3 all green) but a **conflicted merge commit was left in `::main`** (the "jj commits conflicts" hazard); Haiku 474s/334s with 5 retries
 
-Diagnosis: the real problems are **jj conflict hygiene**, the **missing integrate/publish procedure** (every agent said the skill only covers commit messages and re-derived the workflow), and **small-model thrash** — *not* mode detection (all 14 agents detected mode correctly). Marked the baseline finding that the harness's per-agent jj workspaces are pure-`.jj`, so the colocated trap isn't actually exercised.
+Diagnosis: the real problems are **jj conflict hygiene**, the **missing integrate/publish procedure** (every agent said the skill only covers commit messages and re-derived the workflow), and **small-model thrash** — _not_ mode detection (all 14 agents detected mode correctly). Marked the baseline finding that the harness's per-agent jj workspaces are pure-`.jj`, so the colocated trap isn't actually exercised.
 
 ## Assistant
 

@@ -303,6 +303,7 @@ manifest_env="$round_dir/manifest.env"
   echo "AGENTS=$agents"
   echo "PR_BACKED=\"$pr_backed\""
   echo "SPEC=$round_dir/spec.json"
+  echo "DEFAULT_STALE_SEEDED=0"
 } >"$manifest_env"
 
 # commit message for a pre-made agent change (COMMITS.md-shaped; it's test data).
@@ -408,6 +409,12 @@ else
       jj --repository "$ws" bookmark create "agent-$k" -r @ >/dev/null 2>&1
       jj --repository "$ws" new >/dev/null 2>&1
     done
+    # Make the documented default-workspace lifecycle failure deterministic:
+    # rewriting default@ from a sibling workspace leaves the default working copy
+    # stale until someone runs `jj workspace update-stale` there. This exercises
+    # the consolidate-in-default bookend without changing the shared main line.
+    jj --repository "$round_dir/ws-agent-1" rebase -r 'default@' -d 'agent-1' >/dev/null 2>&1
+    echo "DEFAULT_STALE_SEEDED=1" >>"$manifest_env"
     seed_ws="default"
   else
     # start task: NO pre-committed work. The durable filesystem-isolation signal

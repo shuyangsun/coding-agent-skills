@@ -18,6 +18,7 @@
 #   record-metrics.sh --round N --agent LABEL --mode git|jj \
 #     [--difficulty easy|medium|hard] [--tier large|mid|small] [--env ENV] \
 #     [--total SECONDS] [--conflict SECONDS] [--tokens N] [--stale N] \
+#     [--orphan-ws N] [--orphan-dirs N] [--default-ok pass|fail|n/a|-] \
 #     [--isolate pass|fail|-] [--name-ok pass|fail|n/a|-] [--retries N] [--stalls N] \
 #     [--quality pass|fail|partial] [--notes "..."] [--file PATH]
 #
@@ -28,6 +29,13 @@
 # --stale   surviving merged `agent-*` refs the agent failed to delete (the
 #           branch/bookmark hygiene metric from check-quality.sh's STALE_REFS).
 #           0 = clean; PR-backed refs are excluded upstream.
+# --orphan-ws / --orphan-dirs
+#           retired jj `agent-K` workspace entries/directories the agent failed
+#           to remove after its work landed. 0 = clean; Git rows use 0.
+# --default-ok
+#           jj default-workspace lifecycle verdict from check-quality.sh:
+#           pass = default is usable and parked on main after any stale recovery;
+#           fail = still stale/unusable or not parked on main; n/a/- = not scored.
 # --isolate session-START isolation verdict for a `--task start` round, from
 #           check-isolation.sh's ISOLATED line (pass = the agent carved out its
 #           own worktree/workspace before working / didn't over-isolate). Use the
@@ -43,7 +51,7 @@
 set -euo pipefail
 
 round="" agent="" mode="" difficulty="-" tier="-" env="-"
-total=0 conflict=0 tokens=0 stale=0 isolate="-" name_ok="-" retries=0 stalls=0 quality="-" notes="-"
+total=0 conflict=0 tokens=0 stale=0 orphan_ws=0 orphan_dirs=0 default_ok="-" isolate="-" name_ok="-" retries=0 stalls=0 quality="-" notes="-"
 file="${VCS_HARNESS_DIR:-${TMPDIR:-/tmp}/vcs-harness}/metrics.tsv"
 
 die() {
@@ -64,6 +72,9 @@ while [[ $# -gt 0 ]]; do
     --conflict) conflict="$2"; shift 2 ;;
     --tokens) tokens="$2"; shift 2 ;;
     --stale) stale="$2"; shift 2 ;;
+    --orphan-ws) orphan_ws="$2"; shift 2 ;;
+    --orphan-dirs) orphan_dirs="$2"; shift 2 ;;
+    --default-ok) default_ok="$2"; shift 2 ;;
     --isolate) isolate="$2"; shift 2 ;;
     --name-ok) name_ok="$2"; shift 2 ;;
     --retries) retries="$2"; shift 2 ;;
@@ -82,18 +93,20 @@ done
 [[ -n "$round" && -n "$agent" && -n "$mode" ]] || die "--round, --agent, --mode are required"
 [[ "$mode" == "git" || "$mode" == "jj" ]] || die "--mode must be git or jj"
 case "$difficulty" in easy | medium | hard | -) : ;; *) die "--difficulty must be easy, medium, or hard" ;; esac
+case "$default_ok" in pass | fail | n/a | -) : ;; *) die "--default-ok must be pass, fail, n/a, or -" ;; esac
 case "$isolate" in pass | fail | partial | -) : ;; *) die "--isolate must be pass, fail, or -" ;; esac
 case "$name_ok" in pass | fail | n/a | -) : ;; *) die "--name-ok must be pass, fail, n/a, or -" ;; esac
-for n in "$round" "$total" "$conflict" "$tokens" "$stale" "$retries" "$stalls"; do
+for n in "$round" "$total" "$conflict" "$tokens" "$stale" "$orphan_ws" "$orphan_dirs" "$retries" "$stalls"; do
   [[ "$n" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "numeric field expected, got: $n"
 done
 
 mkdir -p "$(dirname "$file")"
 if [[ ! -f "$file" ]]; then
-  printf 'round\tagent\tmode\tdifficulty\ttier\tenv\ttotal_s\tconflict_s\ttokens\tstale_refs\tisolate\tname_ok\tretries\tstalls\tquality\tnotes\n' >"$file"
+  printf 'round\tagent\tmode\tdifficulty\ttier\tenv\ttotal_s\tconflict_s\ttokens\tstale_refs\torphan_ws\torphan_dirs\tdefault_ok\tisolate\tname_ok\tretries\tstalls\tquality\tnotes\n' >"$file"
 fi
-printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$round" "$(clean "$agent")" "$mode" "$difficulty" "$(clean "$tier")" "$(clean "$env")" \
-  "$total" "$conflict" "$tokens" "$stale" "$isolate" "$name_ok" "$retries" "$stalls" "$quality" "$(clean "$notes")" >>"$file"
+  "$total" "$conflict" "$tokens" "$stale" "$orphan_ws" "$orphan_dirs" "$default_ok" "$isolate" "$name_ok" \
+  "$retries" "$stalls" "$quality" "$(clean "$notes")" >>"$file"
 
-echo "recorded round $round / $agent ($mode, ${difficulty}, tier=${tier}, iso=${isolate}, name=${name_ok}) -> $file"
+echo "recorded round $round / $agent ($mode, ${difficulty}, tier=${tier}, def=${default_ok}, orphan_ws=${orphan_ws}, orphan_dirs=${orphan_dirs}, iso=${isolate}, name=${name_ok}) -> $file"

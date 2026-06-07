@@ -42,7 +42,7 @@ Implemented across the skill + harness: added the cleanup rule and a PR carve-ou
 Ran the **baseline** (committed pre-cleanup `vcs`) vs **revised** medium rounds (both modes) as two background Workflows.
 
 - Baseline: correctness PASS but **5 stale refs** left (R1 git 2, R2 jj 3).
-- Revised: **stale → 0**, tokens flat — but R3's Opus agent deleted the PR-backed branch, reasoning *"a bare local remote isn't a real PR host."* The metric caught it (`HYGIENE: FAIL — PR-backed ref wrongly deleted`).
+- Revised: **stale → 0**, tokens flat — but R3's Opus agent deleted the PR-backed branch, reasoning _"a bare local remote isn't a real PR host."_ The metric caught it (`HYGIENE: FAIL — PR-backed ref wrongly deleted`).
 
 Fixed the PR-exception to key on the checkable signal — "does a remote branch of that name exist? → keep it" — and to explicitly **not** judge whether the remote is "a real PR host."
 

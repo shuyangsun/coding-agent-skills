@@ -71,6 +71,9 @@ for rd in rounds:
     # were left behind (STALE_LIST) so we can attribute the stale-ref metric per
     # agent (the scoreboard then sums it per round and per tier).
     stale_set, stale_total = set(), 0
+    orphan_ws_set, orphan_dir_set = set(), set()
+    orphan_ws_total = orphan_dir_total = 0
+    default_ok = "-"
     for line in out.splitlines():
         s = line.strip()
         if s.startswith("STALE_LIST="):
@@ -80,6 +83,23 @@ for rd in rounds:
                 stale_total = int(s[len("STALE_REFS="):])
             except ValueError:
                 stale_total = 0
+        elif s.startswith("ORPHAN_WS_LIST="):
+            orphan_ws_set = set(s[len("ORPHAN_WS_LIST="):].split())
+        elif s.startswith("ORPHAN_DIR_LIST="):
+            orphan_dir_set = set(s[len("ORPHAN_DIR_LIST="):].split())
+        elif s.startswith("ORPHAN_WS="):
+            try:
+                orphan_ws_total = int(s[len("ORPHAN_WS="):])
+            except ValueError:
+                orphan_ws_total = 0
+        elif s.startswith("ORPHAN_DIRS="):
+            try:
+                orphan_dir_total = int(s[len("ORPHAN_DIRS="):])
+            except ValueError:
+                orphan_dir_total = 0
+        elif s.startswith("DEFAULT_OK="):
+            v = s[len("DEFAULT_OK="):].strip()
+            default_ok = v if v in ("pass", "fail") else "-"
     # session-start isolation (start rounds only). check-isolation.sh prints
     # ISOLATED=pass/fail for a `--task start` round, or ISOLATED=n/a (exit 2) for
     # an integration round — in which case the metric stays "-" (not measured).
@@ -97,8 +117,11 @@ for rd in rounds:
     iso_note = f", isolated={isolate}" if isolate != "-" else ""
     if name_ok in ("pass", "fail"):
         iso_note += f", name={name_ok}"
+    jj_note = ""
+    if default_ok != "-":
+        jj_note = f", default={default_ok}, orphan={orphan_ws_total + orphan_dir_total}"
     print(f"\n{'='*78}\n### round {rnum}  {mode}/{diff}  ->  {quality.upper()}  "
-          f"(stale_refs={stale_total}{iso_note})\n{'='*78}")
+          f"(stale_refs={stale_total}{jj_note}{iso_note})\n{'='*78}")
     if isolate != "-":
         for line in iout.splitlines():
             s = line.strip()
@@ -109,7 +132,10 @@ for rd in rounds:
     for line in out.splitlines():
         s = line.strip()
         if (s.startswith("FAIL") or s.startswith("RESULT") or s.startswith("HYGIENE")
-                or s.startswith("STALE_REFS") or "jj workflow used" in line
+                or s.startswith(("STALE_REFS", "DEFAULT_OK", "DEFAULT_STATUS",
+                                 "DEFAULT_PARENT", "ORPHAN_WS", "ORPHAN_DIRS",
+                                 "WORKSPACE_HYGIENE"))
+                or "jj workflow used" in line
                 or "advanced through jj" in line):
             print("  " + s)
     # per-agent metrics rows
@@ -118,6 +144,8 @@ for rd in rounds:
         md = r.get("mode_detected", "?")
         mode_ok = "OK" if md == mode else f"WRONG({md})"
         stale = 1 if f"agent-{a['k']}" in stale_set else 0
+        orphan_ws = 1 if f"agent-{a['k']}" in orphan_ws_set else 0
+        orphan_dirs = 1 if f"agent-{a['k']}" in orphan_dir_set else 0
         tokens = token_map.get((rnum, a["k"]), 0)
         note = f"detect={mode_ok};pub={r.get('published')};mis={str(r.get('mishandled',''))[:40]}"
         sh("bash", f"{HERE}/record-metrics.sh",
@@ -126,13 +154,15 @@ for rd in rounds:
            "--total", str(r.get("total_seconds", 0) or 0),
            "--conflict", str(r.get("conflict_seconds", 0) or 0),
            "--tokens", str(tokens), "--stale", str(stale), "--isolate", isolate,
-           "--name-ok", name_ok,
+           "--orphan-ws", str(orphan_ws), "--orphan-dirs", str(orphan_dirs),
+           "--default-ok", default_ok, "--name-ok", name_ok,
            "--retries", str(r.get("retries", 0) or 0),
            "--stalls", str(r.get("stalls", 0) or 0),
            "--quality", quality, "--notes", note)
         print(f"  - a{a['k']} {a['tier']:<5} {a['model']:<7} detect={mode_ok:<10} "
               f"tot={r.get('total_seconds')}s cnf={r.get('conflict_seconds')}s "
-              f"tok={tokens} stale={stale} iso={isolate} name={name_ok} retr={r.get('retries')} stall={r.get('stalls')} "
+              f"tok={tokens} stale={stale} orphan={orphan_ws + orphan_dirs} def={default_ok} "
+              f"iso={isolate} name={name_ok} retr={r.get('retries')} stall={r.get('stalls')} "
               f"pub={r.get('published')}")
 
 print(f"\n{'#'*78}\n# SCOREBOARD\n{'#'*78}")

@@ -65,8 +65,10 @@ typically local — there may be no remote; "publish" means advancing the `main`
 bookmark). jj records conflicts as **commit state**, so it will happily _commit_ a
 conflict — you must resolve it _in the commit_, not paper over it in a child.
 
-1. If jj warns the working copy is stale, run `jj workspace update-stale` (or any
-   `jj` command) first so the working copy reflects current `main`.
+1. If jj says `The working copy is stale`, treat it as routine workspace
+   lifecycle, not repo corruption. Run `jj workspace update-stale` in that
+   workspace, then continue. Do not retry random jj commands first; stale
+   workspaces block them until this command reconciles the working copy.
 2. Create the integration commit as a merge of `main` and your work:
    `jj new main agent-K`. (Equivalently `jj rebase -b agent-K -d main` then edit
    that commit.) The new commit `@` becomes your merge.
@@ -111,6 +113,23 @@ remote list` is non-empty and the bookmark tracks one of those — `agent-K@git`
    `jj bookmark delete agent-K` then `jj git export`. Details in
    [Finish](#finish-delete-the-merged-branch-then-stop).
 
+9. **If this repo has sibling jj workspaces, finish the `default` workspace
+   lifecycle.** This is the consolidate-and-push bookend for local multi-agent
+   work:
+   - Find `default` and the siblings:
+     `jj workspace list -T 'name ++ ": " ++ root ++ "\n"'`.
+   - In `default`, expect stale state after sibling workspace operations. Run
+     `jj workspace update-stale`; if it reports the workspace was not stale, that
+     is fine. Then run `jj new main` so `default@` is parked on current `main`.
+   - For each sibling workspace whose work is already on `main` and does **not**
+     back open PR/review work, retire the workspace too:
+     `jj workspace forget <name>` and remove its on-disk directory. Skip
+     workspaces that still contain unlanded work or whose branch/bookmark is kept
+     because a real remote backs it.
+   - If you are currently inside the workspace being retired, first `cd` to
+     `default` (or another directory outside it), then forget it and remove its
+     directory.
+
 ## Finish: delete the merged branch, then stop
 
 Once your work is verified on `main`, your `agent-K` branch/bookmark is merged and
@@ -148,8 +167,15 @@ it, `jj workspace forget <name>` / `git worktree remove <path>` (and delete its
 directory). Leave a workspace/worktree the _tool_ started you in for the tool to
 clean up.
 
+In jj repos where several local workspaces share the same repo, also do the
+`default` lifecycle bookend above: recover stale `default` if needed, park it on
+`main`, and remove retired sibling workspaces whose work has landed and does not
+back open review work. This cleanup prevents the next agent from hitting a stale
+`default` before it can consolidate or push.
+
 Then **stop.** You are done the moment your work is on `main`, the union is
 preserved, the verify step is clean, and the merged branch is resolved (deleted,
-or kept because a remote backs it), and any workspace/worktree you created is
-removed. Do not write new code, run builds/tests/formatters, or amend the
+or kept because a remote backs it), `default` is usable if this is a jj
+multi-workspace repo, and any retired workspace/worktree you are responsible for
+is removed. Do not write new code, run builds/tests/formatters, or amend the
 committed change — integration is the whole job.

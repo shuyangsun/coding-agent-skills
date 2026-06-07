@@ -24,15 +24,14 @@
 #
 # The round PASSES only if every check AND the oracle pass.
 #
-# Separately, a branch/bookmark HYGIENE metric is reported (not folded into the
-# correctness RESULT): after a clean merge each `agent-K` ref is redundant and vcs
-# should delete it unless it backs an open PR (PR_BACKED). The script prints
-# `STALE_REFS=N` and a HYGIENE PASS/FAIL line so resolution quality and repo
-# hygiene stay separable on the scoreboard; the exit bar (METRICS.md) wants both.
+# Separately, hygiene/lifecycle metrics are reported (not folded into the
+# correctness RESULT): branch/bookmark cleanup (`STALE_REFS`), jj default
+# workspace readiness (`DEFAULT_OK`), and retired jj workspace teardown
+# (`ORPHAN_WS` / `ORPHAN_DIRS`). The exit bar (METRICS.md) wants all of them clean.
 #
 # Usage: check-quality.sh <round-dir>
 # Exit:  0 = PASS, 1 = FAIL, 2 = usage / setup error.  (RESULT = correctness only;
-#        STALE_REFS / HYGIENE are reported for the metrics layer to record.)
+#        hygiene/lifecycle metrics are reported for the metrics layer to record.)
 set -uo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -59,9 +58,11 @@ note_fail() {
 echo "== quality report: round $ROUND ($MODE, ${DIFFICULTY:-?}) =="
 
 # jj is colocated; force its bookmarks out to Git refs so the Git-based scans see
-# the latest integration state.
+# the latest integration state. Use --ignore-working-copy so a deliberately stale
+# default workspace does not prevent the correctness oracle from inspecting main;
+# default readiness is scored separately below.
 if [[ "$MODE" == "jj" && -d "$repo/.jj" ]]; then
-  jj -R "$repo" git export >/dev/null 2>&1 || true
+  jj -R "$repo" --ignore-working-copy git export >/dev/null 2>&1 || true
 fi
 
 git --git-dir="$gitdir" rev-parse --verify -q "$ref" >/dev/null 2>&1 ||
@@ -102,7 +103,7 @@ fi
 # ops. So the absence of any main-advancing jj op means git was used where jj
 # was required. (This assumes the seed never moves `main` — keep it that way.)
 if [[ "$MODE" == "jj" && -d "$repo/.jj" ]]; then
-  moved="$(jj -R "$repo" op log --no-graph -T 'description.first_line() ++ "\n"' 2>/dev/null |
+  moved="$(jj -R "$repo" --ignore-working-copy op log --no-graph -T 'description.first_line() ++ "\n"' 2>/dev/null |
     grep -cE '(point|move) bookmark main\b' || true)"
   if [[ "${moved:-0}" -gt 0 ]]; then
     echo "  ok: 'main' advanced through jj ($moved bookmark op(s)) — jj workflow used."
@@ -131,7 +132,7 @@ if [[ "$MODE" == "git" ]]; then
   fi
   echo "  ok: integration ref published without conflict markers."
 else
-  conflicted="$(jj -R "$repo" log --no-graph -r "::$ref" -T 'if(conflict, "x", "")' 2>/dev/null | tr -d '\n')"
+  conflicted="$(jj -R "$repo" --ignore-working-copy log --no-graph -r "::$ref" -T 'if(conflict, "x", "")' 2>/dev/null | tr -d '\n')"
   if [[ -n "$conflicted" ]]; then
     note_fail "jj history reaching $ref contains ${#conflicted} conflicted commit(s)."
   else
@@ -201,6 +202,86 @@ if [[ "$stale" -eq 0 && "$missing_pr" -eq 0 ]]; then
 else
   [[ "$stale" -gt 0 ]] && echo "  HYGIENE: FAIL — $stale merged branch/bookmark(s) not deleted: $stale_list"
   [[ "$missing_pr" -gt 0 ]] && echo "  HYGIENE: FAIL — PR-backed ref(s) wrongly deleted: $missing_list"
+fi
+
+# 7. jj default workspace lifecycle + retired workspace cleanup --------------
+# These are measured separately from content correctness for the multi-workspace
+# failure mode documented in docs/issues/0001:
+#   - DEFAULT_OK: the `default` workspace is usable at the end, not stale, and is
+#     parked on latest `main` (the consolidate-and-push starting point).
+#   - ORPHAN_WS / ORPHAN_DIRS: retired per-agent jj workspaces were forgotten and
+#     their on-disk directories removed once their work landed.
+if [[ "$MODE" == "jj" && -d "$repo/.jj" && "${TASK:-integrate}" == "integrate" ]]; then
+  default_ok="fail"
+  default_status="error"
+  default_parent="unknown"
+  default_detail=""
+
+  if default_out="$(jj -R "$repo" st 2>&1)"; then
+    default_status="usable"
+  elif printf '%s\n' "$default_out" | grep -qi 'working copy is stale'; then
+    default_status="stale"
+    default_detail="default workspace is still stale; run jj workspace update-stale there"
+  else
+    default_status="error"
+    default_detail="$(printf '%s\n' "$default_out" | head -1)"
+  fi
+
+  main_id="$(jj -R "$repo" --ignore-working-copy log --no-graph -r main -T 'commit_id ++ "\n"' 2>/dev/null | head -1)"
+  parent_ids="$(jj -R "$repo" --ignore-working-copy log --no-graph -r 'default@-' -T 'commit_id ++ "\n"' 2>/dev/null || true)"
+  parent_count="$(printf '%s\n' "$parent_ids" | sed '/^$/d' | wc -l | tr -d ' ')"
+  if [[ -n "$main_id" && "$parent_count" == "1" ]] && printf '%s\n' "$parent_ids" | grep -qxF "$main_id"; then
+    default_parent="main"
+  else
+    default_parent="other"
+    [[ -z "$default_detail" ]] && default_detail="default workspace is not parked on main; run jj new main after stale recovery"
+  fi
+  if [[ "$default_status" == "usable" && "$default_parent" == "main" ]]; then
+    default_ok="pass"
+    default_detail="default usable and parked on main"
+  fi
+
+  echo "  -- jj default workspace lifecycle --"
+  echo "  DEFAULT_OK=$default_ok"
+  echo "  DEFAULT_STATUS=$default_status"
+  echo "  DEFAULT_PARENT=$default_parent"
+  echo "  DEFAULT_DETAIL=$default_detail"
+
+  orphan_ws=0
+  orphan_dirs=0
+  orphan_ws_list=""
+  orphan_dir_list=""
+  ws_listing="$(jj -R "$repo" --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null || true)"
+  for ((k = 1; k <= AGENTS; k++)); do
+    name="agent-$k"
+    if printf '%s\n' "$ws_listing" | cut -f1 | grep -qxF "$name"; then
+      orphan_ws=$((orphan_ws + 1))
+      orphan_ws_list="${orphan_ws_list:+$orphan_ws_list }$name"
+    fi
+    ws_var="WS_$k"
+    ws_path="${!ws_var:-}"
+    if [[ -n "$ws_path" && "$ws_path" != "$repo" && -d "$ws_path" ]]; then
+      orphan_dirs=$((orphan_dirs + 1))
+      orphan_dir_list="${orphan_dir_list:+$orphan_dir_list }$name"
+    fi
+  done
+  echo "  -- jj retired workspace hygiene --"
+  echo "  ORPHAN_WS=$orphan_ws"
+  echo "  ORPHAN_WS_LIST=$orphan_ws_list"
+  echo "  ORPHAN_DIRS=$orphan_dirs"
+  echo "  ORPHAN_DIR_LIST=$orphan_dir_list"
+  if [[ "$orphan_ws" -eq 0 && "$orphan_dirs" -eq 0 ]]; then
+    echo "  WORKSPACE_HYGIENE: PASS — no retired agent workspace entry or directory left behind"
+  else
+    [[ "$orphan_ws" -gt 0 ]] && echo "  WORKSPACE_HYGIENE: FAIL — workspace entries still registered: $orphan_ws_list"
+    [[ "$orphan_dirs" -gt 0 ]] && echo "  WORKSPACE_HYGIENE: FAIL — workspace directories still on disk: $orphan_dir_list"
+  fi
+else
+  echo "  DEFAULT_OK=n/a"
+  echo "  ORPHAN_WS=0"
+  echo "  ORPHAN_WS_LIST="
+  echo "  ORPHAN_DIRS=0"
+  echo "  ORPHAN_DIR_LIST="
 fi
 
 # history shape (informational) ---------------------------------------------

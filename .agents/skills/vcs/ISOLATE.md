@@ -104,5 +104,12 @@ your merged branch/bookmark (see
 - If the tool started you in a worktree you didn't create, leave its removal to
   the tool; just delete your branch/bookmark.
 
+If you are doing an integration/consolidation task and `INTEGRATE.md` identifies
+a sibling jj workspace as retired (its work is on `main` and it does not back open
+review work), you are responsible for forgetting that workspace and removing its
+directory even if another agent originally created it. Confirm with
+`jj workspace list -T 'name ++ ": " ++ root ++ "\n"'`, move outside the directory
+being removed, then forget and delete it.
+
 Skip deletion only when a **remote branch backs it** (an open PR) — same carve-out
 as Finish.

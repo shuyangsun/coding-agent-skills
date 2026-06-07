@@ -2,7 +2,7 @@
 
 # jj multi-workspace lifecycle gaps in multi-agent collaboration
 
-- **Status:** Open — documented, not yet fixed
+- **Status:** Fixed — harness metrics and `vcs` guidance added
 - **Date:** 2026-06-06
 - **Area:** `skills/vcs` (multi-agent jj workflow); affects any session using per-agent `jj` workspaces
 - **Severity:** Medium — both are recoverable, but they interrupt and accrete around the consolidate-and-push step of multi-agent collaboration
@@ -13,8 +13,7 @@
 The multi-agent flow has each agent isolate into its **own** `jj` workspace
 (`<ide>-<work>`), do its work, advance the shared `main` bookmark, and then
 consolidate in the **`default`** workspace and push from there. Two related gaps
-in that workspace **lifecycle** have surfaced — neither has guidance in the `vcs`
-skill, and both bite the consolidation step:
+in that workspace **lifecycle** had surfaced; both bit the consolidation step:
 
 - **Gap 1 — `default` goes stale** the moment a sibling workspace records
   operations, blocking every `jj` command there until reconciled.
@@ -22,8 +21,8 @@ skill, and both bite the consolidation step:
   `main`; they linger on disk and keep contributing to Gap 1.
 
 Both stem from the same root: `jj` workspace lifecycle is fully manual, and the
-`vcs` skill doesn't yet drive the consolidate-and-tidy bookend the way it now
-drives session-start isolation.
+`vcs` skill did not drive the consolidate-and-tidy bookend the way it already
+drove session-start isolation.
 
 ## Gap 1 — `default` workspace goes stale after sibling-workspace work
 
@@ -119,15 +118,15 @@ instance — `vcs-tune` — was cleaned up this way while documenting the gap.
   (it is the colocated checkout carrying `.git` and the `origin` remote). Gap 1
   blocks that consolidation outright; Gap 2 silently grows the set of workspaces
   that trigger Gap 1.
-- An agent driving the merge has no `vcs` guidance for either state; it may retry
-  blindly, abandon the merge, escalate unnecessarily, or leave orphans behind.
+- Without explicit `vcs` guidance for either state, an agent may retry blindly,
+  abandon the merge, escalate unnecessarily, or leave orphans behind.
 - Both interact with the freshly-added isolation/naming workflow: agents now
   routinely spin up sibling workspaces, so both states will be hit **often**.
 
-## Proposed direction (NOT done here — for a later fix)
+## Implemented direction
 
-The `vcs` skill (likely `ISOLATE.md` / `INTEGRATE.md`) should grow guidance for
-the **consolidate-in-`default`** bookend of the multi-workspace flow:
+The `vcs` skill now has guidance for the **consolidate-in-`default`** bookend of
+the multi-workspace flow:
 
 - Expect a `The working copy is stale` error when returning to `default` after
   sibling-workspace operations; treat it as routine, and run
@@ -138,9 +137,10 @@ the **consolidate-in-`default`** bookend of the multi-workspace flow:
 - Spell out the recommended order to merge several agents' workspaces into
   `default` and publish, composed with branch/bookmark cleanup.
 
-A future `improving-vcs-skill` harness round could measure both: that an agent
-recovers from a stale `default` and that **no orphan workspaces remain** after a
-multi-agent round — the same way isolation and naming are now measured.
+The `improving-vcs-skill` harness now measures both: `DEFAULT_OK` verifies that
+an agent recovers and parks `default` on `main`, and `ORPHAN_WS` / `ORPHAN_DIRS`
+verify that no retired sibling workspaces remain after a multi-agent round — the
+same way isolation and naming are measured.
 
 ## References
 

@@ -50,8 +50,9 @@ integrate-and-publish steps for each mode, the conflict etiquette (union every
 additive change; keep the higher value for a single-valued field; leave no
 markers), the jj rule that **no conflicted commit may remain in `main`'s
 history** before you advance the bookmark, and the final tidy-up — **delete your
-merged branch/bookmark** (unless it backs an open PR) so it doesn't linger as a
-stale ref.
+merged branch/bookmark** (unless it backs an open PR), and in jj multi-workspace
+flows recover/park `default` and retire landed sibling workspaces, so stale
+working copies don't block the next consolidation.
 
 ## 4. Write the commit message
 

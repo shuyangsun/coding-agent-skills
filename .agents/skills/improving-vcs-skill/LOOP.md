@@ -17,7 +17,10 @@ and **model tier** so a few rounds sample the whole space ([MATRIX.md](MATRIX.md
    fixtures, **pre-commits each agent's change** on `agent-K`, writes a plan
    (`spec.json`), the briefs, and a manifest. Note the per-agent workspace paths
    and the integration ref (`main`). The agents author **no code** — their work
-   already exists; they only integrate it.
+   already exists; they only integrate it. In jj integration rounds, the sandbox
+   also deliberately makes the shared `default` workspace stale by rewriting
+   `default@` from a sibling workspace; the agent's finish flow must recover it
+   and park it on `main`.
 
 2. **Brief & spawn sub-agents — one per workspace, in parallel.** Each stands in
    for an (agent/tool × environment × **model tier**) cell from
@@ -57,18 +60,23 @@ and **model tier** so a few rounds sample the whole space ([MATRIX.md](MATRIX.md
    catches an agent that did forbidden "extra work". It also prints, **separately
    from that verdict**, the branch/bookmark **hygiene** metric (`STALE_REFS=N` —
    merged `agent-K` refs the agent failed to delete, excluding any `--pr-backed`
-   ones); the exit bar wants this at 0.
+   ones), plus jj lifecycle metrics: `DEFAULT_OK=pass/fail` (default workspace
+   usable and parked on main) and `ORPHAN_WS=N` / `ORPHAN_DIRS=N` (retired
+   workspace entries/directories left behind). The exit bar wants all of these
+   clean.
 
 6. **Record + compare.** For each agent, `record-metrics.sh` the time/conflict/
-   retry numbers, the quality verdict, the **`--tokens`** (output-token) and
-   **`--stale`** (hygiene) counts, **and `--tier` / `--difficulty`**; then
-   `scoreboard.sh` to see this round against prior rounds **and** the per-tier
-   breakdown. Headline costs: **batch wall-clock** and, above all,
-   **conflict-resolution time** — watch their round-over-round deltas and whether
-   any tier or difficulty×tier cell lags. `stale` must be 0; `mean_tok` must not
-   balloon. (When driven by the bundled runners, `_score.py` fills `--stale` from
-   the oracle and `--tokens` from each agent's transcript JSONL — pass the
-   workflow's transcript dir as `_score.py`'s third argument.)
+   retry numbers, the quality verdict, the **`--tokens`** (output-token),
+   **`--stale`** (branch/bookmark hygiene), **`--orphan-ws`** /
+   **`--orphan-dirs`** (retired jj workspace hygiene), **`--default-ok`** (jj
+   default readiness), **and `--tier` / `--difficulty`**; then `scoreboard.sh` to
+   see this round against prior rounds **and** the per-tier breakdown. Headline
+   costs: **batch wall-clock** and, above all, **conflict-resolution time** —
+   watch their round-over-round deltas and whether any tier or difficulty×tier
+   cell lags. `stale`, `orph`, and `def` must be clean; `mean_tok` must not
+   balloon. (When driven by the bundled runners, `_score.py` fills these hygiene
+   metrics from the oracle and `--tokens` from each agent's transcript JSONL —
+   pass the workflow's transcript dir as `_score.py`'s third argument.)
 
 7. **Diagnose, then revise `vcs`.** Read the narratives _through the lens of the
    numbers_: find what actually cost time or caused a `check-quality` failure
@@ -111,7 +119,7 @@ integration rounds; they're single-agent, so cover the space by repetition.
    **separately**, so isolation, naming, correctness, and cleanup stay
    distinguishable.
 4. **Record** with `record-metrics.sh … --isolate <pass|fail> --name-ok
-   <pass|fail|n/a>` and read the `iso` and `name` columns on the scoreboard (want
+<pass|fail|n/a>` and read the `iso` and `name` columns on the scoreboard (want
    0; `-` on integration rounds, and `name` is `-`/`n/a` on the worktree arm).
 
 When you iterate on isolation, drive `iso` round-over-round (isolate into your own
@@ -166,7 +174,11 @@ system is in use — determine it as `vcs` instructs, before you start.
 cloud session; jj is not installed here. / You are on a local CLI with both
 git and jj available.]
 
-Your workspace is: <ABSOLUTE WORKSPACE PATH>. Work only there.
+Your workspace is: <ABSOLUTE WORKSPACE PATH>. Run integration commands there.
+Do not edit project files outside it. The only allowed exception is
+end-of-integration VCS cleanup that `vcs` explicitly prescribes, such as updating
+jj `default`, forgetting a retired workspace, or removing its directory after the
+work is on `main`.
 
 Your task:
 <PASTE THE CONTENTS OF briefs/agent-K.md>
@@ -178,6 +190,7 @@ When done, report back exactly in this format:
 The brief forbids writing code, adding tests, or running the app to "verify" —
 the test is the integration and conflict resolution. It does **not** forbid the
 end-of-integration **tidy-up** `vcs` calls for (deleting the merged branch/
-bookmark); that step is part of a clean finish and is measured by the hygiene
-metric, so leave room for it rather than telling the agent to stop the instant
+bookmark, recovering/parking jj `default`, and retiring a jj workspace whose work
+landed); those steps are part of a clean finish and are measured by hygiene
+metrics, so leave room for them rather than telling the agent to stop the instant
 its work hits `main`.
