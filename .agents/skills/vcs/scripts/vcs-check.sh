@@ -20,11 +20,27 @@ usage:
   vcs-check.sh pre-vcs-write [--helper isolate|integrate|session-start|rename-work] [work-ref]
   vcs-check.sh pre-publish [--helper integrate] [work-ref]
   vcs-check.sh assert-owner <work-ref>
-  vcs-check.sh hook [--agent codex|claude]
+  vcs-check.sh hook [--agent codex|claude|agy]
 
-The hook form reads a Codex/Claude hook JSON object on stdin and exits 2 to
-block risky default-workspace edits or raw VCS writes.
+The hook form reads an agent hook JSON object on stdin and blocks risky
+default-workspace edits or raw VCS writes. Antigravity hooks receive a JSON
+decision response; Claude/Codex hooks use the agent-native exit-code contract.
 EOF
+}
+
+is_antigravity_agent() {
+  case "$agent" in
+    agy | antigravity | gemini) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+json_string() {
+  command -v python3 >/dev/null 2>&1 || {
+    printf '"%s"' "$(cat | sed 's/"/\\"/g')"
+    return 0
+  }
+  python3 -c 'import json, sys; print(json.dumps(sys.stdin.read()))'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -67,10 +83,17 @@ deny() {
     fi
     dir="$(dirname "$dir")"
   done
-  printf 'vcs-check: %s\n' "$reason" >&2
   if [[ "$hook_mode" -eq 1 ]]; then
+    if is_antigravity_agent; then
+      local encoded
+      encoded="$(printf 'vcs-check: %s' "$reason" | json_string)"
+      printf '{"decision":"deny","reason":%s}\n' "$encoded"
+      exit 0
+    fi
+    printf 'vcs-check: %s\n' "$reason" >&2
     exit 2
   fi
+  printf 'vcs-check: %s\n' "$reason" >&2
   exit 3
 }
 
@@ -227,10 +250,14 @@ except Exception:
     sys.exit(0)
 cur = data
 for part in field.split("."):
-    if isinstance(cur, dict):
+    if isinstance(cur, list) and part.isdigit():
+        idx = int(part)
+        cur = cur[idx] if idx < len(cur) else None
+    elif isinstance(cur, dict):
         cur = cur.get(part)
     else:
         cur = None
+    if cur is None:
         break
 if cur is not None:
     print(cur)
@@ -251,25 +278,48 @@ EOF
 
 check_hook() {
   hook_mode=1
-  local input event tool command
+  local input event tool command tool_cwd target_file target_dir
   input="$(cat 2>/dev/null || true)"
   event="$(json_field "$input" hook_event_name)"
+  [[ -n "$event" ]] || event="$(json_field "$input" event)"
   tool="$(json_field "$input" tool_name)"
+  [[ -n "$tool" ]] || tool="$(json_field "$input" toolCall.name)"
   command="$(json_field "$input" tool_input.command)"
+  [[ -n "$command" ]] || command="$(json_field "$input" tool_input.commandLine)"
+  [[ -n "$command" ]] || command="$(json_field "$input" tool_input.CommandLine)"
+  [[ -n "$command" ]] || command="$(json_field "$input" toolCall.args.command)"
+  [[ -n "$command" ]] || command="$(json_field "$input" toolCall.args.commandLine)"
+  [[ -n "$command" ]] || command="$(json_field "$input" toolCall.args.CommandLine)"
+  tool_cwd="$(json_field "$input" tool_input.cwd)"
+  [[ -n "$tool_cwd" ]] || tool_cwd="$(json_field "$input" tool_input.Cwd)"
+  [[ -n "$tool_cwd" ]] || tool_cwd="$(json_field "$input" toolCall.args.cwd)"
+  [[ -n "$tool_cwd" ]] || tool_cwd="$(json_field "$input" toolCall.args.Cwd)"
+  if [[ -z "$tool_cwd" ]]; then
+    target_file="$(json_field "$input" toolCall.args.AbsolutePath)"
+    [[ -n "$target_file" ]] || target_file="$(json_field "$input" toolCall.args.TargetFile)"
+    if [[ "$target_file" == /* ]]; then
+      target_dir="$(dirname "$target_file")"
+      [[ -d "$target_dir" ]] && tool_cwd="$target_dir"
+    fi
+  fi
+  if [[ -n "$tool_cwd" && -d "$tool_cwd" ]]; then
+    cd "$tool_cwd" 2>/dev/null || true
+  fi
 
   case "$event" in
     SubagentStart | CwdChanged)
+      is_antigravity_agent && return 0
       hook_warn_if_shared "$event"
       return 0
       ;;
   esac
 
   case "$tool" in
-    apply_patch | Edit | Write | MultiEdit | NotebookEdit)
+    apply_patch | Edit | Write | MultiEdit | NotebookEdit | write_to_file | replace_file_content | multi_replace_file_content)
       check_pre_edit
       return 0
       ;;
-    Bash)
+    Bash | run_command)
       if is_vetted_helper_command "$command"; then
         return 0
       fi
@@ -304,6 +354,9 @@ case "$cmd" in
     ;;
   hook)
     check_hook
+    if is_antigravity_agent; then
+      printf '{"decision":"allow"}\n'
+    fi
     ;;
   -h | --help | "")
     usage

@@ -39,12 +39,14 @@ choose `<work>`:
 bash <skill-dir>/scripts/session-start.sh --hook <agent> --ide <ide>
 ```
 
-In a local jj repo this always creates a temporary workspace such as
+In a local jj `default` workspace this creates a temporary workspace such as
 `codex-pending-1a2b3c4d`, creates the same-name bookmark, writes a local owner
-marker outside the tracked tree, and prints `NEXT_CWD=...`. In a Git primary
-checkout it creates a temporary worktree; in a linked Git worktree it records the
-owner marker and works in place. If `NEXT_CWD` is printed, `cd` there before
-editing or publishing.
+marker outside the tracked tree, and prints `NEXT_CWD=...`. In an existing
+non-`default` jj workspace or linked Git worktree it records the owner marker and
+works in place; in a Git primary checkout it creates a temporary worktree. If
+`NEXT_CWD` is printed, `cd` there before editing or publishing. Repeated startup
+hooks for the same session reuse the existing temporary workspace instead of
+creating another one.
 
 When the task is clear, rename the temporary owner to the normal convention:
 
