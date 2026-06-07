@@ -20,11 +20,16 @@ usage:
   vcs-check.sh pre-vcs-write [--helper isolate|integrate|session-start|rename-work] [work-ref]
   vcs-check.sh pre-publish [--helper integrate] [work-ref]
   vcs-check.sh assert-owner <work-ref>
+-  vcs-check.sh hook [--agent codex|claude]
   vcs-check.sh hook [--agent codex|claude|agy]
+  vcs-check.sh hook [--agent codex|claude|cursor]
 
 The hook form reads an agent hook JSON object on stdin and blocks risky
 default-workspace edits or raw VCS writes. Antigravity hooks receive a JSON
 decision response; Claude/Codex hooks use the agent-native exit-code contract.
+The hook form reads a Codex/Claude-style hook JSON object on stdin and exits 2
+to block risky default-workspace edits or raw VCS writes. Cursor hooks should
+call cursor-hook.sh, which adapts Cursor payloads and emits Cursor JSON.
 EOF
 }
 
