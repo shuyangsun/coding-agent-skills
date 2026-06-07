@@ -107,10 +107,77 @@ git_conflict_files() {
   git diff --name-only --diff-filter=U 2>/dev/null
 }
 
+git_has_conflict_markers() {
+  grep -Eq '^(<<<<<<<|=======|>>>>>>>|[|]{7})' "$1" 2>/dev/null
+}
+
+git_try_auto_conflicts() {
+  local paths=() p backup valid=1 remaining resolved=()
+  while IFS= read -r p; do
+    [[ -n "$p" ]] && paths+=("$p")
+  done < <(git_conflict_files)
+  [[ "${#paths[@]}" -gt 0 ]] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+
+  for p in "${paths[@]}"; do
+    [[ -f "$p" ]] || continue
+    case "$p" in
+      *.json)
+        if [[ -f "$script_dir/json-union-merge.py" ]] &&
+          python3 "$script_dir/json-union-merge.py" "$p" >/dev/null 2>&1 &&
+          python3 -m json.tool "$p" >/dev/null 2>&1; then
+          git add "$p" >/dev/null 2>&1 && resolved+=("$p")
+        fi
+        ;;
+      *.yaml | *.yml | *.toml | *.ini | *.env)
+        if [[ -f "$script_dir/scalar-version-merge.py" ]] &&
+          python3 "$script_dir/scalar-version-merge.py" "$p" >/dev/null 2>&1 &&
+          ! git_has_conflict_markers "$p"; then
+          git add "$p" >/dev/null 2>&1 && resolved+=("$p")
+        fi
+        ;;
+      *)
+        [[ -f "$script_dir/conflict-preview.py" ]] || continue
+        backup="$(mktemp "${TMPDIR:-/tmp}/vcs-git-conflict.XXXXXX")" || continue
+        cp "$p" "$backup" || {
+          rm -f "$backup"
+          continue
+        }
+        if python3 "$script_dir/conflict-preview.py" --write "$p" >/dev/null 2>&1 &&
+          ! git_has_conflict_markers "$p"; then
+          valid=1
+          case "$p" in
+            *.py) python3 -m py_compile "$p" >/dev/null 2>&1 || valid=0 ;;
+          esac
+          if [[ "$valid" -eq 1 ]] && git add "$p" >/dev/null 2>&1; then
+            resolved+=("$p")
+            rm -f "$backup"
+          else
+            cp "$backup" "$p" 2>/dev/null || true
+            rm -f "$backup"
+          fi
+        else
+          cp "$backup" "$p" 2>/dev/null || true
+          rm -f "$backup"
+        fi
+        ;;
+    esac
+  done
+
+  [[ "${#resolved[@]}" -gt 0 ]] || return 1
+  remaining="$(git_conflict_files)"
+  msg "AUTO_RESOLVED=git-additive paths=${resolved[*]}"
+  [[ -z "$remaining" ]] || msg "AUTO_RESOLVED_PARTIAL=remaining-conflicts paths=$(printf '%s' "$remaining" | tr '\n' ' ')"
+  [[ -z "$remaining" ]]
+}
+
 git_print_conflict_and_exit() {
   msg "VCS_CONFLICT=git"
   msg "Resolve these files by union; for single-valued fields keep the higher value:"
   git_conflict_files | sed 's/^/  - /'
+  if command -v python3 >/dev/null 2>&1 && [[ -f "$script_dir/conflict-preview.py" ]]; then
+    msg "additive text/JSON conflicts may have been auto-resolved already; inspect any remaining files only."
+  fi
   msg "During git rebase, the HEAD side is already-landed main; compare values directly instead of choosing ours/theirs."
   msg "Then run: bash <skill-dir>/scripts/integrate.sh --continue $work_ref"
   exit 2
@@ -153,12 +220,18 @@ git_publish_loop() {
     if git_rebase_in_progress; then
       git add -A
       GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || {
-        [[ -n "$(git_conflict_files)" ]] && git_print_conflict_and_exit
+        if [[ -n "$(git_conflict_files)" ]]; then
+          git_try_auto_conflicts && continue
+          git_print_conflict_and_exit
+        fi
         die "git rebase --continue failed"
       }
     else
       git rebase "$upstream" >/dev/null 2>&1 || {
-        [[ -n "$(git_conflict_files)" ]] && git_print_conflict_and_exit
+        if [[ -n "$(git_conflict_files)" ]]; then
+          git_try_auto_conflicts && continue
+          git_print_conflict_and_exit
+        fi
         die "git rebase $upstream failed"
       }
     fi

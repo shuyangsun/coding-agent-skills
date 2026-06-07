@@ -1,0 +1,10 @@
+round	agent	mode	difficulty	tier	env	total_s	conflict_s	tokens	stale_refs	orphan_ws	orphan_dirs	default_ok	isolate	name_ok	retries	stalls	quality	notes
+301	agent-1	git	medium	large	cloud-git	22	0	0	0	0	0	-	-	-	0	0	fail	baseline current helper; no conflict
+301	agent-2	git	medium	mid	cloud-git	67	44	0	0	0	0	-	-	-	1	0	fail	baseline manual conflict; oracle later failed registry union
+301	agent-3	git	medium	small	cloud-git	54	34	0	0	0	0	-	-	-	1	0	fail	baseline manual conflict; oracle failed lost validation-2
+302	agent-1	git	medium	large	cloud-git	22	0	0	0	0	0	-	-	-	0	0	pass	optimized helper; no conflict
+302	agent-2	git	medium	mid	cloud-git	30	0	0	0	0	0	-	-	-	0	0	pass	optimized helper auto-resolved additive text/json
+302	agent-3	git	medium	small	cloud-git	25	0	0	0	0	0	-	-	-	0	0	pass	optimized helper auto-resolved additive text/json and version tie-break
+303	agent-1	git	medium	large	cloud-git	26	0	0	0	0	0	-	-	-	0	0	pass	optimized confirmation; no conflict stop
+303	agent-2	git	medium	mid	cloud-git	33	0	0	0	0	0	-	-	-	0	0	pass	optimized confirmation; auto-resolved additive conflicts
+303	agent-3	git	medium	small	cloud-git	14	0	0	0	0	0	-	-	-	0	0	pass	optimized confirmation; auto-resolved additive conflicts and version tie-break

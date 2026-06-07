@@ -54,12 +54,14 @@ condition.
   `bash <skill-dir>/scripts/integrate.sh --continue <branch-or-bookmark>`.
 
 `integrate.sh` handles the no-ambiguity finish steps: Git fetch/rebase/push retry,
-jj merge formation, stale workspace recovery, `main` movement checks, `jj git
-export`, merged branch/bookmark deletion when no real remote backs it, parking
-jj `default` on `main`, retiring landed jj agent workspaces, and auto-resolving
-jj conflicts that are mechanically additive and structurally valid. If it prints
-`NEXT_CWD=...`, run any later shell command from that live directory because your
-jj workspace was intentionally removed.
+safe additive Git conflict cleanup for text/JSON files, deterministic
+higher-version scalar tie-breaks in config files, jj merge formation, stale
+workspace recovery, `main` movement checks, `jj git export`, merged
+branch/bookmark deletion when no real remote backs it, parking jj `default` on
+`main`, retiring landed jj agent workspaces, and auto-resolving jj conflicts that
+are mechanically additive and structurally valid. If it prints `NEXT_CWD=...`,
+run any later shell command from that live directory because your jj workspace
+was intentionally removed.
 
 ## 3. Conflict etiquette
 

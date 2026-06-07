@@ -21,12 +21,13 @@ etiquette below, then continue:
 bash <skill-dir>/scripts/integrate.sh --continue <branch-or-bookmark>
 ```
 
-The helper handles mode detection, Git fetch/rebase/push retry, jj merge
-formation, stale workspace recovery, `main` movement checks, `jj git export`,
-merged branch/bookmark deletion when no real remote backs it, parking jj
-`default` on `main`, and retiring landed jj agent workspaces. Use the manual
-recipes below only when the helper is missing or reports an unexpected setup
-problem.
+The helper handles mode detection, Git fetch/rebase/push retry, safe additive
+Git conflict cleanup for text/JSON files, deterministic higher-version scalar
+tie-breaks in config files, jj merge formation, stale workspace recovery, `main`
+movement checks, `jj git export`, merged branch/bookmark deletion when no real
+remote backs it, parking jj `default` on `main`, and retiring landed jj agent
+workspaces. Use the manual recipes below only when the helper is missing or
+reports an unexpected setup problem.
 
 ## The model (read once)
 
