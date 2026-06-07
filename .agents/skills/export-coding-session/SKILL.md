@@ -5,11 +5,11 @@ description: Export the current Claude Code / Codex / Gemini (agy) / Cursor agen
 
 # Export agent session history
 
-Save the current agent session as a markdown transcript under `docs/coding-sessions/`. Agent-neutral: the skill is bundled once and symlinked into each agent runtime's skill directory (`.agents/skills/`, `.claude/skills/`, etc.), so the same copy serves every agent.
+Save the current agent session as a markdown transcript under `docs/coding-sessions/`. Agent-neutral: the skill directory can be used directly from `.agents/skills/` or symlinked into another runtime directory (`.claude/skills/`, etc.), so the same copy serves every agent.
 
 ## Locating the bundled scripts
 
-The two helper scripts (`next-index.sh`, `redaction-scan.sh`) live next to this `SKILL.md`. Run them from **this skill's own directory** — the path the runtime gave you when it loaded the skill (e.g. `.agents/skills/export-coding-session/`, `.claude/skills/export-coding-session/`, or wherever this repo's `skills/` directory was symlinked in the host project). Below this is written as `<skill-dir>/`; substitute the actual path. The scripts resolve the working repo root on their own (Git, then Jujutsu, then the current directory) and create any directories they need, so they work from any agent and any working directory.
+The two helper scripts (`next-index.sh`, `redaction-scan.sh`) live next to this `SKILL.md`. Run them from **this skill's own directory** — the path the runtime gave you when it loaded the skill (e.g. `.agents/skills/export-coding-session/`, `.claude/skills/export-coding-session/`, or wherever this skill directory was symlinked in the host project). Below this is written as `<skill-dir>/`; substitute the actual path. The scripts resolve the working repo root on their own (Git, then Jujutsu, then the current directory) and create any directories they need, so they work from any agent and any working directory.
 
 ## Steps
 
