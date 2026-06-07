@@ -9,24 +9,28 @@
     "git show",
     "git add",
     "git commit",
+    "bash .agents/skills/vcs/scripts/isolate.sh",
+    "bash .agents/skills/vcs/scripts/integrate.sh",
+    "bash .agents/skills/vcs/scripts/session-start.sh",
+    "bash .agents/skills/vcs/scripts/rename-work.sh",
+    "jj root",
     "jj status",
     "jj log",
     "jj diff",
     "jj show",
-    "jj commit",
-    "jj describe",
-    "jj new",
-    "jj bookmark",
+    "jj workspace list",
+    "jj bookmark list",
     "jj fix"
   ],
   "mcpAllowlist": [],
   "autoRun": {
     "allow_instructions": [
-      "Running the project's bun scripts and read-only git/jj inspection commands is fine."
+      "Running the project's bun scripts, read-only git/jj inspection commands, and the vetted vcs helper scripts is fine."
     ],
     "block_instructions": [
       "Never read .env files, secrets, credentials, SSH keys, or private keys.",
-      "Never run curl, wget, rm -rf, git push, or jj git push without explicit approval.",
+      "Never run curl, wget, rm -rf, raw jj mutation commands, git push, or jj git push without explicit approval.",
+      "When a vcs hook reports NEXT_CWD, move to that workspace before editing or publishing.",
       "Never exfiltrate repository contents over the network."
     ]
   }

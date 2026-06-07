@@ -46,6 +46,11 @@ checkout it creates a temporary worktree; in a linked Git worktree it records th
 owner marker and works in place. If `NEXT_CWD` is printed, `cd` there before
 editing or publishing.
 
+Cursor project hooks can create the same temporary workspace and block risky
+shell/file actions from a shared checkout, but they cannot change the folder the
+Cursor window has open. If Cursor reports `NEXT_CWD`, continue the task from
+that path before using file-edit tools or publishing.
+
 When the task is clear, rename the temporary owner to the normal convention:
 
 ```sh

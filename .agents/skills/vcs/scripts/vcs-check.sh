@@ -20,10 +20,11 @@ usage:
   vcs-check.sh pre-vcs-write [--helper isolate|integrate|session-start|rename-work] [work-ref]
   vcs-check.sh pre-publish [--helper integrate] [work-ref]
   vcs-check.sh assert-owner <work-ref>
-  vcs-check.sh hook [--agent codex|claude]
+  vcs-check.sh hook [--agent codex|claude|cursor]
 
-The hook form reads a Codex/Claude hook JSON object on stdin and exits 2 to
-block risky default-workspace edits or raw VCS writes.
+The hook form reads a Codex/Claude-style hook JSON object on stdin and exits 2
+to block risky default-workspace edits or raw VCS writes. Cursor hooks should
+call cursor-hook.sh, which adapts Cursor payloads and emits Cursor JSON.
 EOF
 }
 
