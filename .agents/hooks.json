@@ -1,0 +1,23 @@
+{
+  "vcs-session-isolation": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "bash .agents/skills/vcs/scripts/antigravity-hook.sh pre-invocation",
+        "timeout": 30
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .agents/skills/vcs/scripts/antigravity-hook.sh pre-tool-use",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -42,7 +42,8 @@ condition.
 
 - **Agent session startup:** local project hooks may run
   `bash <skill-dir>/scripts/session-start.sh --hook <agent> --ide <ide>` before
-  you know the task name. If it prints `NEXT_CWD=...`, `cd` there before edits or
+  you know the task name (`<agent>` is the hook dialect, such as `codex`,
+  `claude`, or `agy`). If it prints `NEXT_CWD=...`, `cd` there before edits or
   VCS writes. When the task slug is clear, run
   `bash <skill-dir>/scripts/rename-work.sh <ide>-<work>` from that temporary
   workspace. These helpers record local session ownership outside the tracked

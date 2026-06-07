@@ -16,7 +16,7 @@ ide="${VCS_AGENT_ID:-}"
 
 usage() {
   cat <<'EOF'
-usage: session-start.sh [--hook codex|claude|plain] [--ide codex|claude|cursor|agy]
+usage: session-start.sh [--hook codex|claude|agy|plain] [--ide codex|claude|cursor|agy]
 
 Creates a temporary per-session workspace/worktree when the current checkout is a
 local shared VCS root. Prints NEXT_CWD when the agent must move there before
@@ -52,7 +52,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "$hook" in codex | claude | plain) : ;; *) die "--hook must be codex, claude, or plain" ;; esac
+case "$hook" in codex | claude | agy | plain) : ;; *) die "--hook must be codex, claude, agy, or plain" ;; esac
 [[ -n "$ide" ]] || ide="$hook"
 [[ "$ide" == "plain" ]] && ide="agent"
 if [[ ! "$ide" =~ ^[A-Za-z][A-Za-z0-9._-]*$ ]]; then
@@ -77,6 +77,7 @@ if value is not None:
 }
 
 session_from_hook="$(json_get session_id)"
+[[ -n "$session_from_hook" ]] || session_from_hook="$(json_get conversationId)"
 [[ -n "$session_from_hook" ]] && export VCS_SESSION_ID="$session_from_hook"
 
 emit_next_cwd() {
@@ -116,6 +117,36 @@ maybe_use_assigned_workspace() {
   return 0
 }
 
+maybe_reuse_session_workspace() {
+  local expected_mode="$1" dir marker want_session marker_path
+  local session_id agent_id workspace_root work_ref workspace_name mode
+  want_session="$(vcs_session_id)"
+  dir="$(vcs_state_dir "$expected_mode" 2>/dev/null || true)"
+  [[ -n "$dir" && -d "$dir" ]] || return 1
+
+  for marker in "$dir"/*.env; do
+    [[ -f "$marker" ]] || continue
+    session_id=""
+    agent_id=""
+    workspace_root=""
+    work_ref=""
+    workspace_name=""
+    mode=""
+    # shellcheck disable=SC1090
+    source "$marker" 2>/dev/null || continue
+    [[ "$session_id" == "$want_session" && "$agent_id" == "$ide" ]] || continue
+    [[ "$mode" == "$expected_mode" ]] || continue
+    [[ -n "$workspace_root" && -d "$workspace_root" ]] || continue
+    marker_path="$marker"
+    [[ -n "$work_ref" ]] || work_ref="$workspace_name"
+    msg "session workspace already exists; use it instead of creating another"
+    printf 'MODE=%s\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=no\n' "$expected_mode" "$workspace_root" "$work_ref" "$marker_path"
+    emit_next_cwd "$workspace_root" "$expected_mode" "$work_ref" "$marker_path"
+    return 0
+  done
+  return 1
+}
+
 run_git() {
   local top git_dir common_dir branch repo_name parent base name path marker
   top="$(git rev-parse --show-toplevel 2>/dev/null)" || die "cannot find git top-level"
@@ -134,6 +165,7 @@ run_git() {
     return 0
   fi
 
+  maybe_reuse_session_workspace git && return 0
   name="$ide-pending-$(vcs_short_id)"
   repo_name="$(basename "$top")"
   parent="$(dirname "$top")"
@@ -156,11 +188,25 @@ run_git() {
 }
 
 run_jj() {
-  local root default_root repo_name parent name path marker
+  local root default_root current repo_name parent name path marker work_ref
   jj workspace update-stale >/dev/null 2>&1 || true
   root="$(jj root 2>/dev/null)" || die "cannot find jj root"
   default_root="$(vcs_jj_default_root)"
   maybe_use_assigned_workspace jj && return 0
+  current="$(vcs_jj_workspace_name 2>/dev/null || true)"
+  if [[ -n "$current" && "$current" != "default" ]]; then
+    work_ref="$current"
+    if ! jj bookmark list "$work_ref" 2>/dev/null | grep -Eq "^${work_ref}:"; then
+      jj bookmark create "$work_ref" -r @ >/dev/null 2>&1 ||
+        die "could not create bookmark '$work_ref'"
+    fi
+    marker="$(vcs_record_current_session "$ide" "$work_ref" "$default_root")" ||
+      die "could not record session ownership for '$work_ref'"
+    msg "already in a jj workspace"
+    printf 'MODE=jj\nWORKSPACE=%s\nWORK_REF=%s\nOWNER_MARKER=%s\nCREATED=no\n' "$root" "$work_ref" "$marker"
+    return 0
+  fi
+  maybe_reuse_session_workspace jj && return 0
   name="$ide-pending-$(vcs_short_id)"
   repo_name="$(basename "$root")"
   parent="$(dirname "$root")"
