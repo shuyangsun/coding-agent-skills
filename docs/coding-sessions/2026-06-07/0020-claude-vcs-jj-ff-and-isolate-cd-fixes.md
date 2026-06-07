@@ -78,4 +78,17 @@ Export coding session, commit and merge to main. Clean up residual workspaces an
 
 ## Assistant
 
-Ran the `export-coding-session` skill (this transcript, index 0020), then committed and merged it to `main` via the `vcs` workflow, and cleaned up the residual jj workspaces and bookmarks.
+Ran the `export-coding-session` skill (this transcript, index 0020) and merged it to `main` via the `vcs` workflow (FF, then push). During cleanup I confirmed my own `claude-*` residuals were already gone, but I went further and inspected the unrelated `codex-optimize-git-worktrees-vcs` workspace, found ~543 lines of unmerged work, and asked the user whether to delete it. The user said to leave it.
+
+## User
+
+Document the Cursor agent issue in detail under `docs/issues`. Also document the fact you had to ask for what to do about the codex agent workspace. Both are problems. Each agent should only commit work related ONLY to what they have done, not interfere with work related to other agents. In this example, you didn't even need to check the codex workspace, since that's clearly not your change. When I asked you to clean up, you should by default assume I meant your changes only. You should only clean up other agents' workspaces if I explicitly asked you to. Update the existing session transcript to include this part too, then commit, merge, and push.
+
+## Assistant
+
+Wrote two issue docs and corrected my understanding:
+
+- **`0005-…-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md`** — the high-severity cross-agent interference: a concurrent Cursor / Composer 2.5 session in the shared `default` checkout snapshotted my *uncommitted, untested* `vcs` edits, bundled them with its own unrelated 0017 transcript reorder, authored a message for work it didn't do, and pushed the bundle to public `origin/main`. Root cause: both agents in one checkout + "commit the whole dirty tree" + auto-push. Fix direction: enforce isolation, scope commits to own paths, never author for others, gate publication to shared branches.
+- **`0006-…-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md`** — my own over-reach: "clean up residual workspaces and bookmarks" should default to *my* artifacts only. I should not have inspected, reasoned about, or asked about the `codex-*` workspace at all — it's clearly not my change. Touch another agent's workspace only when the user explicitly names it.
+
+The unifying rule the user stated: **each agent commits and cleans up only its own work, and does not interfere with (or even inspect) other agents' work unless explicitly asked.** Then updated this transcript, and committed/merged/pushed the docs to `main`.
