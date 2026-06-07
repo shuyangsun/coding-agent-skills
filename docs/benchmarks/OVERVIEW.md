@@ -20,4 +20,4 @@ tree (does not restart per day).
 
 - [`0002` — jj workspaces vs Git worktrees (Cursor Composer 2.5)](2026-06-07/0002-vcs-skill-composer-2.5-jj-vs-git.md) · [data](2026-06-07/0002-composer-2.5-metrics.tsv)
 - [`0003` — Git worktree helper automation](2026-06-07/0003-vcs-skill-git-worktree-helper-automation.md) · [data](2026-06-07/0003-git-worktree-helper-metrics.tsv)
-- [`0004` — Codex GPT token & speed, jj vs Git](2026-06-07/0004-codex-gpt-jj-vs-git-token-speed.md) · [data](2026-06-07/0004-codex-gpt-jj-vs-git-metrics.tsv)
+- [`0004` — jj vs Git token & speed, by model tier (GPT/Codex + Claude)](2026-06-07/0004-vcs-jj-vs-git-token-speed.md) · [data](2026-06-07/0004-vcs-jj-vs-git-metrics.tsv)

@@ -7,3 +7,11 @@ round	agent	mode	difficulty	tier	env	total_s	conflict_s	tokens	stale_refs	orphan
 502	agent-3	git	medium	small	cloud-git	39	0	3158	0	0	0	-	-	-	0	0	pass	detect=git;published=true
 503	agent-1	jj	easy	mid	local-cli	135	0	5189	0	0	0	-	pass	fail	3	1	pass	start isolation pass;name fail agent-prefix;guard cwd friction
 504	agent-1	git	easy	mid	cloud-git	111	0	5260	0	0	0	-	pass	pass	1	0	pass	start isolation pass;name pass;guard cwd friction
+601	agent-1	jj	medium	large	local-cli	103	0	1181	0	0	0	pass	-	-	0	1	pass	family=claude;model=opus;detect=OK;pub=True;mis=none
+601	agent-2	jj	medium	mid	local-cli	33	0	326	0	0	0	pass	-	-	0	0	pass	family=claude;model=sonnet;detect=OK;pub=True;mis=none
+601	agent-3	jj	medium	small	local-cli	112	55	515	0	0	0	pass	-	-	0	0	pass	family=claude;model=haiku;detect=OK;pub=True;mis=none
+602	agent-1	git	medium	large	cloud-git	128	0	552	0	0	0	-	-	-	1	1	pass	family=claude;model=opus;detect=OK;pub=True;mis=none
+602	agent-2	git	medium	mid	cloud-git	29	0	260	0	0	0	-	-	-	0	0	pass	family=claude;model=sonnet;detect=OK;pub=True;mis=none
+602	agent-3	git	medium	small	cloud-git	54	0	57	0	0	0	-	-	-	0	0	pass	family=claude;model=haiku;detect=OK;pub=True;mis=none
+603	agent-1	jj	easy	mid	local-cli	111	0	944	0	0	0	-	pass	pass	0	0	pass	family=claude;model=sonnet;detect=OK;pub=True;mis=none
+604	agent-1	git	easy	mid	cloud-git	96	0	412	0	0	0	-	pass	pass	0	0	pass	family=claude;model=sonnet;detect=OK;pub=True;mis=none
