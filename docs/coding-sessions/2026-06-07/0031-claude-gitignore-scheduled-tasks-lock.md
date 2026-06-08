@@ -47,6 +47,7 @@ Failed (path not found). Found the correct path at `.agents/skills/vcs/scripts/r
 _Tool: Bash — `bash .agents/skills/vcs/scripts/rename-work.sh claude-gitignore-scheduled-tasks-lock`_
 
 Output:
+
 ```
 vcs-rename-work: renamed jj workspace 'claude-pending-62fcb9f3' to 'claude-gitignore-scheduled-tasks-lock'
 MODE=jj
@@ -69,6 +70,7 @@ _Tool: Bash — `bash .claude/skills/export-coding-session/next-index.sh`_
 First attempt failed (vcs-check refused write from shared workspace). Retried from workspace directory:
 
 Output:
+
 ```
 dir:   docs/coding-sessions/2026-06-07
 index: 0031

@@ -1,0 +1,3 @@
+# Prompt: VCS jj vs Git generic benchmark
+
+Use the `/improving-vcs-skill` harness to test the `/vcs` skill with different models at different capability tiers. Focus on comparing the Jujutsu workspace workflow against the Git worktree workflow, measuring token usage, speed (time), and quality (correctness). Save the benchmark results in the same files as previous runs under `docs/benchmarks/`. You do not need to change the implementation of the `vcs` skill. Pay attention to whether Jujutsu workspaces solve problems with Git worktrees: is it faster? Does it produce cleaner/more efficient model behaviors?

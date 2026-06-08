@@ -18,7 +18,7 @@ Read both issue docs, then the `vcs` skill surface: `SKILL.md`, `scripts/integra
 
 Diagnosis:
 
-- **0003** — `integrate.sh`'s jj path *unconditionally* ran `jj new main work`, so linear single-agent work produced an empty, description-less merge that `jj git push` rejects, leaving orphaned commits above `main`.
+- **0003** — `integrate.sh`'s jj path _unconditionally_ ran `jj new main work`, so linear single-agent work produced an empty, description-less merge that `jj git push` rejects, leaving orphaned commits above `main`.
 - **0004** — agents call `isolate.sh` but treat printing `WORKSPACE=` as "done" and never `cd` into the new checkout, so edits land in the shared checkout.
 
 ### Fix 0003 — `integrate.sh`
@@ -48,7 +48,7 @@ Provisioned rounds under `$VCS_HARNESS_DIR=/tmp/vcs-harness-fix` and spawned Hai
 
 - **round-300** jj integrate, single agent (linear/FF): `check-quality.sh` → `RESULT: PASS`, info `main has 2 commit(s), 0 merge(s)`, `DEFAULT_OK=pass`, `STALE_REFS=0` — the 0003 fix (was an empty merge before).
 - **round-302** jj integrate, 3 agents (concurrent): resolution oracle `PASS` (union intact, tie-break `1.5.3`, JSON/YAML/py valid); first agent hit the new FF path, others formed described merges. Hygiene failures were isolated to one struggling small-tier agent (agent-3, 130 tool calls), not the helper.
-- **round-301** jj start-from-main, **round-303** git start-from-main: `check-isolation.sh` → `ISOLATED=pass`, `NAME_OK=pass`, **`ISO_FS=pass`** (work done *inside* the isolated checkout — the exact 0004 failure mode); git round: "primary checkout untouched … work was done in a separate worktree".
+- **round-301** jj start-from-main, **round-303** git start-from-main: `check-isolation.sh` → `ISOLATED=pass`, `NAME_OK=pass`, **`ISO_FS=pass`** (work done _inside_ the isolated checkout — the exact 0004 failure mode); git round: "primary checkout untouched … work was done in a separate worktree".
 
 Tore down the sandboxes with `rm-sandbox.sh --all`.
 
@@ -56,7 +56,7 @@ Tore down the sandboxes with `rm-sandbox.sh --all`.
 
 Cleanup revealed a stray `claude-streaming-export` jj workspace/bookmark and sibling checkout in the **real** repo — a `--task start` sub-agent ran `isolate.sh` from the Agent tool's default cwd (project root) before cd-ing to its sandbox. Removed it (forget workspace + delete bookmark + rm dir); left the pre-existing `codex-optimize-git-worktrees-vcs` workspace alone.
 
-Worse, the working copy was unexpectedly clean and `origin/main` had advanced to `b30c66a2`: a **concurrent Cursor / Composer 2.5 session in the same checkout** had committed the uncommitted vcs edits *bundled with its own unrelated `0017` transcript reorder*, with a generated message and a `Co-Authored-By: Composer 2.5 (Cursor)` trailer, and pushed it to GitHub. The pushed vcs files were byte-identical to the tested work. Surfaced this and asked how to proceed.
+Worse, the working copy was unexpectedly clean and `origin/main` had advanced to `b30c66a2`: a **concurrent Cursor / Composer 2.5 session in the same checkout** had committed the uncommitted vcs edits _bundled with its own unrelated `0017` transcript reorder_, with a generated message and a `Co-Authored-By: Composer 2.5 (Cursor)` trailer, and pushed it to GitHub. The pushed vcs files were byte-identical to the tested work. Surfaced this and asked how to proceed.
 
 ## User
 
@@ -88,7 +88,7 @@ Document the Cursor agent issue in detail under `docs/issues`. Also document the
 
 Wrote two issue docs and corrected my understanding:
 
-- **`0005-…-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md`** — the high-severity cross-agent interference: a concurrent Cursor / Composer 2.5 session in the shared `default` checkout snapshotted my *uncommitted, untested* `vcs` edits, bundled them with its own unrelated 0017 transcript reorder, authored a message for work it didn't do, and pushed the bundle to public `origin/main`. Root cause: both agents in one checkout + "commit the whole dirty tree" + auto-push. Fix direction: enforce isolation, scope commits to own paths, never author for others, gate publication to shared branches.
-- **`0006-…-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md`** — my own over-reach: "clean up residual workspaces and bookmarks" should default to *my* artifacts only. I should not have inspected, reasoned about, or asked about the `codex-*` workspace at all — it's clearly not my change. Touch another agent's workspace only when the user explicitly names it.
+- **`0005-…-concurrent-cursor-agent-committed-and-pushed-another-agents-work.md`** — the high-severity cross-agent interference: a concurrent Cursor / Composer 2.5 session in the shared `default` checkout snapshotted my _uncommitted, untested_ `vcs` edits, bundled them with its own unrelated 0017 transcript reorder, authored a message for work it didn't do, and pushed the bundle to public `origin/main`. Root cause: both agents in one checkout + "commit the whole dirty tree" + auto-push. Fix direction: enforce isolation, scope commits to own paths, never author for others, gate publication to shared branches.
+- **`0006-…-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md`** — my own over-reach: "clean up residual workspaces and bookmarks" should default to _my_ artifacts only. I should not have inspected, reasoned about, or asked about the `codex-*` workspace at all — it's clearly not my change. Touch another agent's workspace only when the user explicitly names it.
 
 The unifying rule the user stated: **each agent commits and cleans up only its own work, and does not interfere with (or even inspect) other agents' work unless explicitly asked.** Then updated this transcript, and committed/merged/pushed the docs to `main`.
