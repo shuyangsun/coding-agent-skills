@@ -1,6 +1,6 @@
 ---
 name: improving-docs-and-rag-skills
-description: Iterative, measurement-driven harness for IMPROVING two skills at once — `docs` (read/write docs) and `rag` (set up retrieval over a doc set). Use ONLY while authoring or changing `docs` or `rag` — never during normal development. It builds naive vs skill-authored corpora and baseline vs skill RAG configs, runs a deterministic in-process eval (BM25 + in-memory vectors) over a pinned gold set, and reports each skill's marginal effect AND their interaction (the coupling) so revisions are kept or reverted on the numbers.
+description: Iterative, measurement-driven harness for IMPROVING two skills at once — `docs` (read/write docs) and `rag` (set up retrieval over a doc set). Use ONLY while authoring or changing `docs` or `rag` — never during normal development. It establishes a no-doc/no-RAG floor baseline first, then builds naive vs skill-authored corpora and baseline vs skill RAG configs, runs a deterministic in-process eval (BM25 + in-memory vectors) over a pinned gold set, and reports each treatment as a lift above the floor plus each skill's marginal effect AND their interaction (the coupling) so revisions are kept or reverted on the numbers.
 ---
 
 # Improving the `docs` and `rag` skills (one harness, two skills)
@@ -64,17 +64,26 @@ An LLM-as-judge is permitted **only** as an advisory, non-gating signal.
   reference RAG over the **GOLD** corpus (a pinned snapshot of today's `docs/`)
   with pinned `qrels`. It does not move when either skill changes; a move here
   flags **instrument** drift, not skill quality.
-- **Plane 2 — Skill effects via a 2×2 factorial.** Two binary treatments on the
-  same fact payload and gold queries:
+- **Plane 2 — Skill effects via a 2×2 factorial, above an absolute floor.** Every
+  cell is read as a **lift above the floor `Z`** — the genuine "no doc, no RAG"
+  baseline: an **empty corpus** scored with retrieval turned **off**
+  (`docs-eval.py --no-retrieval`), so every metric is identically 0. The floor is
+  run **first** each round; the four treatment cells are two binary treatments on
+  the same fact payload and gold queries:
   - **corpus** ∈ {`N` = naive dump, `D` = `docs`-skill-authored}
   - **rag** ∈ {`b` = baseline config, `r` = `rag`-skill config}
 
-  |              | rag = `b`             | rag = `r`            |
-  | ------------ | --------------------- | -------------------- |
-  | corpus = `N` | `Nb` (control)        | `Nr` (rag-only gain) |
-  | corpus = `D` | `Db` (docs-only gain) | `Dr` (co-designed)   |
+  |               | rag = `b`             | rag = `r`            |
+  | ------------- | --------------------- | -------------------- |
+  | (floor `Z`)   | `0` (no doc, no RAG)  | —                    |
+  | corpus = `N`  | `Nb` (control)        | `Nr` (rag-only gain) |
+  | corpus = `D`  | `Db` (docs-only gain) | `Dr` (co-designed)   |
 
-  Computed **per query (paired)**:
+  Read as the named conditions the scoreboard reports in order — **floor → docs-only
+  (`Db`) → RAG-only (`Nr`) → docs+RAG (`Dr`)** — each as a lift above `Z` (`Nb` is
+  the naive "neither-skill" reference between floor and treatments). Computed
+  **per query (paired)** over the four cells (the floor is the reference, not part
+  of the interaction math):
   - **`docs` marginal** = `Db − Nb` and `Dr − Nr`
   - **`rag` marginal** = `Nr − Nb` and `Dr − Db`
   - **Coupling (interaction)** = `(Dr − Db) − (Nr − Nb)`. Positive ⇒ co-design
@@ -85,6 +94,29 @@ factorial cells are **distributions**: author **N ≥ 5 seeds** per cell, report
 median + IQR, gate on a **paired sign/permutation test** whose CI excludes zero
 across rounds. Use **PLAIN** (no-contextualization) retrieval as the noise-free
 cross-round comparison and **FULL** as the corroborating arm.
+
+## Content-type axis: code vs natural language (separate metrics)
+
+Retrieval behaves differently over **prose** and over **code**, so the harness
+measures them **separately** and reports both. Each gold fact carries a `domain`:
+
+- **`nl`** — natural-language markdown under `docs/`, including the exported
+  **coding-session transcripts** (long, dialog-shaped prose). This is the corpus
+  the N/D/Z factorial above runs on.
+- **`code`** — the repo's own [`inception/`](../../../inception) TanStack Start app
+  (source + config), indexed in place ("inception only for now").
+
+Both domains run the **same** chunk→index→fuse→rerank path and the same configs;
+only the file loader and which queries run change. `scoreboard.py` prints a
+**code-vs-natural-language** view (per rag config) on top of the factorial. The
+factorial/floor stay an `nl` story; code is its own column. Scored against its own
+corpus via `--corpus-kind code --domain code`.
+
+> **Caveat (Phase 0):** absolute recall is **not** cross-domain comparable while
+> the `inception/` corpus is tiny (~12 files < `top_k`): code `recall@k` and
+> `retrieval_hit@20` sit at ceiling, so only `ndcg@10`/`mrr`/`precision` tell code
+> rankers apart. Grow the code corpus/fact set (or shrink code `top_k`) before
+> reading code recall as signal; the scoreboard prints this caveat too.
 
 ## The five metrics (sliced by tier and difficulty)
 
@@ -145,12 +177,12 @@ under `$DOCS_RAG_HARNESS_DIR` (default `$TMPDIR/docs-rag-harness`); only
 
 | Script                                                    | Role                                                                                                                                                  |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gold.py`                                                 | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall.                |
-| `docs-eval.py`                                            | Phase-0 thin eval: given `(corpus, rag-config)`, chunk + index (BM25 + in-memory vectors), run gold queries, emit ranked results + per-stage timings. |
-| `check-retrieval.py`                                      | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines.                                                                               |
+| `gold.py`                                                 | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall; owns the `nl`/`code` content-type domains and their corpus loaders. |
+| `docs-eval.py`                                            | Phase-0 thin eval: given `(corpus, rag-config)`, chunk + index (BM25 + in-memory vectors), run gold queries, emit ranked results + per-stage timings. `--no-retrieval` runs the floor (no index, no retrieval ⇒ all metrics 0). |
+| `check-retrieval.py`                                      | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines; `--corpus-kind code --domain code` scores a code run, emits a `domain` column. |
 | `check-convention.sh`                                     | `docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE`.                                                                             |
 | `check-rag-config.sh`                                     | `rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline.                                                         |
-| `new-corpus.sh`                                           | Provision a round: `--task read\|write`; build N/D (+ GOLD); seed the write convention trap.                                                          |
+| `new-corpus.sh`                                           | Provision a round: `--task read\|write`; build Z (empty floor) + N/D (+ GOLD); seed the write convention trap.                                        |
 | `apply-rag.sh`                                            | Given a corpus + `rag-config.json`, chunk + (optionally) contextualize + snapshot + index per (corpus × config).                                      |
 | `next-index.sh`                                           | Globally-unique zero-padded index **per type folder**; shared by `docs` + the WRITE oracle.                                                           |
 | `record-metrics.sh`                                       | One TSV row per `query × cell(corpus,rag) × mode × round`.                                                                                            |

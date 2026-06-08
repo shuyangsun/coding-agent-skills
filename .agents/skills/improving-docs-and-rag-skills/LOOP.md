@@ -6,34 +6,57 @@ to **one** skill per round.
 
 ## Phase-0 quick start (no services, no LLM)
 
-From this skill's directory (`SK=.agents/skills/improving-docs-and-rag-skills`),
-with `H="${DOCS_RAG_HARNESS_DIR:-$TMPDIR/docs-rag-harness}"`:
+From the repo root (with `SK=.agents/skills/improving-docs-and-rag-skills` and
+`H="${DOCS_RAG_HARNESS_DIR:-$TMPDIR/docs-rag-harness}"`):
 
 ```sh
 # 1. Build + validate the gold set (the single source of truth).
 python3 $SK/scripts/gold.py validate
 python3 $SK/scripts/gold.py build --out "$H/gold-set"
 
-# 2. Build the corpus axis: D (structured) and N (naive, de-structured).
+# 2. Build the corpus axis: Z (empty baseline), N (naive), D (structured),
+#    plus a code/ snapshot of the inception/ app (the code content-type).
 python3 $SK/scripts/mk-corpus.py --out "$H/corpora"
 
-# 3. Run all four factorial cells (corpus N|D × rag b|r), score each, log rows.
+# 3. FLOOR FIRST — the absolute "no doc, no RAG" baseline (empty corpus + no
+#    retrieval). Every metric scores 0; the treatment cells are lifts above it.
 rm -f "$H/metrics.tsv"
+python3 $SK/scripts/docs-eval.py --corpus "$H/corpora/Z" --no-retrieval \
+    --out "$H/cell-Z0" --corpus-tag Z
+python3 $SK/scripts/check-retrieval.py --run "$H/cell-Z0/run.jsonl" \
+    --corpus "$H/corpora/Z" --qrels-mode sentinel --tsv-out "$H/metrics.tsv" \
+    --round "$ROUND" --corpus-tag Z --rag-tag 0 --rag-config-id none
+
+# 4. Then the four NL treatment cells (corpus N|D × rag b|r): docs-only (Db),
+#    RAG-only (Nr), docs+RAG (Dr), and the naive control (Nb). Score, log rows.
 for corpus in N D; do for tag in b r; do
   cfg=$SK/configs/$([ $tag = b ] && echo baseline-b || echo rag-r).json
   python3 $SK/scripts/docs-eval.py --corpus "$H/corpora/$corpus" --config "$cfg" \
-      --out "$H/cell-$corpus$tag" --corpus-tag "$corpus"
+      --out "$H/cell-$corpus$tag" --corpus-tag "$corpus" --domain nl
   python3 $SK/scripts/check-retrieval.py --run "$H/cell-$corpus$tag/run.jsonl" \
       --corpus "$H/corpora/$corpus" --qrels-mode sentinel --tsv-out "$H/metrics.tsv" \
-      --round "$ROUND" --corpus-tag "$corpus" --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)"
+      --round "$ROUND" --corpus-tag "$corpus" --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)" --domain nl
 done; done
 
-# 4. Read the factorial: cell means, marginal effects, the interaction (coupling).
+# 5. CODE content-type: index the inception/ snapshot under each rag config and
+#    score the code gold queries — separate metrics, same eval path as NL.
+for tag in b r; do
+  cfg=$SK/configs/$([ $tag = b ] && echo baseline-b || echo rag-r).json
+  python3 $SK/scripts/docs-eval.py --corpus "$H/corpora/code" --corpus-kind code \
+      --config "$cfg" --out "$H/cell-code$tag" --corpus-tag code --domain code
+  python3 $SK/scripts/check-retrieval.py --run "$H/cell-code$tag/run.jsonl" \
+      --corpus "$H/corpora/code" --corpus-kind code --qrels-mode sentinel --tsv-out "$H/metrics.tsv" \
+      --round "$ROUND" --corpus-tag code --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)" --domain code
+done
+
+# 6. Read it: baseline-first lifts above the floor, the code-vs-NL content-type
+#    comparison, cell means, then the factorial (marginals + interaction/coupling).
 python3 $SK/scripts/scoreboard.py --tsv "$H/metrics.tsv" --metric recall@20
 ```
 
 The retrieval half is **bit-reproducible** (deterministic chunking, stable-hash
-embedding, stable sort); only the latency columns vary run-to-run.
+embedding, stable sort); only the latency columns vary run-to-run. The floor cell
+is identically 0 by construction (no index, no retrieval).
 
 ## The round (general form, all three loops)
 

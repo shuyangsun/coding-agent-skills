@@ -20,13 +20,15 @@ doc in top-20) is the **primary** Phase-0 answerability signal; `answer_ok` /
 
 ## TSV schema (`metrics.tsv`)
 
-One row per `query × cell(corpus,rag) × mode × round`. Phase-0 fills what it can
-measure; the rest are `NA` until Phase 1. Columns emitted today:
+One row per `query × cell(corpus,rag) × domain × mode × round`. The floor is logged
+as `corpus=Z, rag=0` (all metric columns 0); code rows are `corpus=code, domain=code`.
+Phase-0 fills what it can measure; the rest are `NA` until Phase 1. Columns emitted
+today:
 
 ```
-round  corpus(N|D|GOLD)  rag(b|r)  rag_config_id  mode(simple|rag)  retrieval(plain|full)
-seed  query_id  qtype  difficulty  recall@5  recall@10  recall@20  precision@5
-precision@10  ndcg@10  mrr  retrieval_hit@20
+round  corpus(Z|N|D|code|GOLD)  domain(nl|code)  rag(0|b|r)  rag_config_id
+mode(simple|rag)  retrieval(plain|full)  seed  query_id  qtype  difficulty
+recall@5  recall@10  recall@20  precision@5  precision@10  ndcg@10  mrr  retrieval_hit@20
 ```
 
 Phase-1 adds: `embed_tier gen_tier chunker embed_ver gen_ver factuality_grounded
@@ -36,10 +38,21 @@ host_fingerprint notes`.
 
 ## Scoreboard views (`scoreboard.py`)
 
-1. **Cell means** — recall@20, nDCG@10, retrieval_hit@20, MRR for each of Nb/Nr/Db/Dr.
+0. **Baseline-first view (floor)** — the absolute "no doc, no RAG" floor (`Z`,
+   `--no-retrieval`; all metrics 0) printed first, then each named condition as a
+   **lift above the floor**, in order: floor → docs-only (`Db`) → RAG-only (`Nr`) →
+   docs+RAG (`Dr`), with `Nb` as the naive reference. Establishes that every
+   reported gain is measured against nothing.
+0b. **Content-type comparison (code vs natural language)** — when code rows are
+   present, code (`inception/`) vs natural language (structured `D` docs incl.
+   transcripts) on each domain's own corpus, per rag config. Separate metrics so
+   the code/NL retrieval gap is directly visible. The factorial below stays `nl`.
+1. **Cell means** — recall@20, nDCG@10, retrieval_hit@20, MRR for the floor `Z`
+   plus each of Nb/Nr/Db/Dr.
 2. **The 2×2 factorial (headline)** — the two marginal effects (`docs` = Db−Nb &
    Dr−Nr; `rag` = Nr−Nb & Dr−Db) and the **interaction** `(Dr−Db)−(Nr−Nb)`, each
    paired per query with a seeded-bootstrap 90% CI. `*` flags a CI excluding zero.
+   The floor is the reference, **not** part of the interaction math.
 3. *(Phase 1)* by tier×mode ("no tier/mode left behind") and difficulty×tier.
 
 Cross-host comparison is refused: absolute recall/latency are host-relative; only
