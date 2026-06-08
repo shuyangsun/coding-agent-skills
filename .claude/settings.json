@@ -25,6 +25,7 @@
       "Bash(jj bookmark list *)",
       "Bash(jj bookmark delete *)",
       "Bash(jj git push *)",
+      "Bash(jj git export *)",
       "Bash(jj fix *)",
       "WebSearch",
       "WebFetch(domain:github.com)",

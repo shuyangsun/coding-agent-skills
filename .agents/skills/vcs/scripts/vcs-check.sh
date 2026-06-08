@@ -200,6 +200,12 @@ is_safe_jj_main_push_command() {
   while IFS= read -r word; do
     words+=("$word")
   done < <(simple_command_words "$c")
+  while [[ "${#words[@]}" -gt 0 ]]; do
+    case "${words[0]}" in
+      env | *=*) words=("${words[@]:1}") ;;
+      *) break ;;
+    esac
+  done
   [[ "${#words[@]}" -ge 3 ]] || return 1
   [[ "${words[0]}" == "jj" && "${words[1]}" == "git" && "${words[2]}" == "push" ]] || return 1
 
@@ -239,6 +245,19 @@ jj_bookmark_exists() {
   jj --ignore-working-copy bookmark list "$name" 2>/dev/null | grep -Eq "^${name}:"
 }
 
+jj_bookmark_remote_backed() {
+  local name="$1" remotes line remote
+  remotes="$(jj --ignore-working-copy git remote list 2>/dev/null | awk '{print $1}' | sed '/^$/d' || true)"
+  [[ -n "$remotes" ]] || return 1
+  line="$(jj --ignore-working-copy bookmark list "$name" 2>/dev/null || true)"
+  for remote in $remotes; do
+    if printf '%s\n' "$line" | grep -Eq "@${remote}([[:space:]]|$)"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 jj_ref_is_empty_descriptionless() {
   local rev="$1" state
   state="$(jj --ignore-working-copy log --no-graph -r "$rev" \
@@ -262,20 +281,33 @@ is_owned_safe_jj_cleanup_command() {
   while IFS= read -r word; do
     words+=("$word")
   done < <(simple_command_words "$c")
+  while [[ "${#words[@]}" -gt 0 ]]; do
+    case "${words[0]}" in
+      env | *=*) words=("${words[@]:1}") ;;
+      *) break ;;
+    esac
+  done
   [[ "${#words[@]}" -eq 4 ]] || return 1
   [[ "${words[0]}" == "jj" ]] || return 1
 
   case "${words[1]} ${words[2]}" in
     "bookmark delete")
       target="${words[3]}"
-      vcs_session_owns_ref "$target" || return 1
       jj_bookmark_exists "$target" || return 1
-      jj_ref_is_safe_for_shared_cleanup "$target"
+      if vcs_session_owns_ref "$target"; then
+        jj_ref_is_safe_for_shared_cleanup "$target"
+        return $?
+      fi
+      jj_bookmark_remote_backed "$target" && return 1
+      jj_ref_is_ancestor_of_main "$target"
       ;;
     "workspace forget")
       target="${words[3]}"
-      vcs_session_owns_ref "$target" || return 1
-      jj_ref_is_safe_for_shared_cleanup "${target}@"
+      if vcs_session_owns_ref "$target"; then
+        jj_ref_is_safe_for_shared_cleanup "${target}@"
+        return $?
+      fi
+      jj_ref_is_ancestor_of_main "${target}@"
       ;;
     *)
       return 1
@@ -286,6 +318,9 @@ is_owned_safe_jj_cleanup_command() {
 check_pre_vcs_write() {
   local command="${1:-}"
   [[ "${VCS_GUARD_ALLOW_SHARED:-}" == "1" ]] && return 0
+  if [[ -n "$command" && "$command" == "jj git export" ]]; then
+    return 0
+  fi
   if [[ -n "$command" ]] && is_owned_safe_jj_cleanup_command "$command"; then
     return 0
   fi

@@ -106,6 +106,12 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["jj", "git", "export"],
+    decision = "allow",
+    justification = "Allow guarded jj-to-Git ref synchronization after cleanup.",
+)
+
+prefix_rule(
     pattern = ["jj", "describe"],
     decision = "prompt",
     justification = "Direct jj commit mutation must be guarded by workspace ownership.",
@@ -142,9 +148,9 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["jj", "git", ["export", "import"]],
+    pattern = ["jj", "git", "import"],
     decision = "prompt",
-    justification = "Direct jj/Git synchronization must be guarded by workspace ownership.",
+    justification = "Direct Git-to-jj synchronization must be guarded by workspace ownership.",
 )
 
 prefix_rule(
