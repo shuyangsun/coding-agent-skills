@@ -4,9 +4,10 @@ Measurement reports that put the repo's skills under test. For `vcs`:
 conflict-resolution speed/quality, branch hygiene, token cost, and Jujutsu
 workspaces vs Git worktrees across vendors. For `docs`: retrieval findability of
 the repo's documentation (floor-vs-doc, structure, and — later — the docs×rag
-interaction). Each report records its **Date** and links the SKILL under test;
-raw metrics live in a co-located `.tsv` sharing the report's `NNNN` and date
-folder.
+interaction). For `rag`: retrieval quality over a doc set (no-RAG floor vs RAG,
+code vs natural language). Each report records its **Date** and links the SKILL
+under test; raw metrics live in a co-located `.tsv` sharing the report's `NNNN`
+and date folder.
 
 Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `benchmarks/`
 tree (does not restart per day).
@@ -27,3 +28,4 @@ tree (does not restart per day).
 ### 2026-06-08
 
 - [`0005` — `docs` skill: floor (no doc) vs with-doc findability (Phase 0)](2026-06-08/0005-docs-skill-floor-vs-doc.md) · [data](2026-06-08/0005-docs-skill-floor-vs-doc-metrics.tsv)
+- [`0006` — `rag` skill: no-RAG baseline vs RAG, code vs natural language](2026-06-08/0006-rag-skill-baseline-vs-rag.md) · [data](2026-06-08/0006-rag-vs-baseline-metrics.tsv)
