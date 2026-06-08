@@ -7,13 +7,14 @@
 
 - **GPT / Codex Desktop** — `large=gpt-5.5`, `mid=gpt-5.4`, `small=gpt-5.4-mini` (Run A).
 - **Claude / Claude Code** — `large=opus`, `mid=sonnet`, `small=haiku` (Run B).
+- **Cursor / Composer 2.5** — `large=mid=small=composer-2.5-fast` (Run C; one model, three serialized agent slots).
 
 **Scale (per family):** 8 sub-agent runs — 2 medium serialized integration rounds
 (jj and Git, 3 agents each, one per tier) plus 2 mid-tier start-isolation rounds
 (jj and Git, 1 agent each).
 
-Raw metrics (both families, one row per agent): [0004-vcs-jj-vs-git-metrics.tsv](0004-vcs-jj-vs-git-metrics.tsv)
-(GPT = rounds `5xx`, Claude = rounds `6xx`; the concrete model per row is in the `notes` column).
+Raw metrics (all families, one row per agent): [0004-vcs-jj-vs-git-metrics.tsv](0004-vcs-jj-vs-git-metrics.tsv)
+(GPT = rounds `5xx`, Claude = rounds `6xx`, Composer = rounds `7xx`; the concrete model per row is in the `notes` column).
 
 This file is **agent- and model-agnostic**: the same harness, sandboxes, and
 scoring drive any model or coding tool. The reproduction prompt below is written
@@ -77,43 +78,55 @@ the measured workflow rather than raw VCS latency.
 
 ## Cross-family headline (medium integration + easy start)
 
-| Metric                         |   GPT jj | GPT git | Claude jj | Claude git |
-| ------------------------------ | -------: | ------: | --------: | ---------: |
-| Integration oracle             |     PASS |    PASS |      PASS |       PASS |
-| Integration agents passing     |    3 / 3 |   3 / 3 |     3 / 3 |      3 / 3 |
-| Integration wall max           |    337 s |    48 s |     112 s |      128 s |
-| Integration serialized total   |    432 s |   127 s |     248 s |      211 s |
-| Integration mean output tokens |   11,098 |   2,369 |       674 |        290 |
-| Start oracle                   |     PASS |    PASS |      PASS |       PASS |
-| Start total                    |    135 s |   111 s |     111 s |       96 s |
-| Start output tokens            |    5,189 |   5,260 |       944 |        412 |
-| Start naming (`<ide>-<work>`)  | **FAIL** |    PASS |  **PASS** |       PASS |
-| Hygiene (stale / orph / def)   |    0/0/0 | 0/0/n/a |     0/0/0 |    0/0/n/a |
+| Metric                         |   GPT jj | GPT git | Claude jj | Claude git | Composer jj | Composer git |
+| ------------------------------ | -------: | ------: | --------: | ---------: | ----------: | -----------: |
+| Integration oracle             |     PASS |    PASS |      PASS |       PASS |        PASS |         PASS |
+| Integration agents passing     |    3 / 3 |   3 / 3 |     3 / 3 |      3 / 3 |       3 / 3 |        3 / 3 |
+| Integration wall max           |    337 s |    48 s |     112 s |      128 s |       460 s |         27 s |
+| Integration serialized total   |    432 s |   127 s |     248 s |      211 s |       892 s |         59 s |
+| Integration mean output tokens |   11,098 |   2,369 |       674 |        290 |       3,193 |          631 |
+| Start oracle                   |     PASS |    PASS |      PASS |       PASS |        PASS |         PASS |
+| Start total                    |    135 s |   111 s |     111 s |       96 s |       174 s |         26 s |
+| Start output tokens            |    5,189 |   5,260 |       944 |        412 |       1,825 |        2,220 |
+| Start naming (`<ide>-<work>`)  | **FAIL** |    PASS |  **PASS** |       PASS |    **FAIL** |     **FAIL** |
+| Hygiene (stale / orph / def)   |    0/0/0 | 0/0/n/a |     0/0/0 |    0/0/n/a |       0/0/0 |      0/0/n/a |
 
 **Read this comparison with one caveat:** output-token counts come from each
 vendor's own transcript (`token_count.output_tokens` for Codex,
-`usage.output_tokens` for Claude). Different tokenizers and reasoning verbosity
+`usage.output_tokens` for Claude; for Composer, assistant-output characters ÷ 4
+because Cursor subagent JSONL lacks a `usage` field). Different tokenizers and reasoning verbosity
 make absolute cross-vendor token numbers **indicative, not exact**. The reliable
 signals are the objective pass/fail oracle and the **within-family, per-tier**
 trends; cross-family token gaps should be read as order-of-magnitude, not
 to-the-digit.
 
-Three things stand out across families:
+Four things stand out across families:
 
-- **Both families resolve correctly in both modes, at every tier.** Quality and
-  hygiene are clean throughout; this benchmark is now about cost, not correctness.
+- **All three families resolve correctly in both modes, at every tier.** Quality
+  and hygiene are clean throughout; this benchmark is now about cost, not
+  correctness.
 - **GPT's headline came from a single small-tier jj outlier** (337 s / 29,095
   tokens). **Claude's small tier did not blow up** — haiku on jj resolved the
-  same single-valued version tie-break in 112 s / 515 tokens. So the "Git wins"
-  story is GPT-specific to that cell, not a property of jj.
+  same single-valued version tie-break in 112 s / 515 tokens. Composer's small
+  tier also passed cleanly (273 s / 3,303 est. tokens) but spent 240 s on the
+  YAML tie-break. So the "Git wins" story is GPT-specific to that cell, not a
+  property of jj.
 - **Claude fixed the jj naming miss.** GPT's jj start produced an
   `agent-pending-*` working copy (NAME_OK fail); Claude named its jj workspace
-  `claude-streaming-export` (NAME_OK pass), so naming passes in both modes.
+  `claude-streaming-export` (NAME_OK pass). **Composer failed naming in both
+  modes** (`composer-pending-*` on jj, `composer-agent-1` on git) — same class
+  of miss as GPT, not the clean `cursor-<work>` slug `vcs` expects.
+- **Composer's jj integration wall max (460 s) was a mid-tier workspace-lifecycle
+  stall**, not a small-tier blowup: agent 2 had to recreate a retired `ws-agent-2`
+  after agent 1's tidy-up removed it. Git integration for Composer was the
+  fastest family measured (27 s wall max, 631 mean est. tokens).
 
-The friction common to both families is the `vcs-check` cwd guard: it only tracks
+The friction common to all families is the `vcs-check` cwd guard: it only tracks
 an **unquoted** leading `cd <abs-path> &&`; quoted paths and `-C`/`-R` forms were
-rejected, costing the large-tier agents a retry/stall in both runs. That is a
-guard/skill interaction in the measured workflow, not raw VCS latency.
+rejected, costing retries/stalls. Composer additionally hit guard blocks when
+the start-round assigned path was the shared jj default workspace, forcing
+`isolate.sh` before any edit. That is guard/skill interaction in the measured
+workflow, not raw VCS latency.
 
 ---
 
@@ -237,6 +250,126 @@ and cleaned up — with no retries or stalls.
 
 ---
 
+## Run C — Cursor (Composer 2.5)
+
+**Models:** `large=mid=small=composer-2.5-fast` (single model; three serialized
+integration slots stand in for the tier ladder). Rounds 701 (jj medium), 702 (git
+medium), 703 (jj start), 704 (git start). Tokens read per-agent from Cursor
+subagent transcript JSONL (assistant-output characters ÷ 4 — Cursor does not emit
+`usage.output_tokens` in subagent transcripts); quality/isolation/naming from the
+oracles.
+
+### Headline
+
+| Metric                                      | Jujutsu workspaces | Git worktrees   |
+| ------------------------------------------- | ------------------ | --------------- |
+| Integration oracle                          | **PASS**           | **PASS**        |
+| Integration agents passing                  | **3 / 3**          | **3 / 3**       |
+| Integration wall max                        | 460 s              | **27 s**        |
+| Integration serialized total                | 892 s              | **59 s**        |
+| Integration mean output tokens (est.)       | 3,193              | **631**         |
+| Start-isolation oracle                      | **PASS**           | **PASS**        |
+| Start-isolation total                       | 174 s              | **26 s**        |
+| Start-isolation output tokens (est.)        | 1,825              | 2,220           |
+| Start-isolation naming (`<ide>-<work>`)     | **FAIL**           | **FAIL**        |
+| Hygiene (`stale` / `orph` / `def failures`) | **0 / 0 / 0**      | **0 / 0 / n/a** |
+
+For Composer, Git worktrees had a decisive speed and token advantage on
+integration — the largest jj-vs-git gap of any family in this benchmark. jj still
+passed every oracle; the cost was orchestration friction (workspace recreation,
+session-start hangs, YAML tie-break time) not incorrect merges.
+
+### Scoreboard
+
+```text
+== BY ROUND (trend: lower is better; delta vs previous round) ==
+round diff      n  pass%  wall(max)     d  mean_tot  conf(max)     d  mean_cnf  mean_tok stale  orph  def  iso  name  retr stall
+--------------------------------------------------------------------------------------------------------------------------------------
+701   medium    3   100%        460              297        240              80      3193     0     0    0    -     -     0     3
+702   medium    3   100%         27  -433        20          0  -240         0       631     0     0    -    -     -     0     0
+703   easy      1   100%        174  +147       174          0    +0         0      1825     0     0    -    0     1     0     1
+704   easy      1   100%         26  -148        26          0    +0         0      2220     0     0    -    0     1     0     1
+
+== BY MODEL TIER ==
+tier      n  pass%  mean_tot  conf(max)  mean_cnf  mean_tok stale  orph  def  iso  name  retr stall
+---------------------------------------------------------------------------------------------------
+large     2   100%        87          0         0      1317     0     0    0    -     -     0     0
+mid       4   100%       169          0        60      2591     0     0    0    0     2     0     4
+small     2   100%       150        240       120      2030     0     0    0    -     -     0     1
+
+== PASS-RATE MATRIX (rows = tier, cols = difficulty) ==
+tier\diff       easy    medium
+------------------------------
+large              -      100%
+mid             100%      100%
+small              -      100%
+```
+
+`conf(max)` is non-zero only for the small-tier jj cell (240 s): the deliberate
+`config.yaml` version tie-break. The mid-tier jj cell (460 s) recorded
+`conflict_seconds=0` in its self-report because `integrate.sh` auto-resolved
+additive files before the agent timed the YAML span; wall-clock still reflects
+the workspace-recreation stall.
+
+### Integration Results
+
+| mode | tier  | model               | total | output tokens (est.) | retries | stalls | quality | note                                                      |
+| ---- | ----- | ------------------- | ----: | -------------------: | ------: | -----: | ------- | --------------------------------------------------------- |
+| jj   | large | `composer-2.5-fast` | 159 s |                2,172 |       0 |      0 | PASS    | fast-forward integrate; no conflict stop                  |
+| jj   | mid   | `composer-2.5-fast` | 460 s |                4,105 |       0 |      2 | PASS    | ws-agent-2 retired by agent 1; recreation + session hangs |
+| jj   | small | `composer-2.5-fast` | 273 s |                3,303 |       0 |      1 | PASS    | YAML tie-break 1.5.3 > 1.5.1 (conflict 240 s)             |
+| git  | large | `composer-2.5-fast` |  15 s |                  462 |       0 |      0 | PASS    | clean integrate.sh; pushed origin/main                    |
+| git  | mid   | `composer-2.5-fast` |  17 s |                  675 |       0 |      0 | PASS    | additive conflicts auto-resolved                          |
+| git  | small | `composer-2.5-fast` |  27 s |                  756 |       0 |      0 | PASS    | helper completed without manual stop                      |
+
+#### Integration deltas
+
+| metric             |    jj |  git | git advantage              |
+| ------------------ | ----: | ---: | -------------------------- |
+| Wall max           | 460 s | 27 s | git 433 s faster           |
+| Serialized total   | 892 s | 59 s | git 833 s faster           |
+| Mean total         | 297 s | 20 s | git 277 s faster per agent |
+| Output tokens      | 9,580 | 1893 | git 7,687 fewer (est.)     |
+| Mean output tokens | 3,193 |  631 | git 2,562 fewer per run    |
+
+#### Gap by model tier
+
+| tier                   | jj total | git total | jj output tokens (est.) | git output tokens (est.) | gap                              |
+| ---------------------- | -------: | --------: | ----------------------: | -----------------------: | -------------------------------- |
+| `large` / composer-2.5 |    159 s |      15 s |                   2,172 |                      462 | git much faster and leaner       |
+| `mid` / composer-2.5   |    460 s |      17 s |                   4,105 |                      675 | jj dominated by lifecycle stall  |
+| `small` / composer-2.5 |    273 s |      27 s |                   3,303 |                      756 | git edge; jj YAML tie-break cost |
+
+Unlike GPT's small-tier jj blowup, Composer's small tier resolved correctly — but
+the mid-tier jj agent paid the price when the serialized chain retired workspaces
+early. Git's advantage here is the largest cross-family gap in the benchmark.
+
+### Start-Isolation Results
+
+| mode | tier | model               | total | output tokens (est.) | retries | stalls | isolation | name | quality |
+| ---- | ---- | ------------------- | ----: | -------------------: | ------: | -----: | --------- | ---- | ------- |
+| jj   | mid  | `composer-2.5-fast` | 174 s |                1,825 |       0 |      1 | PASS      | FAIL | PASS    |
+| git  | mid  | `composer-2.5-fast` |  26 s |                2,220 |       0 |      1 | PASS      | FAIL | PASS    |
+
+Both Composer start agents isolated before editing and landed the requested
+change. Git was 148 s faster. Naming failed in both modes: jj captured
+`composer-pending-*` (pending workspace slug) rather than `cursor-streaming-export`;
+git used `composer-agent-1` instead of a `<ide>-<work>` work slug.
+
+### Observations (Composer)
+
+- **Git wins decisively on integration cost** — 27 s vs 460 s wall max and ~5×
+  fewer estimated output tokens. This is the strongest Git advantage measured
+  across GPT, Claude, and Composer in this file.
+- **Quality and hygiene are clean** — every integration and start round passed
+  the objective oracle with zero stale refs, orphan workspaces, or default failures.
+- **Naming matches GPT, not Claude** — both start arms failed `NAME_OK`; the
+  `composer-*` prefix is recognized but the work slug did not follow `<ide>-<work>`.
+- **jj friction is workflow/orchestration, not merge correctness** — workspace
+  retirement between serialized agents and guard-blocked default writes dominated
+  jj time; the YAML tie-break on the small tier was the only real conflict-resolution
+  work.
+
 ## Run A — GPT (Codex Desktop)
 
 In this Codex/GPT run, Git worktrees showed the practical advantage. Both modes
@@ -356,10 +489,10 @@ and passed naming.
 
 ## Conclusion
 
-Across both families the `vcs` skill is **correct and hygienic in both modes, at
-every tier** — every integration and start round passed the objective oracle with
-clean stale-ref, orphan, and default-workspace hygiene. The interesting story is
-cost, and it differs by family:
+Across all three families the `vcs` skill is **correct and hygienic in both modes,
+at every tier** — every integration and start round passed the objective oracle
+with clean stale-ref, orphan, and default-workspace hygiene. The interesting story
+is cost, and it differs by family:
 
 - **GPT / Codex:** Git worktrees had the practical speed/token advantage, driven
   almost entirely by a small-tier jj outlier (337 s / 29,095 tokens). With
@@ -369,12 +502,17 @@ cost, and it differs by family:
   jj cell that decided the GPT run was a clean, low-token pass for haiku, and
   Claude also closed the jj naming gap. There is no Claude penalty for jj — the
   only notable slowdown was a large-tier Git cell hitting the cwd guard.
+- **Cursor / Composer 2.5:** Git worktrees had the **largest** speed/token
+  advantage of any family (27 s vs 460 s wall max; ~631 vs ~3,193 mean est.
+  tokens). jj passed every oracle but mid-tier serialized integration paid a
+  heavy workspace-lifecycle tax. Naming failed like GPT, not Claude.
 
-So "Git is faster" is **Codex-specific**, not a property of the skill: a more
-capable / less verbose model erases it. The one improvement target both families
-agree on is the **`vcs-check` cwd guard** — its unquoted-leading-`cd` requirement
-and its post-workspace-retirement read refusal cost the large tiers retries and
-stalls in both runs.
+So "Git is faster" is **not universal** — Claude nearly ties — but it holds for
+Codex (small-tier jj outlier) and **strongly** for Composer (mid-tier lifecycle
+stall). The improvement targets all families agree on are the **`vcs-check` cwd
+guard** (unquoted-leading-`cd`, post-retirement read refusal) and clearer
+**`<ide>-<work>` naming** guidance so Cursor/GPT agents stop using
+`composer-pending-*` / `agent-pending-*` slugs.
 
 ### Next benchmark
 
@@ -390,6 +528,8 @@ stalls in both runs.
 ## Limitations
 
 - Single benchmark run per family, not multiple consecutive rounds.
+- Composer tokens are **estimated** (assistant chars ÷ 4); Cursor subagent
+  transcripts lack vendor `usage` fields.
 - Medium integration plus easy start only; no hard or concurrent stress round.
 - Cross-vendor **output-token** comparison is indicative, not exact (different
   tokenizers and transcript accounting per vendor); trust within-family per-tier
