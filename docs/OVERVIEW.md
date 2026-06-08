@@ -1,8 +1,8 @@
 # docs/
 
 Long-lived project documentation for **coding-agent-skills**: benchmarks, plans,
-issues, prompts, and exported agent sessions. Source-of-truth for _why_ the skills
-look the way they do and _how_ they were measured.
+issues, prompts, research notes, and exported agent sessions. Source-of-truth for
+_why_ the skills look the way they do and _how_ they were measured.
 
 ## Convention
 
@@ -32,3 +32,4 @@ relevance fast.
 | [`issues/`](issues/OVERVIEW.md)                   | Documented failure modes observed in agent VCS sessions. |
 | [`plans/`](plans/OVERVIEW.md)                     | Design/plan docs framing _what_ to build and _why_.      |
 | [`prompts/`](prompts/OVERVIEW.md)                 | Prompts used to kick off skill-authoring work.           |
+| [`research/`](research/OVERVIEW.md)               | External research notes that inform skill design.        |

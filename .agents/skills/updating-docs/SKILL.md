@@ -16,7 +16,7 @@ human skimming, a retriever ranking) actually finds it. The **find** half — ch
 what's already there before you write — is [`retrieving-context`](../retrieving-context/SKILL.md);
 do that first.
 
-Two empirical anchors drive every rule below; treat them as the _why_:
+Three empirical anchors drive every rule below; treat them as the _why_:
 
 1. **Having the doc at all is the dominant lever.** The single biggest jump in
    findability is going from no doc to one indexed doc. So the first failure mode
@@ -25,6 +25,12 @@ Two empirical anchors drive every rule below; treat them as the _why_:
    and one-concept files help a human and help heading-aware retrieval, but they do
    **not** rescue an answer that isn't stated in plain, searchable words. So
    structure is necessary, not sufficient: **anchor the answer lexically** (§5).
+3. **Advanced retrieval still needs authored context.** Contextual retrieval, late
+   chunking, graph retrieval, parent-document retrieval, and rerankers can recover
+   more context than naive chunking, but they work best when the doc itself names
+   its parent project/module, source paths, entities, and relationships. Write
+   those context clues once, near the top and at section boundaries, instead of
+   relying on a retriever to infer them.
 
 ## 1. Before you write: search first (don't duplicate)
 
@@ -47,6 +53,10 @@ rule it enforces:
 - **Centralize under the docs root** (`docs/`) when it is cross-cutting: a plan, a
   design/decision record, an issue write-up, a benchmark, a runbook, a session
   note. These are not owned by one module and belong in the shared, indexed tree.
+- **Add a small source map** when a task, decision, or workflow spans several code
+  files and no single file is the obvious home. The source map is a bridge, not a
+  replacement for source: it states the answer, names the primary files/functions,
+  and links to the code a reader must verify.
 
 When in doubt, prefer the location where the next person _looking for this_ will
 look first.
@@ -100,6 +110,11 @@ This is the rule that most often decides whether a doc is found:
 - **State the answer in plain prose near the top**, in a `## Summary` or lead
   paragraph — before background, history, or derivation. Retrieval and skimming
   both reward the answer being early.
+- **Add a retrieval context line when the doc is not self-evident.** In one short
+  sentence near the top, name the parent project/module, the workflow or failure
+  mode, and the source paths or identifiers the doc explains. This gives
+  contextual retrievers and parent/child chunkers the same disambiguating context a
+  human would get from opening the full file.
 - **Anchor it lexically.** Put the concrete fact — the number, the identifier, the
   command, the error string, the proper noun — in the prose itself, spelled the way
   someone would search for it. An answer that exists only in a table cell, a
@@ -108,8 +123,35 @@ This is the rule that most often decides whether a doc is found:
   with it and will not retrieve it. When you state a figure, name what it measures
   in the same sentence ("cold-start p95 latency dropped from 1.8s to 0.4s"),
   so the sentence matches both the value query and the topic query.
+- **Make sections self-contained.** Start each section with the subject it is about
+  ("`XqGame::kPolicySize` maps Xiang Qi actions to 8,100 policy slots"), not only
+  "This" or "The fix". Chunk-level retrievers may see the section without the H1.
+- **Mirror table-only facts in prose.** Tables are good for scanning, but each
+  critical row needs a sentence that repeats the value, what it measures, and the
+  entity it belongs to.
 
-## 6. Wire it into the graph
+## 6. Write for advanced retrieval without bloat
+
+Do the work once in the doc, not once per chunk:
+
+- **Use a compact context capsule.** A good top block is usually `Date`, `Status`,
+  `Area`, `Sources`, then `## Summary`. `Sources` should list primary files,
+  commands, issue IDs, benchmark data, or session transcript paths. Keep it short:
+  a retriever needs anchors, not a second abstract.
+- **Preserve relationship edges.** Say what the doc implements, supersedes,
+  depends on, tests, or explains, and link those docs/code paths. Graph-style
+  retrieval and rerankers can only use relationships that are explicit in text.
+- **Prefer stable names over clever prose.** Use exact API names, config keys,
+  file paths, commands, error strings, task IDs, benchmark IDs, and model/version
+  names alongside natural-language descriptions.
+- **For long transcripts or generated logs, add a human-authored lead summary.**
+  Keep the transcript/log faithful, but put the high-signal facts, changed files,
+  commands, and outcome near the top so retrieval does not have to mine thousands
+  of dialogue tokens before it finds the point.
+- **Do not spray boilerplate into every section.** If the same context must repeat
+  often, that is a sign the doc wants a source map, glossary, or split file.
+
+## 7. Wire it into the graph
 
 A new doc that nothing points to is nearly as lost as no doc:
 
@@ -128,7 +170,11 @@ A new doc that nothing points to is nearly as lost as no doc:
 - An **opaque filename** (`notes.md`, `0042-fix.md`) or a vague H1.
 - The **answer buried** below the fold, or living only in a table/figure/attachment
   with no plain-prose, lexically-anchored statement.
+- A **context-free chunk**: a section that says "this" or "the change" but does not
+  name the project/module, source path, API, command, or error it is about.
 - A **grab-bag** file mixing several concepts so it ranks for none.
+- A **source map that replaces verification** — it must point to primary code/docs,
+  not become an uncited copy that drifts.
 - **Bloat** — pages of preamble around a one-paragraph answer.
 
 ## Checklist before you finish
@@ -138,5 +184,6 @@ A new doc that nothing points to is nearly as lost as no doc:
 - [ ] Lives in the right place (co-located vs centralized) and follows the repo's
       naming/index convention.
 - [ ] One concept; descriptive H1 + status block; clean headings.
-- [ ] Answer is in the first screen, in plain prose, with the key fact spelled out.
+- [ ] Answer is in the first screen, in plain prose, with the key fact, source
+      path/API/command, and retrieval context spelled out.
 - [ ] Linked from its directory index and cross-linked to related docs.
