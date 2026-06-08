@@ -60,16 +60,24 @@ LEXICAL_OVERLAP_MAX = 0.30
 HELD_OUT_FRACTION_NOTE = "hash(query_id) parity; even=dev, odd=held-out"
 
 # Docs excluded from every corpus snapshot: this harness's own plan + the coding
-# session that produced it (they quote the gold facts as worked examples), and
-# any directory-overview index files. Globs are matched against the corpus-root
-# relative POSIX path. The OVERVIEW.md globs enforce the firewall this comment
-# has always claimed: index docs aggregate many facts' sentinels, so leaving them
-# in-corpus would let a retriever score a hit by returning the directory listing
-# instead of the actual answer (and would inflate sentinel-mode qrels).
+# session that produced it + the benchmark reports it writes (all quote the gold
+# facts/sentinels as worked examples), and any directory-overview index files.
+# Globs are matched against the corpus-root relative POSIX path with fnmatch, so
+# '*' spans '/'. The OVERVIEW.md globs enforce the firewall this comment has always
+# claimed: index docs aggregate many facts' sentinels, so leaving them in-corpus
+# would let a retriever score a hit by returning the directory listing instead of
+# the actual answer (and would inflate sentinel-mode qrels). The benchmark-report
+# globs are the same self-reference guard: a docs/rag-harness report names gold
+# sentinels (e.g. "380s") to explain misses, so it must never enter the corpus it
+# measures. Name harness reports *docs-skill* / *rag-skill* / *docs-rag* so these
+# catch them; vcs (and other) benchmark reports stay legitimate corpus docs.
 EXCLUDE_GLOBS = [
     "plans/0002-improving-docs-and-rag-skills.md",
     "plans/*improving-docs-and-rag*.md",
     "coding-sessions/*/*improving-docs-and-rag*.md",
+    "benchmarks/*docs-skill*.md",
+    "benchmarks/*rag-skill*.md",
+    "benchmarks/*docs-rag*.md",
     "OVERVIEW.md",
     "*/OVERVIEW.md",
 ]
