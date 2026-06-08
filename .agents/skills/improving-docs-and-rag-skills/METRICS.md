@@ -6,13 +6,13 @@ every one **attributed to `docs` vs `rag` vs their interaction** via the factori
 
 ## The five metrics
 
-| Metric | Definition | Driven by | Made objective by |
-| --- | --- | --- | --- |
-| **Precision** | of retrieved, how many relevant (graded `qrels`) | docs + rag | `check-retrieval.py` |
-| **Recall** | of relevant, how many retrieved; **recall@20 headline** | docs + rag | `check-retrieval.py` |
-| **Speed** | `index_ms` (one-time) + `retrieval_ms` p50/p95 | **rag** | `docs-eval.py` timers, same-host trend |
-| **Factuality** | answer stays grounded (contains a sentinel from a relevant doc) | docs + rag | sentinel containment + closed-book control + advisory judge. Phase-0 proxy = `retrieval_hit@20` (judge-free) |
-| **Token usage** | `ctx_tokens` (RAG) / `read_tokens` (SIMPLE) at equal correctness | **rag** / **docs** | transcripts via `_score.py`, never self-reported |
+| Metric          | Definition                                                       | Driven by          | Made objective by                                                                                            |
+| --------------- | ---------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| **Precision**   | of retrieved, how many relevant (graded `qrels`)                 | docs + rag         | `check-retrieval.py`                                                                                         |
+| **Recall**      | of relevant, how many retrieved; **recall@20 headline**          | docs + rag         | `check-retrieval.py`                                                                                         |
+| **Speed**       | `index_ms` (one-time) + `retrieval_ms` p50/p95                   | **rag**            | `docs-eval.py` timers, same-host trend                                                                       |
+| **Factuality**  | answer stays grounded (contains a sentinel from a relevant doc)  | docs + rag         | sentinel containment + closed-book control + advisory judge. Phase-0 proxy = `retrieval_hit@20` (judge-free) |
+| **Token usage** | `ctx_tokens` (RAG) / `read_tokens` (SIMPLE) at equal correctness | **rag** / **docs** | transcripts via `_score.py`, never self-reported                                                             |
 
 `nDCG@10` is the multi-relevance summary (graded). `retrieval_hit@20` (a grade-2
 doc in top-20) is the **primary** Phase-0 answerability signal; `answer_ok` /
@@ -53,7 +53,8 @@ host_fingerprint notes`.
    Dr−Nr; `rag` = Nr−Nb & Dr−Db) and the **interaction** `(Dr−Db)−(Nr−Nb)`, each
    paired per query with a seeded-bootstrap 90% CI. `*` flags a CI excluding zero.
    The floor is the reference, **not** part of the interaction math.
-3. *(Phase 1)* by tier×mode ("no tier/mode left behind") and difficulty×tier.
+ 3. *(Phase 1)* by tier×mode ("no tier/mode left behind") and difficulty×tier.
+3. _(Phase 1)_ by tier×mode ("no tier/mode left behind") and difficulty×tier.
 
 Cross-host comparison is refused: absolute recall/latency are host-relative; only
 the frozen-gate numbers and the **within-host factorial deltas** travel.

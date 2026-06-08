@@ -28,6 +28,7 @@ Inspected the skill directory layout and confirmed `.claude/skills` is a symlink
 Made two edits to `.agents/skills/vcs/SKILL.md`:
 
 1. **Description — shorter, WHEN not WHAT** (3 lines, down from 7). New text:
+
    > Load at the START of new repo work, BEFORE you change any file, so you isolate the work in your own workspace/worktree first — and again BEFORE any commit, merge, rebase, or publish. Works in any VCS (Jujutsu or Git).
 
    Dropped the WHAT enumeration (detect mode, union conflicts, format commits, parallel-agent collaboration, "when in doubt…"), leading instead with the two trigger moments.

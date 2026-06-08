@@ -22,7 +22,7 @@ Tried to explore the repo, but every non-read-only Bash command and every `Write
 
 > vcs-check: VCS write refused: current cwd is the shared jj default workspace.
 
-Diagnosed it against `docs/issues/0008`: the guard infers "am I in the shared workspace?" from the hook process's `$PWD`, but this Claude Code harness **resets the Bash cwd to the project root after every command** ("Shell cwd was reset to …"), and the jj workspace is a *sibling* directory outside the project tree. So the cwd can never be made to "live" inside the workspace, and the documented recovery (`cd NEXT_CWD`) is itself a non-read-only command that gets refused — an unescapable deadlock. Confirmed both `Bash` writes and the `Write` tool were blocked, and that a plain `cd` is gated too.
+Diagnosed it against `docs/issues/0008`: the guard infers "am I in the shared workspace?" from the hook process's `$PWD`, but this Claude Code harness **resets the Bash cwd to the project root after every command** ("Shell cwd was reset to …"), and the jj workspace is a _sibling_ directory outside the project tree. So the cwd can never be made to "live" inside the workspace, and the documented recovery (`cd NEXT_CWD`) is itself a non-read-only command that gets refused — an unescapable deadlock. Confirmed both `Bash` writes and the `Write` tool were blocked, and that a plain `cd` is gated too.
 
 Read `vcs-check.sh`, `vcs-state.sh`, `session-start.sh`, `rename-work.sh`, and the hook config in `.claude/settings.json`. Noted several concurrent `codex-*` jj workspaces (so isolation genuinely matters) and that the default workspace has no owner marker.
 

@@ -63,11 +63,11 @@ Let me read the runner workflows and the sandbox/scenario scripts to understand 
 
 _→ Read: ./.agents/skills/improving-vcs-skill/scripts/new-sandbox.sh_
 
-_→ Read: ./.agents/skills/improving-vcs-skill/scripts/_run-baseline.wf.js_
+_→ Read: ./.agents/skills/improving-vcs-skill/scripts/\_run-baseline.wf.js_
 
 Let me read the remaining harness plumbing (scoring, metrics recording, scoreboard) and the other runners.
 
-_→ Read: ./.agents/skills/improving-vcs-skill/scripts/_score.py_
+_→ Read: ./.agents/skills/improving-vcs-skill/scripts/\_score.py_
 
 _→ Read: ./.agents/skills/improving-vcs-skill/scripts/record-metrics.sh_
 
@@ -123,15 +123,15 @@ _→ Edit: ./.agents/skills/improving-vcs-skill/scripts/check-quality.sh_
 
 Now wire `ORPHAN_EMPTY_HEADS` into `_score.py` so it surfaces in the round note and the scoreboard `orph` column:
 
-_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/_score.py_
+_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/\_score.py_
 
-_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/_score.py_
+_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/\_score.py_
 
-_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/_score.py_
+_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/\_score.py_
 
-_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/_score.py_
+_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/\_score.py_
 
-_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/_score.py_
+_→ Edit: ./.agents/skills/improving-vcs-skill/scripts/\_score.py_
 
 The integrate harness in jj 0.41 won't naturally produce orphans (jj auto-abandons empty working copies on `forget`/`new`); issue 7's orphan survives only when a bookmark pinned the empty commit. To make the metric and fix meaningfully testable end-to-end, let me seed that exact condition into the jj integrate sandbox. First, verify the seed sequence produces a durable orphan that my repo-wide sweep then cleans.
 
@@ -211,7 +211,7 @@ check-quality crashed on `TOKENS` unbound — meaning new-sandbox.sh aborted par
 
 _→ Bash: Trace seed block failure in new-sandbox_
 
-The seed aborts because `jj workspace add` runs against the already-stale `default` workspace. Fix: seed the orphan *before* the default-stale rebase. Let me reorder:
+The seed aborts because `jj workspace add` runs against the already-stale `default` workspace. Fix: seed the orphan _before_ the default-stale rebase. Let me reorder:
 
 _→ Edit: ./.agents/skills/improving-vcs-skill/scripts/new-sandbox.sh_
 
@@ -243,7 +243,7 @@ Good — there's a real `origin`, but my work is cleanly isolated as just my edi
 
 _→ Bash: Describe and bookmark my work as claude-vcs-issues-567_
 
-My work now lives on its own bookmark, `claude-vcs-issues-567`, instead of sitting anonymously on `default`. 
+My work now lives on its own bookmark, `claude-vcs-issues-567`, instead of sitting anonymously on `default`.
 
 One genuine fork remains on how fully to isolate, and it changes what you see in this checkout, so I'd rather you decide:
 
@@ -319,7 +319,7 @@ _→ Bash: Provision Haiku validation sandboxes_
 
 All provisioned, orphan seeded in both jj rounds. Now launch the bundled harness runner with all-Haiku tiers (10 sub-agents: jj/easy×3, jj/medium×4, git/easy×3), each loading only the `vcs` skill:
 
-_→ Workflow: ./.agents/skills/improving-vcs-skill/scripts/_run-baseline.wf.js_
+_→ Workflow: ./.agents/skills/improving-vcs-skill/scripts/\_run-baseline.wf.js_
 
 Workflow is running in the background (10 Haiku agents); I'll be notified when it completes. Transcript dir captured for token scoring. While it runs, let me review my `integrate.sh` changes once more as a whole to be sure they're coherent:
 
@@ -330,6 +330,7 @@ The `integrate.sh` diff is coherent: a stable repo anchor computed before retire
 The Haiku harness run is executing in the background. Here's where things stand while it completes:
 
 **Done and deterministically validated (no LLM needed):**
+
 - **Issue 7** — `integrate.sh` now sweeps orphan empty side-heads (conservative predicate: empty + description-less + unbookmarked + not on `main` + not any live working copy). Harness gained an `ORPHAN_EMPTY_HEADS` metric in `check-quality.sh`, a deterministic orphan **seed** in `new-sandbox.sh`, and scoreboard wiring in `_score.py`. Verified end-to-end: seeded orphan → flagged pre-integration → swept by the agent's finish → `ORPHAN_EMPTY_HEADS=0`, `WORKSPACE_HYGIENE: PASS`, `RESULT: PASS`. Also fixed a latent bug this surfaced: the retire step's cwd-guard missed on macOS (`/tmp` vs `/private/tmp`), leaving the agent in a deleted dir and silently breaking `NEXT_CWD`.
 - **Issue 6** — `vcs` SKILL.md §4 + ISOLATE.md now scope "clean up" to your own `<ide>-<work>` artifacts; never inspect/ask about another agent's workspace; the only ownerless thing you may retire is a sibling jj workspace whose work already landed on `main`.
 - **Issue 5** — SKILL.md §4 forbids committing/publishing a shared checkout's whole dirty tree or bundling edits you didn't author; if the tree holds foreign changes, stop and surface them. Reinforced that the helpers land only the named ref, never the live tree.
@@ -359,7 +360,7 @@ _→ Bash: Inspect workflow output file format_
 
 The output is the `{result: [...]}` wrapper (as my memory noted). Let me extract `.result` and run the scorer with the transcript dir for token attribution:
 
-_→ Bash: Run _score.py on Haiku results_
+_→ Bash: Run \_score.py on Haiku results_
 
 Outstanding results — **all 10 Haiku agents passed (100%), every round `RESULT: PASS`**, and critically for issue 7:
 
@@ -375,7 +376,7 @@ _→ Bash: Clean temp sandboxes and confirm working tree_
 
 _→ Bash: Check real repo jj state and my bookmark integrity_
 
-`main` has unexpectedly moved — local `main` now sits on an empty commit *on top of* my `claude-vcs-issues-567` work (it should still be at the original `kppsyyns`). Something advanced `main` in the real repo. Let me investigate the op log to find the cause:
+`main` has unexpectedly moved — local `main` now sits on an empty commit _on top of_ my `claude-vcs-issues-567` work (it should still be at the original `kppsyyns`). Something advanced `main` in the real repo. Let me investigate the op log to find the cause:
 
 _→ Bash: Inspect op log to find what moved main_
 
@@ -440,6 +441,7 @@ Done. Here's the full picture.
 ## What I changed (all on bookmark `claude-vcs-issues-567`, not pushed)
 
 **Issue 7 — orphan empty side-heads (deterministic fix):**
+
 - `vcs/scripts/integrate.sh`: `jj_finish` now sweeps orphan empty side-heads via a conservative predicate — empty **and** description-less **and** unbookmarked **and** not on `main` **and** not any live workspace's working copy (`heads(all()) ~ ::main ~ bookmarks()`, minus each workspace's `<name>@`). Real work, named/bookmarked commits, and active working copies are never touched.
 - Fixed a **latent macOS bug** this surfaced: the retire step's cwd-guard compared shell `PWD` (`/tmp/…`) against jj's canonical root (`/private/tmp/…`), silently missed, left the agent in a `rm -rf`'d directory, and broke the `NEXT_CWD` hand-off. Now compares `pwd -P` too, and the sweep anchors to the `default` root via `-R`.
 - Harness: `check-quality.sh` reports `ORPHAN_EMPTY_HEADS` (+ fails `WORKSPACE_HYGIENE`); `new-sandbox.sh` deterministically **seeds** the orphan every jj round; `_score.py`/`scoreboard.sh` surface it in `orph`.
@@ -449,11 +451,13 @@ Done. Here's the full picture.
 **Per the "prefer scripts over agent inference" steer:** issue 7 is fully deterministic in `integrate.sh`; issues 5/6 are inherently behavioral, so they're skill rules — but I leaned on the fact that the helpers already scope to the named ref by construction.
 
 ## Haiku validation (the harness, as you asked)
+
 10 Haiku agents across jj/easy, jj/medium, git/easy — **100% pass, every round `RESULT: PASS`**, `ORPHAN_EMPTY_HEADS=0` in both jj rounds (seeded orphan swept), correct mode detection throughout, no regressions. (One git agent left a stale merged branch — the existing `STALE_REFS` metric catching a small-model cleanup miss, unrelated to these changes.) All three issue docs marked Resolved with `## Resolution` sections.
 
 ## Two things you should know
+
 1. **You were right about isolation.** I'd been editing on `default` instead of isolating first — an oversight, not deliberate; the `vcs` skill does mandate it. Fixed: my work is now on `claude-vcs-issues-567`, and I saved a memory so I isolate up front next time.
-2. **Issue 5 recurred live during the run.** A workflow sub-agent operated on *this* real repo (the documented sub-agent cwd-hazard) and moved local `main` onto my work. Because the work was already isolated on a named bookmark and **nothing was pushed**, recovery was total — I restored local `main` to `main@origin` and abandoned the stray empty commits. `main@origin` was never touched. I documented this in issue 5's resolution as a real confirmation of the failure mode.
+2. **Issue 5 recurred live during the run.** A workflow sub-agent operated on _this_ real repo (the documented sub-agent cwd-hazard) and moved local `main` onto my work. Because the work was already isolated on a named bookmark and **nothing was pushed**, recovery was total — I restored local `main` to `main@origin` and abandoned the stray empty commits. `main@origin` was never touched. I documented this in issue 5's resolution as a real confirmation of the failure mode.
 
 Nothing is committed to `main` or pushed — the work is staged on its bookmark for your review.
 
@@ -486,6 +490,7 @@ _→ Edit: ~/.claude/projects/<project>/memory/vcs-harness-subagent-cwd-hazard.m
 Done. Issue 5 is **reopened**, not fixed, with the new incident documented.
 
 ## Changes to issue 0005
+
 - **Status → `Reopened (2026-06-07)`**, with a pointer to the recurrence.
 - The section I'd wrongly titled "Resolution" is now **"Partial mitigations so far (NOT a fix)"** — the SKILL.md rule and helper scoping reduce blast radius but don't prevent a process from running `jj`/`git` against a repo it doesn't own, which is the actual mechanism.
 - New **"Update (2026-06-07): recurrence during the fixing session"** documenting the incident in detail: a Haiku harness sub-agent (via the Workflow runner, inheriting the real-repo cwd) ran `jj` against this checkout and moved local `main` onto my in-flight bookmark + empty commits (with the op-log evidence). It was recoverable only because the work was isolated on a named bookmark and **nothing was pushed** (`main@origin` untouched) — the contrast with the original incident, where the swept-in work hit public `origin/main`.
@@ -556,4 +561,3 @@ The newest transcript matches my session (520 lines). Let me inspect its structu
 _→ Bash: Inspect transcript JSONL structure_
 
 _→ Bash: Render transcript to markdown_
-

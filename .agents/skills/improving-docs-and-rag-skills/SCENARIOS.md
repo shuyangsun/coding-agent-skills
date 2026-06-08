@@ -7,8 +7,11 @@
   baseline; every metric is identically 0. Built by `mk-corpus.py` (an empty `Z/`
   dir) and run **first** so all other cells read as lifts above nothing.
 - **GOLD** — a frozen snapshot of today's `docs/` at a pinned revision, scored by
-  the **frozen retrieval gate** (Plane 1). Moves here flag *instrument* drift, not
+   the **frozen retrieval gate** (Plane 1). Moves here flag *instrument* drift, not
+-  skill quality. `gold.py --qrels-mode pinned`.
   skill quality. `check-retrieval.py --qrels-mode pinned`.
+  the **frozen retrieval gate** (Plane 1). Moves here flag _instrument_ drift, not
+  skill quality. `gold.py --qrels-mode pinned`.
 - **D** — `docs`-skill-authored: well-structured (clean headings, one concept per
   file, descriptive filenames, front-matter). The Phase-0 stand-in (`mk-corpus.py`)
   preserves the structured docs verbatim.
@@ -55,6 +58,13 @@ Grounded in this repo's own machine-checkable facts, verified at build time
 | router preload | code | `defaultPreload` | `src/router.tsx` | medium |
 | React Compiler wiring | code | `@rolldown/plugin-babel`, `reactCompilerPreset` | `vite.config.ts` | hard |
 | typecheck compiler | code | `tsgo --noEmit` | `package.json` | medium |
+| Fact                       | Sentinel(s)             | Primary doc                         | difficulty |
+| -------------------------- | ----------------------- | ----------------------------------- | ---------- |
+| benchmark conflict time    | `380s`, `85s`           | `benchmarks/0000-…`                 | medium     |
+| orphan empty head          | `urruyqxt`              | `issues/0007-…`                     | hard       |
+| name-metric durability     | `reference-transaction` | `coding-sessions/2026-06-06/0012-…` | medium     |
+| Composer 2.5 benchmark     | `Composer 2.5`          | `benchmarks/0002-…`                 | medium     |
+| integrate degenerate merge | `degenerate`            | `issues/0003-…`                     | medium     |
 
 This is a **seed**. The plan calls for 50–100+ queries (a power calc): enumerate
 the cross-link graph as relevance pairs and add anchored paraphrases. Growing the
@@ -90,7 +100,7 @@ indexed against a fixed background index, surfaces in top-k). `next-index.sh` an
 
 ## Contamination firewall (the agents under test)
 
-Sub-agents see **only** the skill under test (`docs` *or* `rag`) and a realistic
+Sub-agents see **only** the skill under test (`docs` _or_ `rag`) and a realistic
 task — never this harness, never the gold queries, never `metrics.tsv`. The
 RAG-setup agent in particular is **blind to the gold queries** so it tunes to
 doc-set properties, not to the test.
