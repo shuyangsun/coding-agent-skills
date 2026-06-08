@@ -320,3 +320,30 @@ vcs_session_owns_isolated_workspace() {
   done
   return 1
 }
+
+# Return 0 when the current hook/session id owns the named workspace or work ref.
+# Unlike vcs_session_owns_isolated_workspace, this intentionally does not require
+# the workspace root to still exist; post-integration cleanup may forget a
+# workspace before deleting its same-named bookmark.
+vcs_session_owns_ref() {
+  local ref="$1" sid dir f
+  [[ -n "$ref" ]] || return 1
+  sid="$(vcs_session_id)"
+  [[ -n "$sid" ]] || return 1
+  case "$sid" in local-*) return 1 ;; esac
+  dir="$(vcs_state_dir 2>/dev/null)" || return 1
+  [[ -d "$dir" ]] || return 1
+  for f in "$dir"/*.env; do
+    [[ -f "$f" ]] || continue
+    if (
+      # shellcheck disable=SC1090
+      source "$f" 2>/dev/null || exit 1
+      [[ "${session_id:-}" == "$sid" ]] || exit 1
+      [[ "${workspace_name:-}" == "$ref" || "${work_ref:-}" == "$ref" ]] || exit 1
+      exit 0
+    ); then
+      return 0
+    fi
+  done
+  return 1
+}

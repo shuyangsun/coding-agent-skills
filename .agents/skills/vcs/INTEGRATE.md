@@ -21,6 +21,12 @@ stale-ref, workspace, and `default` lifecycle cleanup the helper owns. Use the
 manual recipes below only when the helper is missing or reports an unexpected
 setup problem.
 
+In jj mode, the helper lands and cleans up local `main`; it does not replace a
+final remote sync when one is required. After the helper has finished, run exactly
+`jj git push --bookmark main` from the live `NEXT_CWD`/`default` workspace to
+publish the already-landed `main` bookmark. Do not use a raw push before the
+helper finishes.
+
 If it stops with `VCS_CONFLICT=...`, resolve only the listed files using the
 etiquette below, then continue:
 

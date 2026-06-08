@@ -12,6 +12,7 @@ cmd="${1:-}"
 helper=""
 agent="agent"
 hook_mode=0
+main_ref="${VCS_MAIN_REF:-main}"
 
 usage() {
   cat <<'EOF'
@@ -173,8 +174,121 @@ check_pre_edit() {
   ensure_not_shared "edit"
 }
 
+simple_command_words() {
+  local c="$1"
+  case "$c" in
+    *$'\n'* | *";"* | *"|"* | *"&"* | *">"* | *"<"*) return 1 ;;
+  esac
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 - "$c" <<'PY'
+import shlex
+import sys
+
+try:
+    words = shlex.split(sys.argv[1], posix=True)
+except ValueError:
+    sys.exit(1)
+
+for word in words:
+    print(word)
+PY
+}
+
+is_safe_jj_main_push_command() {
+  local c="$1" words=() word i arg next seen_bookmark=0
+  [[ "$(current_mode)" == "jj" ]] || return 1
+  while IFS= read -r word; do
+    words+=("$word")
+  done < <(simple_command_words "$c")
+  [[ "${#words[@]}" -ge 3 ]] || return 1
+  [[ "${words[0]}" == "jj" && "${words[1]}" == "git" && "${words[2]}" == "push" ]] || return 1
+
+  i=3
+  while [[ "$i" -lt "${#words[@]}" ]]; do
+    arg="${words[$i]}"
+    case "$arg" in
+      --bookmark | -b)
+        next="${words[$((i + 1))]:-}"
+        [[ "$next" == "$main_ref" ]] || return 1
+        seen_bookmark=1
+        i=$((i + 2))
+        ;;
+      --bookmark=* | -b=*)
+        [[ "${arg#*=}" == "$main_ref" ]] || return 1
+        seen_bookmark=1
+        i=$((i + 1))
+        ;;
+      --remote | -r)
+        [[ -n "${words[$((i + 1))]:-}" ]] || return 1
+        i=$((i + 2))
+        ;;
+      --remote=* | -r=* | --dry-run | --allow-new)
+        i=$((i + 1))
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  done
+
+  [[ "$seen_bookmark" -eq 1 ]]
+}
+
+jj_bookmark_exists() {
+  local name="$1"
+  jj --ignore-working-copy bookmark list "$name" 2>/dev/null | grep -Eq "^${name}:"
+}
+
+jj_ref_is_empty_descriptionless() {
+  local rev="$1" state
+  state="$(jj --ignore-working-copy log --no-graph -r "$rev" \
+    -T 'if(empty,"empty","nonempty") ++ "\t" ++ if(description,"described","undescribed") ++ "\n"' 2>/dev/null | head -1)" || return 1
+  [[ "$state" == $'empty\tundescribed' ]]
+}
+
+jj_ref_is_ancestor_of_main() {
+  local rev="$1"
+  jj --ignore-working-copy log --no-graph -r "($rev) & ::$main_ref" -T 'commit_id ++ "\n"' 2>/dev/null | grep -q .
+}
+
+jj_ref_is_safe_for_shared_cleanup() {
+  local rev="$1"
+  jj_ref_is_ancestor_of_main "$rev" || jj_ref_is_empty_descriptionless "$rev"
+}
+
+is_owned_safe_jj_cleanup_command() {
+  local c="$1" words=() word target
+  [[ "$(current_mode)" == "jj" ]] || return 1
+  while IFS= read -r word; do
+    words+=("$word")
+  done < <(simple_command_words "$c")
+  [[ "${#words[@]}" -eq 4 ]] || return 1
+  [[ "${words[0]}" == "jj" ]] || return 1
+
+  case "${words[1]} ${words[2]}" in
+    "bookmark delete")
+      target="${words[3]}"
+      vcs_session_owns_ref "$target" || return 1
+      jj_bookmark_exists "$target" || return 1
+      jj_ref_is_safe_for_shared_cleanup "$target"
+      ;;
+    "workspace forget")
+      target="${words[3]}"
+      vcs_session_owns_ref "$target" || return 1
+      jj_ref_is_safe_for_shared_cleanup "${target}@"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 check_pre_vcs_write() {
+  local command="${1:-}"
   [[ "${VCS_GUARD_ALLOW_SHARED:-}" == "1" ]] && return 0
+  if [[ -n "$command" ]] && is_owned_safe_jj_cleanup_command "$command"; then
+    return 0
+  fi
   if is_helper_name "$helper"; then
     case "$helper" in
       isolate | session-start | rename-work)
@@ -191,7 +305,11 @@ check_pre_vcs_write() {
 }
 
 check_pre_publish() {
+  local command="${1:-}"
   [[ "${VCS_GUARD_ALLOW_SHARED:-}" == "1" ]] && return 0
+  if [[ -n "$command" ]] && is_safe_jj_main_push_command "$command"; then
+    return 0
+  fi
   if [[ "$helper" == "integrate" ]]; then
     ensure_not_shared "publish"
     return 0
@@ -222,6 +340,9 @@ is_read_only_command() {
       return 0
       ;;
     "jj status"* | "jj st"* | "jj log"* | "jj diff"* | "jj show"* | "jj root"* | "jj workspace list"* | "jj bookmark list"* | "jj resolve --list"* | "jj git remote list"*)
+      return 0
+      ;;
+    "jj workspace update-stale" | "jj workspace update-stale "*)
       return 0
       ;;
     "bash "*"/scripts/"*" --help"* | "bash "*"/scripts/"*" -h"*)
@@ -392,11 +513,11 @@ check_hook() {
         return 0
       fi
       if is_publish_command "$command"; then
-        check_pre_publish
+        check_pre_publish "$command"
         return 0
       fi
       if is_vcs_mutating_command "$command" || is_file_mutating_command "$command" || current_shared_reason >/dev/null 2>&1; then
-        check_pre_vcs_write
+        check_pre_vcs_write "$command"
         return 0
       fi
       ;;
