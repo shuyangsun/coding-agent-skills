@@ -1,5 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./.agents/skills/coding-style/styles/react.oxlintrc.json",
+    "./.agents/skills/coding-style/styles/typescript.oxlintrc.json"
+  ],
   "plugins": ["typescript", "react", "import"],
   "categories": {
     "correctness": "error"
