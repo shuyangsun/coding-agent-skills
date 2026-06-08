@@ -16,8 +16,7 @@ ide="${VCS_AGENT_ID:-}"
 
 usage() {
   cat <<'EOF'
-usage: session-start.sh [--hook codex|claude|agy|plain] [--ide codex|claude|cursor|agy]
-usage: session-start.sh [--hook codex|claude|cursor|plain] [--ide codex|claude|cursor|agy]
+usage: session-start.sh [--hook codex|claude|cursor|agy|plain] [--ide codex|claude|cursor|agy]
 
 Creates a temporary per-session workspace/worktree when the current checkout is a
 local shared VCS root. Prints NEXT_CWD when the agent must move there before
@@ -53,8 +52,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "$hook" in codex | claude | agy | plain) : ;; *) die "--hook must be codex, claude, agy, or plain" ;; esac
-case "$hook" in codex | claude | cursor | plain) : ;; *) die "--hook must be codex, claude, cursor, or plain" ;; esac
+case "$hook" in codex | claude | cursor | agy | plain) : ;; *) die "--hook must be codex, claude, cursor, agy, or plain" ;; esac
 [[ -n "$ide" ]] || ide="$hook"
 [[ "$ide" == "plain" ]] && ide="agent"
 if [[ ! "$ide" =~ ^[A-Za-z][A-Za-z0-9._-]*$ ]]; then
