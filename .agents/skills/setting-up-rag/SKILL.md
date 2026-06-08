@@ -54,6 +54,14 @@ change or when docs were **removed**; `--local` forces embedded mode. Use a
 distinct `--collection` per corpus or content type. Chunking adapts to `--kind`
 (heading-aware for prose, block-packed for code) — see [CHUNKING.md](CHUNKING.md).
 
+The loader prunes nested VCS roots below the selected corpus root. A Jujutsu
+workspace created inside a repo (`jj workspace add <name>`) or a Git worktree
+inside the repo is not indexed as part of the parent corpus; pass that
+workspace/worktree as `--corpus` directly if it is the corpus you want. This keeps
+the behavior generic across repositories. A repo-specific `.gitignore` pattern
+for predictable workspace directory names is a useful extra guard, but the indexer
+does not rely on it.
+
 ## 2. Query
 
 ```sh

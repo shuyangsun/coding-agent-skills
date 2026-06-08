@@ -10,6 +10,10 @@ Thumbs.db
 # VCS
 .jj/
 
+# Nested Jujutsu workspaces / Git worktrees for this repo
+# Gitignore glob equivalent of regex: coding-agent-skills.*/
+coding-agent-skills*/
+
 # Local LLM coding agent settings
 *.local.json
 *.local.md

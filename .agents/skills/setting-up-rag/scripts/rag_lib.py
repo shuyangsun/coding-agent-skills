@@ -48,6 +48,46 @@ CODE_EXTS = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs",
 SKIP_DIRS = {"node_modules", "dist", "build", ".output", ".vite", ".nitro",
              ".git", ".jj", ".turbo", "coverage", ".cache", "__pycache__", ".venv"}
 SKIP_FILES = {"bun.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
+VCS_BOUNDARY_MARKERS = (".git", ".jj")
+
+
+def _is_vcs_root(path: Path) -> bool:
+    return any((path / marker).exists() for marker in VCS_BOUNDARY_MARKERS)
+
+
+def _iter_corpus_files(base: Path, kind: str):
+    """Yield indexable files without crossing into nested VCS workspaces.
+
+    The corpus root itself may be a Git worktree or Jujutsu workspace. Only VCS
+    roots strictly below it are pruned, so indexing a workspace directly still
+    works while indexing its parent does not duplicate that workspace's files.
+    """
+    if kind == "md":
+        def wanted(name: str) -> bool:
+            return name.endswith(".md")
+    elif kind == "code":
+        def wanted(name: str) -> bool:
+            return name.endswith(CODE_EXTS)
+    else:
+        sys.exit(f"rag: unknown corpus kind {kind!r} (use md|code)")
+
+    for dirpath, dirnames, filenames in os.walk(base):
+        current = Path(dirpath)
+        if current != base and _is_vcs_root(current):
+            dirnames[:] = []
+            continue
+
+        kept_dirs = []
+        for dirname in sorted(dirnames):
+            child = current / dirname
+            if dirname in SKIP_DIRS or _is_vcs_root(child):
+                continue
+            kept_dirs.append(dirname)
+        dirnames[:] = kept_dirs
+
+        for filename in sorted(filenames):
+            if wanted(filename):
+                yield current / filename
 
 
 def load_corpus(root: str, kind: str = "md") -> dict[str, str]:
@@ -59,16 +99,10 @@ def load_corpus(root: str, kind: str = "md") -> dict[str, str]:
     base = Path(root).expanduser().resolve()
     if not base.is_dir():
         sys.exit(f"rag: corpus dir not found: {base}")
-    if kind == "md":
-        paths = list(base.rglob("*.md"))
-    elif kind == "code":
-        paths = [p for ext in CODE_EXTS for p in base.rglob(f"*{ext}")]
-    else:
-        sys.exit(f"rag: unknown corpus kind {kind!r} (use md|code)")
     docs: dict[str, str] = {}
-    for path in sorted(set(paths)):
+    for path in _iter_corpus_files(base, kind):
         rel = path.relative_to(base).as_posix()
-        if set(Path(rel).parts) & SKIP_DIRS or path.name in SKIP_FILES:
+        if path.name in SKIP_FILES:
             continue
         try:
             docs[rel] = path.read_text(encoding="utf-8", errors="replace")

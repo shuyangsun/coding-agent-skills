@@ -74,7 +74,11 @@ it honest.
    (`EXCLUDE_GLOBS`), so the gold set never points at a doc that merely cites a
    fact, and a retriever can't score a hit by surfacing the directory listing
    instead of the answer (index docs aggregate many facts' sentinels, which would
-   inflate sentinel-mode qrels). `.agents/` (skills/harness) is never in the corpus.
+   inflate sentinel-mode qrels). Nested VCS roots are also excluded: if
+   `jj workspace add <workspace-name>` creates a workspace under the repo, or a
+   Git worktree lives under the selected corpus root, its files are not treated as
+   newly added corpus files. Selecting that workspace/worktree directly as the
+   corpus still works. `.agents/` (skills/harness) is never in the corpus.
 4. **Closed-book control (Phase 1).** Generate with empty context; if the model
    emits a sentinel from parametric memory, exclude that query from factuality.
    `retrieval_hit` (judge-free) is the primary answerability signal regardless.

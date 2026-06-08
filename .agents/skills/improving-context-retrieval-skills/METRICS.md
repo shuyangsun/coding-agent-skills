@@ -1,24 +1,26 @@
 # METRICS — what is measured and how it is read
 
-Five outcome metrics, every one sliced by model tier and query difficulty, and
-every one **attributed to `updating-docs` vs `setting-up-rag` vs their interaction**
-via the factorial, with the `retrieving-context` consumer plane read off the
-SIMPLE/RAG split (plan §9). Hygiene signals are reported **separately** from
-retrieval quality.
+Five outcome metrics are sliced by model tier and query difficulty and attributed
+to `updating-docs` vs `setting-up-rag` vs their interaction via the factorial,
+with the `retrieving-context` consumer plane read off the SIMPLE/RAG split (plan
+§9). One hygiene metric is reported **separately** from retrieval quality.
 
-## The five metrics
+## Outcome and hygiene metrics
 
-| Metric          | Definition                                                       | Driven by                                                       | Made objective by                                                                                            |
-| --------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Precision**   | of retrieved, how many relevant (graded `qrels`)                 | updating-docs + setting-up-rag                                  | `check-retrieval.py`                                                                                         |
-| **Recall**      | of relevant, how many retrieved; **recall@20 headline**          | updating-docs + setting-up-rag                                  | `check-retrieval.py`                                                                                         |
-| **Speed**       | `index_ms` (one-time) + `retrieval_ms` p50/p95                   | **setting-up-rag**                                              | `docs-eval.py` timers, same-host trend                                                                       |
-| **Factuality**  | answer stays grounded (contains a sentinel from a relevant doc)  | all three                                                       | sentinel containment + closed-book control + advisory judge. Phase-0 proxy = `retrieval_hit@20` (judge-free) |
-| **Token usage** | `ctx_tokens` (RAG) / `read_tokens` (SIMPLE) at equal correctness | **setting-up-rag** / **retrieving-context** + **updating-docs** | transcripts via `_score.py`, never self-reported                                                             |
+| Metric           | Definition                                                       | Driven by                                                       | Made objective by                                                                                            |
+| ---------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Precision**    | of retrieved, how many relevant (graded `qrels`)                 | updating-docs + setting-up-rag                                  | `check-retrieval.py`                                                                                         |
+| **Recall**       | of relevant, how many retrieved; **recall@20 headline**          | updating-docs + setting-up-rag                                  | `check-retrieval.py`                                                                                         |
+| **Speed**        | `index_ms` (one-time) + `retrieval_ms` p50/p95                   | **setting-up-rag**                                              | `docs-eval.py` timers, same-host trend                                                                       |
+| **Factuality**   | answer stays grounded (contains a sentinel from a relevant doc)  | all three                                                       | sentinel containment + closed-book control + advisory judge. Phase-0 proxy = `retrieval_hit@20` (judge-free) |
+| **Token usage**  | `ctx_tokens` (RAG) / `read_tokens` (SIMPLE) at equal correctness | **setting-up-rag** / **retrieving-context** + **updating-docs** | transcripts via `_score.py`, never self-reported                                                             |
+| **VCS boundary** | nested jj workspaces / Git worktrees are not indexed             | **setting-up-rag** + harness loaders                            | `check-vcs-boundary.py` (`vcs_boundary_ok=1`, `vcs_boundary_nested_docs_indexed=0`)                          |
 
 `nDCG@10` is the multi-relevance summary (graded). `retrieval_hit@20` (a grade-2
 doc in top-20) is the **primary** Phase-0 answerability signal; `answer_ok` /
 `factuality_grounded` are secondary and need the Phase-1 generation path.
+`vcs_boundary_ok` is a hygiene metric: it must stay 1, and it is interpreted
+separately from retrieval-quality lift.
 
 ## TSV schema (`metrics.tsv`)
 

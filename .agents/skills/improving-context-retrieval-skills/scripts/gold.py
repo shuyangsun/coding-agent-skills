@@ -96,9 +96,11 @@ EXCLUDE_GLOBS = [
 # docs ("inception only for now"). These select which files load and which trees
 # to skip (build output, dependencies, lockfiles).
 CODE_EXTS = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".html", ".md")
+COMMON_SKIP_DIRS = {".git", ".jj"}
 CODE_SKIP_DIRS = {"node_modules", "dist", "build", ".output", ".vite", ".nitro",
-                  ".git", ".turbo", "coverage", ".cache"}
+                  ".git", ".jj", ".turbo", "coverage", ".cache"}
 CODE_SKIP_FILES = {"bun.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
+VCS_BOUNDARY_MARKERS = (".git", ".jj")
 
 
 @dataclass(frozen=True)
@@ -267,6 +269,49 @@ def is_excluded(relpath: str) -> bool:
     return any(fnmatch.fnmatch(relpath, g) for g in EXCLUDE_GLOBS)
 
 
+def is_vcs_root(path: Path) -> bool:
+    return any((path / marker).exists() for marker in VCS_BOUNDARY_MARKERS)
+
+
+def iter_corpus_files(corpus_root: Path, kind: str):
+    """Yield corpus files without crossing nested Git/Jujutsu workspace roots.
+
+    A directly selected corpus may itself be a Git worktree or Jujutsu workspace.
+    Only VCS roots below that selected root are skipped, preventing nested
+    workspaces/worktrees from being treated as newly added project files.
+    """
+    if kind == "md":
+        skip_dirs = COMMON_SKIP_DIRS
+
+        def wanted(name: str) -> bool:
+            return name.endswith(".md")
+    elif kind == "code":
+        skip_dirs = CODE_SKIP_DIRS
+
+        def wanted(name: str) -> bool:
+            return name.endswith(CODE_EXTS)
+    else:
+        raise ValueError(f"unknown corpus kind: {kind!r}")
+
+    for dirpath, dirnames, filenames in os.walk(corpus_root):
+        current = Path(dirpath)
+        if current != corpus_root and is_vcs_root(current):
+            dirnames[:] = []
+            continue
+
+        kept_dirs = []
+        for dirname in sorted(dirnames):
+            child = current / dirname
+            if dirname in skip_dirs or is_vcs_root(child):
+                continue
+            kept_dirs.append(dirname)
+        dirnames[:] = kept_dirs
+
+        for filename in sorted(filenames):
+            if wanted(filename):
+                yield current / filename
+
+
 def load_corpus(corpus_root: Path, kind: str = "md") -> dict[str, str]:
     """Map corpus-root-relative POSIX path -> document text.
 
@@ -275,18 +320,11 @@ def load_corpus(corpus_root: Path, kind: str = "md") -> dict[str, str]:
     kind="code" : every CODE_EXTS file under the root, skipping dependency/build
                   dirs and lockfiles (the inception/ code domain).
     """
-    if kind == "md":
-        paths = list(corpus_root.rglob("*.md"))
-    elif kind == "code":
-        paths = [p for ext in CODE_EXTS for p in corpus_root.rglob(f"*{ext}")]
-    else:
-        raise ValueError(f"unknown corpus kind: {kind!r}")
-
     docs: dict[str, str] = {}
-    for path in sorted(set(paths)):
+    for path in iter_corpus_files(corpus_root, kind):
         rel = path.relative_to(corpus_root).as_posix()
         if kind == "code":
-            if set(Path(rel).parts) & CODE_SKIP_DIRS or path.name in CODE_SKIP_FILES:
+            if path.name in CODE_SKIP_FILES:
                 continue
         elif is_excluded(rel):
             continue

@@ -12,6 +12,7 @@ From the repo root (with `SK=.agents/skills/improving-context-retrieval-skills` 
 
 ```sh
 # 1. Build + validate the gold set (the single source of truth).
+python3 $SK/scripts/check-vcs-boundary.py
 python3 $SK/scripts/gold.py validate
 python3 $SK/scripts/gold.py build --out "$H/gold-set"
 
@@ -72,9 +73,9 @@ is identically 0 by construction (no index, no retrieval).
    - **READ/eval** — blind consumer with only `retrieving-context` over each
      (corpus × rag) cell, in each mode → the steps above feed the factorial and the
      consumer plane.
-3. **Score objectively** (`check-retrieval.py`, `check-convention.sh`,
-   `check-rag-config.sh`); read tokens from transcripts via `_score.py` — never
-   self-reported, never `budget.spent()`.
+3. **Score objectively** (`check-vcs-boundary.py`, `check-retrieval.py`,
+   `check-convention.sh`, `check-rag-config.sh`); read tokens from transcripts via
+   `_score.py` — never self-reported, never `budget.spent()`.
 4. **Record + compare** (`record-metrics.sh`, `scoreboard.py`): recall@20, the two
    marginal effects, the interaction CI, factuality, latency, tokens — by round,
    tier×mode, difficulty×tier, and the factorial.

@@ -139,15 +139,20 @@ corpus via `--corpus-kind code --domain code`.
 > rankers apart. Grow the code corpus/fact set (or shrink code `top_k`) before
 > reading code recall as signal; the scoreboard prints this caveat too.
 
-## The five metrics (sliced by tier and difficulty)
+## The metrics
 
-| Metric          | Measures                                             | Mostly driven by                                                             | Made objective by                                           |
-| --------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Precision**   | of retrieved, how many relevant                      | updating-docs + setting-up-rag                                               | graded `qrels`                                              |
-| **Recall**      | of relevant, how many retrieved (recall@20 headline) | updating-docs + setting-up-rag                                               | graded `qrels`                                              |
-| **Speed**       | index time + per-query latency (p50/p95)             | **setting-up-rag**                                                           | per-stage timers, same-host                                 |
-| **Factuality**  | answer stays grounded in retrieved docs              | all three                                                                    | sentinel containment + closed-book control + advisory judge |
-| **Token usage** | context/read tokens at equal correctness (↓)         | **setting-up-rag** (ctx) / **retrieving-context** + **updating-docs** (read) | read from transcripts, never self-reported                  |
+| Metric           | Measures                                             | Mostly driven by                                                             | Made objective by                                           |
+| ---------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Precision**    | of retrieved, how many relevant                      | updating-docs + setting-up-rag                                               | graded `qrels`                                              |
+| **Recall**       | of relevant, how many retrieved (recall@20 headline) | updating-docs + setting-up-rag                                               | graded `qrels`                                              |
+| **Speed**        | index time + per-query latency (p50/p95)             | **setting-up-rag**                                                           | per-stage timers, same-host                                 |
+| **Factuality**   | answer stays grounded in retrieved docs              | all three                                                                    | sentinel containment + closed-book control + advisory judge |
+| **Token usage**  | context/read tokens at equal correctness (↓)         | **setting-up-rag** (ctx) / **retrieving-context** + **updating-docs** (read) | read from transcripts, never self-reported                  |
+| **VCS boundary** | nested jj workspaces / Git worktrees are not indexed | **setting-up-rag** + harness loaders                                         | `check-vcs-boundary.py` (`vcs_boundary_ok=1`)               |
+
+Precision through token usage are sliced by tier and difficulty. VCS boundary is
+a hygiene metric: it must stay green, and it is interpreted separately from
+retrieval-quality lift.
 
 ## Two consumer modes (the `retrieving-context` plane)
 
@@ -213,6 +218,7 @@ and **no** eval-time LLM (match the `vcs` harness's restraint).
 | `gold.py`                                                 | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall; owns the `nl`/`code` content-type domains and their corpus loaders.                      |
 | `docs-eval.py`                                            | Phase-0 thin eval: given `(corpus, rag-config)`, chunk + index (BM25 + in-memory vectors), run gold queries, emit ranked results + per-stage timings. `--no-retrieval` runs the floor (no index, no retrieval ⇒ all metrics 0). |
 | `check-retrieval.py`                                      | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines; `--corpus-kind code --domain code` scores a code run, emits a `domain` column.                                                                          |
+| `check-vcs-boundary.py`                                   | Hygiene metric: fixture nested Jujutsu workspaces + Git worktrees under a corpus root and assert loaders exclude them while still allowing a VCS root when selected directly.                                                   |
 | `check-convention.sh`                                     | `updating-docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE`.                                                                                                                                              |
 | `check-rag-config.sh`                                     | `setting-up-rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline.                                                                                                                        |
 | `new-corpus.sh`                                           | Provision a round: `--task read\|write`; build Z (empty floor) + N/D (+ GOLD); seed the write convention trap.                                                                                                                  |
