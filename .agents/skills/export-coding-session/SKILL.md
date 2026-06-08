@@ -1,6 +1,6 @@
 ---
 name: export-coding-session
-description: Export the current Claude Code / Codex / Gemini (agy) / Cursor agent session as a markdown transcript into docs/coding-sessions/. Run only when the user explicitly asks to export the session; never export proactively. This skill owns the export mechanics — filename, transcript collection, and redaction.
+description: Export the current Claude Code / Codex / Gemini (agy) / Cursor agent session as a markdown transcript into docs/coding-sessions/. Run only when the user explicitly asks to export the session; never export proactively. This skill owns the export mechanics — filename, transcript collection, verbatim user turns, and redaction.
 ---
 
 # Export agent session history
@@ -20,6 +20,7 @@ The two helper scripts (`next-index.sh`, `redaction-scan.sh`) live next to this 
    - **Codex** — newest file under `~/.codex/sessions/` (fallback `~/.codex/history.jsonl`).
    - **Gemini / Antigravity (`agy`)** — newest `~/.gemini/antigravity-cli/brain/*/.system_generated/logs/transcript.jsonl`.
    - If no raw log is readable, faithfully reconstruct from your current context.
+     Preserve each `## User` turn exactly as the user wrote it: keep the user's wording, spelling, punctuation, Markdown, and line breaks, and do not summarize or paraphrase user input. The only allowed changes to user turns are required redactions and minimal work-friendly cleanup when a user message contains excessive profanity or hostile phrasing; in that case, rephrase only the offending words or sentence(s) while preserving the request's meaning and surrounding text as-is.
 4. **Write the file** — start with a single markdownlint directive line, `<!-- markdownlint-disable MD013 MD024 -->`, then a blank line, then the `#` title. (The transcript format deliberately keeps long, unwrapped prose lines and repeats `## User` / `## Assistant` headings, which trip markdownlint's `MD013` and `MD024`; the per-file directive keeps the transcript lint-clean even in host projects that don't share this repo's `.markdownlint-cli2.jsonc`.) Always confirm that exact directive is the file's first line — if you're (re)writing or editing a transcript that lacks it, add it; never assume it's already there. After the title, add a metadata block recording the date, repo/branch (or current bookmark or change), the **author** (the human owner — `Full Name <email>` read from the repo's VCS config: `git config user.name` / `git config user.email`, falling back to `jj config get user.name` / `jj config get user.email`), and the **agent with precise model version and thinking/reasoning effort** (e.g. `Claude Code (Opus 4.7, 1M context, thinking: high)`) — that keeps the filename version-free — then a one-line summary and the transcript. Order the block `Date`, `Repo`, `Author`, `Agent`, `Summary`, so the human author sits directly above the AI agent. Never fabricate turns.
 
 ## Redact sensitive data (IMPORTANT)
