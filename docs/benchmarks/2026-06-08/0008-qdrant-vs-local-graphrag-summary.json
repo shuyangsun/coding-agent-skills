@@ -1,0 +1,160 @@
+{
+  "date": "2026-06-08",
+  "qdrant_client": "1.18.0",
+  "fastembed": "0.8.0",
+  "microsoft_graphrag": "2.7.2",
+  "networkx": "3.4.2",
+  "rag_config_id": "rag-r",
+  "corpora": [
+    {
+      "project": "inception",
+      "domain": "history",
+      "root": "/Users/shuyang/developer/coding-agent-skills-codex-pending-4163d5e4",
+      "n_docs": 9,
+      "tokens": 45048
+    },
+    {
+      "project": "inception",
+      "domain": "code",
+      "root": "/Users/shuyang/developer/coding-agent-skills-codex-pending-4163d5e4/inception",
+      "n_docs": 12,
+      "tokens": 2385
+    },
+    {
+      "project": "alpha-zero",
+      "domain": "history",
+      "root": "/Users/shuyang/developer/alpha-zero",
+      "n_docs": 58,
+      "tokens": 59780
+    },
+    {
+      "project": "alpha-zero",
+      "domain": "code",
+      "root": "/Users/shuyang/developer/alpha-zero",
+      "n_docs": 247,
+      "tokens": 207755
+    }
+  ],
+  "summary": [
+    {
+      "project": "alpha-zero",
+      "domain": "code",
+      "system": "local-graphrag",
+      "queries": 3,
+      "recall@20": 0.6667,
+      "primary_hit@20": 0.6667,
+      "answer_hit@5": 0.6667,
+      "ndcg@10": 0.3539,
+      "mrr": 0.25,
+      "retrieval_ms_p50": 9.864,
+      "retrieval_ms_p95": 10.43,
+      "ctx_tokens_top5_avg": 1006.7,
+      "ctx_tokens_to_answer_avg": 1686.0
+    },
+    {
+      "project": "alpha-zero",
+      "domain": "code",
+      "system": "qdrant-fastembed",
+      "queries": 3,
+      "recall@20": 0.6667,
+      "primary_hit@20": 0.6667,
+      "answer_hit@5": 0.3333,
+      "ndcg@10": 0.3333,
+      "mrr": 0.3571,
+      "retrieval_ms_p50": 1992.429,
+      "retrieval_ms_p95": 2004.238,
+      "ctx_tokens_top5_avg": 1139.7,
+      "ctx_tokens_to_answer_avg": 2665.7
+    },
+    {
+      "project": "alpha-zero",
+      "domain": "history",
+      "system": "local-graphrag",
+      "queries": 3,
+      "recall@20": 1.0,
+      "primary_hit@20": 1.0,
+      "answer_hit@5": 1.0,
+      "ndcg@10": 0.7539,
+      "mrr": 0.6667,
+      "retrieval_ms_p50": 3.614,
+      "retrieval_ms_p95": 3.98,
+      "ctx_tokens_top5_avg": 1418.7,
+      "ctx_tokens_to_answer_avg": 370.7
+    },
+    {
+      "project": "alpha-zero",
+      "domain": "history",
+      "system": "qdrant-fastembed",
+      "queries": 3,
+      "recall@20": 0.6667,
+      "primary_hit@20": 0.6667,
+      "answer_hit@5": 1.0,
+      "ndcg@10": 0.6667,
+      "mrr": 0.6667,
+      "retrieval_ms_p50": 2769.404,
+      "retrieval_ms_p95": 2850.269,
+      "ctx_tokens_top5_avg": 1681.7,
+      "ctx_tokens_to_answer_avg": 677.7
+    },
+    {
+      "project": "inception",
+      "domain": "code",
+      "system": "local-graphrag",
+      "queries": 3,
+      "recall@20": 1.0,
+      "primary_hit@20": 1.0,
+      "answer_hit@5": 1.0,
+      "ndcg@10": 0.5436,
+      "mrr": 0.3889,
+      "retrieval_ms_p50": 0.264,
+      "retrieval_ms_p95": 0.323,
+      "ctx_tokens_top5_avg": 912.3,
+      "ctx_tokens_to_answer_avg": 618.3
+    },
+    {
+      "project": "inception",
+      "domain": "code",
+      "system": "qdrant-fastembed",
+      "queries": 3,
+      "recall@20": 1.0,
+      "primary_hit@20": 1.0,
+      "answer_hit@5": 0.6667,
+      "ndcg@10": 0.629,
+      "mrr": 0.5111,
+      "retrieval_ms_p50": 806.99,
+      "retrieval_ms_p95": 809.301,
+      "ctx_tokens_top5_avg": 1099.7,
+      "ctx_tokens_to_answer_avg": 699.3
+    },
+    {
+      "project": "inception",
+      "domain": "history",
+      "system": "local-graphrag",
+      "queries": 3,
+      "recall@20": 1.0,
+      "primary_hit@20": 1.0,
+      "answer_hit@5": 1.0,
+      "ndcg@10": 1.0,
+      "mrr": 1.0,
+      "retrieval_ms_p50": 2.865,
+      "retrieval_ms_p95": 2.941,
+      "ctx_tokens_top5_avg": 1977.3,
+      "ctx_tokens_to_answer_avg": 514.3
+    },
+    {
+      "project": "inception",
+      "domain": "history",
+      "system": "qdrant-fastembed",
+      "queries": 3,
+      "recall@20": 1.0,
+      "primary_hit@20": 1.0,
+      "answer_hit@5": 0.6667,
+      "ndcg@10": 0.8066,
+      "mrr": 0.7778,
+      "retrieval_ms_p50": 2915.577,
+      "retrieval_ms_p95": 2929.606,
+      "ctx_tokens_top5_avg": 2358.3,
+      "ctx_tokens_to_answer_avg": 1150.7
+    }
+  ]
+}

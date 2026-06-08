@@ -12,3 +12,4 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, with `NNNN` unique across the whole
 ### 2026-06-08
 
 - [`0000` — contextual retrieval techniques for doc authors](2026-06-08/0000-contextual-retrieval-for-doc-authors.md)
+- [`0001` — contextual retrieval with GraphRAG](2026-06-08/0001-contextual-retrieval-with-graphrag.md)

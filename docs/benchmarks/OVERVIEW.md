@@ -30,3 +30,4 @@ tree (does not restart per day).
 - [`0005` — `docs` skill: floor (no doc) vs with-doc findability (Phase 0)](2026-06-08/0005-docs-skill-floor-vs-doc.md) · [data](2026-06-08/0005-docs-skill-floor-vs-doc-metrics.tsv)
 - [`0006` — `rag` skill: no-RAG baseline vs RAG, code vs natural language](2026-06-08/0006-rag-skill-baseline-vs-rag.md) · [data](2026-06-08/0006-rag-vs-baseline-metrics.tsv)
 - [`0007` — `updating-docs` skill: contextual retrieval source maps on inception and alpha-zero](2026-06-08/0007-updating-docs-contextual-retrieval.md) · [data](2026-06-08/0007-updating-docs-contextual-retrieval-metrics.tsv)
+- [`0008` — Qdrant/FastEmbed RAG vs local GraphRAG on inception and alpha-zero](2026-06-08/0008-qdrant-vs-local-graphrag.md) · [data](2026-06-08/0008-qdrant-vs-local-graphrag-metrics.tsv)
