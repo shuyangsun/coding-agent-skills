@@ -1,0 +1,17 @@
+round	project	domain	condition	config	n_docs	n_chunks	index_ms	retrieval_ms_p50	retrieval_ms_p95	recall@20	ndcg@10	mrr_any	primary_mrr	answer_hit@5	primary_hit@20	ctx_tokens_top5_chunks	ctx_tokens_to_answer_chunk	read_tokens_to_primary_doc
+701-custom	inception	history	raw	baseline-b	44	549	77.61	1.018	1.075	1.0	0.8333	0.7778	0.7778	1.0	1.0	1428.3	470.3	3261.7
+701-custom	inception	history	raw	rag-r	44	2638	109.795	15.587	16.55	1.0	0.5632	0.4365	0.4365	0.3333	1.0	195	213.3	24797.3
+701-custom	inception	history	source-map	baseline-b	45	550	75.65	1.094	1.213	1.0	0.7465	0.7778	0.7778	1.0	1.0	1387	470.3	3261.7
+701-custom	inception	history	source-map	rag-r	45	2641	109.077	16.054	16.313	1.0	0.6239	1.0	0.2513	1.0	1.0	244	119	25179
+701-custom	inception	code	raw	baseline-b	12	12	0.59	0.029	0.032	1.0	0.6327	0.5111	0.5111	1.0	1.0	542.7	339	339
+701-custom	inception	code	raw	rag-r	12	17	0.667	0.153	0.156	1.0	0.4136	0.2222	0.2222	0.6667	1.0	210.3	396	433.7
+701-custom	inception	code	source-map	baseline-b	13	13	0.648	0.029	0.1	1.0	0.6673	1.0	0.3056	1.0	1.0	561.7	131	470
+701-custom	inception	code	source-map	rag-r	13	20	0.788	0.187	0.192	1.0	0.5832	1.0	0.181	1.0	1.0	218	75	564.7
+701-custom	alpha-zero	history	raw	baseline-b	19	50	5.583	0.09	0.098	1.0	0.285	0.6923	0.0865	0.6667	1.0	1306.3	1817.3	7298.7
+701-custom	alpha-zero	history	raw	rag-r	19	132	7.296	1.234	1.585	1.0	0.5519	0.5556	0.4653	1.0	1.0	182	81.3	4481
+701-custom	alpha-zero	history	source-map	baseline-b	20	51	5.634	0.103	0.112	1.0	0.403	1.0	0.0794	1.0	1.0	1282.3	241.7	7448.7
+701-custom	alpha-zero	history	source-map	rag-r	20	135	7.183	1.403	1.424	1.0	0.566	1.0	0.2708	1.0	1.0	249.3	92	4509
+701-custom	alpha-zero	code	raw	baseline-b	251	424	38.907	0.732	0.745	0.0922	0.2878	0.4444	0.1667	0.6667	0.6667	1333	2245.3	9433.3
+701-custom	alpha-zero	code	raw	rag-r	251	1648	53.399	8.334	9.38	0.4673	0.2909	0.4167	0.2256	1.0	1.0	246	199	4125.7
+701-custom	alpha-zero	code	source-map	baseline-b	252	425	38.68	0.622	0.831	0.2208	0.427	1.0	0.131	1.0	0.6667	1235.7	157	9505.3
+701-custom	alpha-zero	code	source-map	rag-r	252	1651	53.092	8.061	9.441	0.474	0.3519	1.0	0.1652	1.0	1.0	308	99	4282.7
