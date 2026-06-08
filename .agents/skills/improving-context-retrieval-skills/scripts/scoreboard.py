@@ -42,9 +42,9 @@ CELLS = [("N", "b"), ("N", "r"), ("D", "b"), ("D", "r")]
 FLOOR_CORPUS = "Z"
 # The user-facing named conditions, in baseline-first order, mapped to the cells.
 NAMED_CONDITIONS = [
-    ("docs-only", ("D", "b")),   # docs skill, baseline (no rag skill)
-    ("RAG-only", ("N", "r")),    # rag skill, naive corpus (no docs skill)
-    ("docs+RAG", ("D", "r")),    # both skills (co-designed)
+    ("docs-only", ("D", "b")),   # updating-docs corpus, baseline config (no setting-up-rag)
+    ("RAG-only", ("N", "r")),    # setting-up-rag config, naive corpus (no updating-docs structure)
+    ("docs+RAG", ("D", "r")),    # both factorial skills (updating-docs × setting-up-rag, co-designed)
 ]
 # Content-type axis: each domain's "real" corpus tag for the code-vs-nl comparison
 # (nl = the structured D docs; code = the inception/ codebase, corpus tag "code").

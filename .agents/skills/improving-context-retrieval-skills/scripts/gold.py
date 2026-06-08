@@ -67,17 +67,25 @@ HELD_OUT_FRACTION_NOTE = "hash(query_id) parity; even=dev, odd=held-out"
 # claimed: index docs aggregate many facts' sentinels, so leaving them in-corpus
 # would let a retriever score a hit by returning the directory listing instead of
 # the actual answer (and would inflate sentinel-mode qrels). The benchmark-report
-# globs are the same self-reference guard: a docs/rag-harness report names gold
-# sentinels (e.g. "380s") to explain misses, so it must never enter the corpus it
-# measures. Name harness reports *docs-skill* / *rag-skill* / *docs-rag* so these
-# catch them; vcs (and other) benchmark reports stay legitimate corpus docs.
+# globs are the same self-reference guard: a context-retrieval harness report names
+# gold sentinels (e.g. "380s") to explain misses, so it must never enter the corpus
+# it measures. Match both the historical report names (*docs-skill* / *rag-skill* /
+# *docs-rag*) and the current per-skill names (*setting-up-rag* / *updating-docs* /
+# *retrieving-context*); vcs (and other) benchmark reports stay legitimate corpus docs.
 EXCLUDE_GLOBS = [
+    # this harness's design plan + the sessions that produced it (historical + current names)
     "plans/0002-improving-docs-and-rag-skills.md",
     "plans/*improving-docs-and-rag*.md",
+    "plans/*improving-context-retrieval*.md",
     "coding-sessions/*/*improving-docs-and-rag*.md",
+    "coding-sessions/*/*improving-context-retrieval*.md",
+    # benchmark reports that quote gold sentinels (historical + current per-skill names)
     "benchmarks/*docs-skill*.md",
     "benchmarks/*rag-skill*.md",
     "benchmarks/*docs-rag*.md",
+    "benchmarks/*setting-up-rag*.md",
+    "benchmarks/*updating-docs*.md",
+    "benchmarks/*retrieving-context*.md",
     "OVERVIEW.md",
     "*/OVERVIEW.md",
 ]

@@ -1,6 +1,6 @@
 {
   "rag_config_id": "rag-r",
-  "_note": "A `rag`-skill-shaped config: heading-aware chunking, idf-weighted embeddings, hybrid BM25+dense with RRF fusion, and a rerank pass. The actual `rag` skill emits this, justified by doc-set properties and validated on held-out queries.",
+  "_note": "A `setting-up-rag`-skill-shaped config: heading-aware chunking, idf-weighted embeddings, hybrid BM25+dense with RRF fusion, and a rerank pass. The actual `setting-up-rag` skill emits this, justified by doc-set properties and validated on held-out queries.",
   "chunker": { "strategy": "heading", "size": 350, "overlap": 40 },
   "embedding": { "model": "hash", "dim": 512, "idf_weight": true },
   "hybrid": {

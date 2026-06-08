@@ -2,7 +2,7 @@
 
 A clean-state [TanStack Start](https://tanstack.com/start) application — named for the
 recursive, self-improving philosophy of this skill repository. It exists as a realistic
-target codebase for the `improving-docs-and-rag-skills` harness.
+target codebase for the `improving-context-retrieval-skills` harness.
 
 ## Stack
 

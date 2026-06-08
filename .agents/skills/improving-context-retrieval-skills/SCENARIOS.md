@@ -7,14 +7,11 @@
   baseline; every metric is identically 0. Built by `mk-corpus.py` (an empty `Z/`
   dir) and run **first** so all other cells read as lifts above nothing.
 - **GOLD** — a frozen snapshot of today's `docs/` at a pinned revision, scored by
-   the **frozen retrieval gate** (Plane 1). Moves here flag *instrument* drift, not
--  skill quality. `gold.py --qrels-mode pinned`.
-  skill quality. `check-retrieval.py --qrels-mode pinned`.
   the **frozen retrieval gate** (Plane 1). Moves here flag _instrument_ drift, not
-  skill quality. `gold.py --qrels-mode pinned`.
-- **D** — `docs`-skill-authored: well-structured (clean headings, one concept per
-  file, descriptive filenames, front-matter). The Phase-0 stand-in (`mk-corpus.py`)
-  preserves the structured docs verbatim.
+  skill quality. `check-retrieval.py --qrels-mode pinned`.
+- **D** — `updating-docs`-skill-authored: well-structured (clean headings, one
+  concept per file, descriptive filenames, front-matter). The Phase-0 stand-in
+  (`mk-corpus.py`) preserves the structured docs verbatim.
 - **N** — naive dump: identical content and sentinels, structure destroyed
   (front-matter dropped, headings demoted, opaque filenames). Same doc count as D
   in `--mode perdoc` so doc-level recall is not saturated.
@@ -47,24 +44,17 @@ so the difference is visible rather than averaged away.
 Grounded in this repo's own machine-checkable facts, verified at build time
 (every sentinel must still occur in its pinned primary doc):
 
-| Fact | Domain | Sentinel(s) | Primary doc (relative to its domain's corpus root) | difficulty |
-| --- | --- | --- | --- | --- |
-| benchmark conflict time | nl | `380s`, `85s` | `benchmarks/2026-06-06/0000-…` | medium |
-| orphan empty head | nl | `urruyqxt` | `issues/2026-06-07/0007-…` | hard |
-| name-metric durability | nl | `reference-transaction` | `coding-sessions/2026-06-06/0012-…` | medium |
-| Composer 2.5 benchmark | nl | `Composer 2.5` | `benchmarks/2026-06-07/0002-…` | medium |
-| integrate degenerate merge | nl | `degenerate` | `issues/2026-06-07/0003-…` | medium |
-| inception toolchain (transcript) | nl | `native-preview` | `coding-sessions/2026-06-07/0028-…` | medium |
-| router preload | code | `defaultPreload` | `src/router.tsx` | medium |
-| React Compiler wiring | code | `@rolldown/plugin-babel`, `reactCompilerPreset` | `vite.config.ts` | hard |
-| typecheck compiler | code | `tsgo --noEmit` | `package.json` | medium |
-| Fact                       | Sentinel(s)             | Primary doc                         | difficulty |
-| -------------------------- | ----------------------- | ----------------------------------- | ---------- |
-| benchmark conflict time    | `380s`, `85s`           | `benchmarks/0000-…`                 | medium     |
-| orphan empty head          | `urruyqxt`              | `issues/0007-…`                     | hard       |
-| name-metric durability     | `reference-transaction` | `coding-sessions/2026-06-06/0012-…` | medium     |
-| Composer 2.5 benchmark     | `Composer 2.5`          | `benchmarks/0002-…`                 | medium     |
-| integrate degenerate merge | `degenerate`            | `issues/0003-…`                     | medium     |
+| Fact                             | Domain | Sentinel(s)                                     | Primary doc (relative to its domain's corpus root) | difficulty |
+| -------------------------------- | ------ | ----------------------------------------------- | -------------------------------------------------- | ---------- |
+| benchmark conflict time          | nl     | `380s`, `85s`                                   | `benchmarks/2026-06-06/0000-…`                     | medium     |
+| orphan empty head                | nl     | `urruyqxt`                                      | `issues/2026-06-07/0007-…`                         | hard       |
+| name-metric durability           | nl     | `reference-transaction`                         | `coding-sessions/2026-06-06/0012-…`                | medium     |
+| Composer 2.5 benchmark           | nl     | `Composer 2.5`                                  | `benchmarks/2026-06-07/0002-…`                     | medium     |
+| integrate degenerate merge       | nl     | `degenerate`                                    | `issues/2026-06-07/0003-…`                         | medium     |
+| inception toolchain (transcript) | nl     | `native-preview`                                | `coding-sessions/2026-06-07/0028-…`                | medium     |
+| router preload                   | code   | `defaultPreload`                                | `src/router.tsx`                                   | medium     |
+| React Compiler wiring            | code   | `@rolldown/plugin-babel`, `reactCompilerPreset` | `vite.config.ts`                                   | hard       |
+| typecheck compiler               | code   | `tsgo --noEmit`                                 | `package.json`                                     | medium     |
 
 This is a **seed**. The plan calls for 50–100+ queries (a power calc): enumerate
 the cross-link graph as relevance pairs and add anchored paraphrases. Growing the
@@ -91,8 +81,8 @@ it honest.
 
 ## The WRITE convention trap (the `--task write` loop)
 
-A sub-agent with **only** `docs` authors into an empty `docs/` from a fixed fact
-payload, against a seeded trap: a pre-existing `NNNN` index forcing a
+A sub-agent with **only** `updating-docs` authors into an empty `docs/` from a fixed
+fact payload, against a seeded trap: a pre-existing `NNNN` index forcing a
 globally-unique number, and a divergent flat doc to standardize. Scored on
 `CONV_OK` (durable file signals) and `WRITE_FINDABLE` (the just-authored doc,
 indexed against a fixed background index, surfaces in top-k). `next-index.sh` and
@@ -100,7 +90,8 @@ indexed against a fixed background index, surfaces in top-k). `next-index.sh` an
 
 ## Contamination firewall (the agents under test)
 
-Sub-agents see **only** the skill under test (`docs` _or_ `rag`) and a realistic
-task — never this harness, never the gold queries, never `metrics.tsv`. The
-RAG-setup agent in particular is **blind to the gold queries** so it tunes to
-doc-set properties, not to the test.
+Sub-agents see **only** the skill under test (`updating-docs`, `setting-up-rag`, _or_
+`retrieving-context`) and a realistic task — never this harness, never the gold
+queries, never `metrics.tsv`. The RAG-setup agent in particular is **blind to the
+gold queries** so it tunes to doc-set properties, not to the test; the READ consumer
+sees only `retrieving-context` and the corpus, never the labels it is scored against.

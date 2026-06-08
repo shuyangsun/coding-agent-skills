@@ -1,19 +1,27 @@
 ---
-name: rag
-description: Load when setting up or improving RETRIEVAL (RAG) over a document or
-  code set — chunking, embeddings, hybrid (dense+sparse) search, reranking, and
-  vector-DB config. Local-first (Qdrant + FastEmbed, CPU, no cloud). The main flow
-  ASSUMES local RAG is already running; it bootstraps it only if not.
+name: setting-up-rag
+description: Load when STANDING UP or TUNING a local retrieval (RAG) system over a
+  document or code set — provision the stack, chunk, embed, index, and configure
+  hybrid (dense+sparse) search, reranking, and vector-DB knobs. Local-first
+  (Qdrant + FastEmbed, CPU, no cloud). To merely RETRIEVE context for a task (not
+  build the index), load `retrieving-context` instead; it queries this stack.
 ---
 
-# RAG — local-first retrieval over a doc set
+# Setting up RAG — local-first retrieval over a doc set
 
-Set up effective retrieval over a given corpus (markdown docs, transcripts, or
-source code) so a downstream agent can answer from it. The pipeline is
-**Qdrant + FastEmbed**, CPU-only, no cloud key: chunk → embed (dense + sparse) →
-index → hybrid retrieve (RRF) → rerank → top-k. Defaults live in
-[`scripts/rag-config.json`](scripts/rag-config.json); the helpers do the
+**Stand up and tune** effective retrieval over a given corpus (markdown docs,
+transcripts, or source code) so a downstream agent can answer from it. The
+pipeline is **Qdrant + FastEmbed**, CPU-only, no cloud key: chunk → embed
+(dense + sparse) → index → hybrid retrieve (RRF) → rerank → top-k. Defaults live
+in [`scripts/rag-config.json`](scripts/rag-config.json); the helpers do the
 mechanics, so spend tokens on the corpus-specific choices, not the boilerplate.
+
+> **Building the index vs. using it.** This skill is the **operator** side —
+> provision the stack, index a corpus, and tune the config. An agent that just
+> needs to **retrieve context to answer a question or do a task** should load
+> [`retrieving-context`](../retrieving-context/SKILL.md) instead: it routes to
+> the best retrieval available and queries _this_ local stack (the `query.py`
+> below) when it is running. Come here to build or improve what it queries.
 
 This file assumes local RAG is **already running**. The first two lines below
 handle the one case where it isn't — do not read the setup docs otherwise.

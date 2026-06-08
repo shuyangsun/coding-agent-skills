@@ -1,13 +1,14 @@
-# LOOP — one round of the docs+rag harness
+# LOOP — one round of the context-retrieval harness
 
 Mirrors `improving-vcs-skill/LOOP.md`, over the 2×2 factorial. Run rounds; keep
 revisions that move the numbers; revert the rest. One small, attributable change
-to **one** skill per round.
+to **one** skill per round (`updating-docs`, `setting-up-rag`, or
+`retrieving-context`).
 
 ## Phase-0 quick start (no services, no LLM)
 
-From the repo root (with `SK=.agents/skills/improving-docs-and-rag-skills` and
-`H="${DOCS_RAG_HARNESS_DIR:-$TMPDIR/docs-rag-harness}"`):
+From the repo root (with `SK=.agents/skills/improving-context-retrieval-skills` and
+`H="${CONTEXT_RETRIEVAL_HARNESS_DIR:-$TMPDIR/context-retrieval-harness}"`):
 
 ```sh
 # 1. Build + validate the gold set (the single source of truth).
@@ -64,34 +65,38 @@ is identically 0 by construction (no index, no retrieval).
    (corpus × config); seed the WRITE convention trap (`new-corpus.sh`, future).
 2. **Run the three loops** (blind sub-agents; see [SCENARIOS.md](SCENARIOS.md) and
    [MATRIX.md](MATRIX.md)):
-   - **WRITE-docs** — agent with only `docs` authors into an empty `docs/` →
-     `check-convention.sh` (`CONV_OK`, `WRITE_FINDABLE`).
-   - **RAG-setup** — agent with only `rag`, blind to gold queries, emits
+   - **WRITE-docs** — agent with only `updating-docs` authors into an empty `docs/`
+     → `check-convention.sh` (`CONV_OK`, `WRITE_FINDABLE`).
+   - **RAG-setup** — agent with only `setting-up-rag`, blind to gold queries, emits
      `rag-config.json` → `check-rag-config.sh`.
-   - **READ/eval** — blind consumer over each (corpus × rag) cell → the steps
-     above feed the factorial.
+   - **READ/eval** — blind consumer with only `retrieving-context` over each
+     (corpus × rag) cell, in each mode → the steps above feed the factorial and the
+     consumer plane.
 3. **Score objectively** (`check-retrieval.py`, `check-convention.sh`,
    `check-rag-config.sh`); read tokens from transcripts via `_score.py` — never
    self-reported, never `budget.spent()`.
 4. **Record + compare** (`record-metrics.sh`, `scoreboard.py`): recall@20, the two
    marginal effects, the interaction CI, factuality, latency, tokens — by round,
    tier×mode, difficulty×tier, and the factorial.
-5. **Diagnose, then revise ONE skill.** Attribute via the factorial: if the `docs`
-   marginal lags only under heading-aware chunking, the interaction tells you
-   whether the lever is `docs` or `rag`.
+5. **Diagnose, then revise ONE skill.** Attribute via the factorial: if the
+   `updating-docs` marginal lags only under heading-aware chunking, the interaction
+   tells you whether the lever is `updating-docs` or `setting-up-rag`; a gap between
+   SIMPLE and RAG outcomes points at `retrieving-context`.
 6. **Re-run on fresh indexes.** Keep the change if its skill's marginal effect
-   rises, quality holds across tiers/modes, **and** it does not degrade the other
+   rises, quality holds across tiers/modes, **and** it does not degrade another
    skill's marginal effect (coupling non-negative). Else revert. Noise → drop it
-   and keep both skills smaller.
-7. **Tear down** with `rm-corpus.sh` (guarded to `$DOCS_RAG_HARNESS_DIR`).
+   and keep all three skills smaller.
+7. **Tear down** with `rm-corpus.sh` (guarded to `$CONTEXT_RETRIEVAL_HARNESS_DIR`).
 
 ## Revise/revert discipline
 
-- One attributable change to one skill per round; never both skills at once
+- One attributable change to one skill per round; never two skills at once
   (the factorial only separates them if exactly one treatment definition moves).
-- A `docs` change that raises `CONV_OK` but lowers recall is reverted.
-- A `rag` change that raises recall but balloons latency/tokens at no factuality
-  gain is reverted.
+- An `updating-docs` change that raises `CONV_OK` but lowers recall is reverted.
+- A `setting-up-rag` change that raises recall but balloons latency/tokens at no
+  factuality gain is reverted.
+- A `retrieving-context` change that wins one consumer mode but regresses the other
+  is reverted.
 - A change that improves one skill's marginal effect but makes the **interaction**
   go negative is reverted.
 - Clear the bar only on the **held-out** split (`--split held-out`); tune on

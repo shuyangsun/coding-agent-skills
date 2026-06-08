@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """docs-eval.py — Phase-0 thin in-process retrieval eval (no services, no LLM).
 
-Given a corpus and a `rag-config.json` (the `rag` skill's output), it chunks +
+Given a corpus and a `rag-config.json` (the `setting-up-rag` skill's output), it chunks +
 indexes the corpus with **BM25 (sparse) + an in-memory hashed-embedding vector
 index (dense)**, runs the gold queries, and writes a ranked run plus per-stage
 timings. The scorer (`check-retrieval.py`, which imports `gold.py`) turns the run
@@ -23,7 +23,7 @@ and rerank knobs can be exercised reproducibly. Real semantic embeddings
 chunking axes carry the meaningful Phase-0 signal. Absolute numbers are therefore
 host- and placeholder-relative; the *deltas* between cells are what travel.
 
-rag-config.json (the knobs the `rag` skill owns):
+rag-config.json (the knobs the `setting-up-rag` skill owns):
   {
     "rag_config_id": "baseline-b",
     "chunker":   {"strategy": "fixed|heading|recursive", "size": 512, "overlap": 64},

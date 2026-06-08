@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""mk-corpus.py — build the corpus axis: Z (empty baseline), N (naive), D (docs-skill).
+"""mk-corpus.py — build the corpus axis: Z (empty baseline), N (naive), D (updating-docs).
 
 Three corpus variants from the same fact payload:
   - **Z** (zero / empty): no documents at all — the absolute zero baseline before
     any docs or RAG. Every retrieval metric scores 0. Run this *first* so every
     other cell is measured as a lift above zero.
-  - **D** (docs-skill): well-structured docs — clean Markdown headings, one
+  - **D** (updating-docs): well-structured docs — clean Markdown headings, one
     concept per file, descriptive filenames, front-matter. Stands in for
-    `docs`-skill output.
+    `updating-docs`-skill output.
   - **N** (naive dump): the identical text content with structure destroyed —
     front-matter dropped and heading markers demoted to plain lines, under opaque
     filenames (`n-0001.md`). Same count of docs and same sentinels as D, so the
@@ -26,8 +26,9 @@ It also snapshots a **code** corpus from the `inception/` app (content-type axis
 natural-language docs and the two can be compared. Skipped if `inception/` is absent.
 
 This is a deterministic Phase-0 stand-in so the full factorial can be measured
-*before* the real `docs` skill exists. Once `docs`/`rag` exist, `new-corpus.sh`
-will author D with the actual skill and synthesize N from the same fact payload.
+*before* the real `updating-docs` skill exists. Once `updating-docs`/`setting-up-rag`
+exist, `new-corpus.sh` will author D with the actual skill and synthesize N from the
+same fact payload.
 
 Usage:
   mk-corpus.py --out DIR [--corpus SRC] [--code-corpus inception/] [--naive-files 6]

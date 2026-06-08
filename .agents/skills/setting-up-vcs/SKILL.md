@@ -1,5 +1,5 @@
 ---
-name: setup-vcs
+name: setting-up-vcs
 description: Wire the mechanical hooks and guardrails that make the `vcs` skill's
   isolation automatic for every coding agent in a repo (Claude Code, Codex, Cursor,
   Antigravity, Gemini), and install Jujutsu when it is missing. Run it when setting
@@ -18,7 +18,7 @@ the guardrails depend on (Jujutsu) is actually installed.
 
 Like [`update-agent-permissions`](../update-agent-permissions/SKILL.md), this is a
 **method, not a snapshot**: hook formats and install commands drift, so re-derive the
-specifics every run. The two skills are companions — `setup-vcs` wires the _hooks_
+specifics every run. The two skills are companions — `setting-up-vcs` wires the _hooks_
 that enforce isolation; `update-agent-permissions` sets the _permission posture_ they
 ride on. Run both when standing up a repo.
 

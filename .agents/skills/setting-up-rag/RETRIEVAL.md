@@ -4,7 +4,7 @@ The retrieve path is in [`scripts/query.py`](scripts/query.py); knobs are the
 `hybrid` / `rerank` / `top_k` blocks of
 [`scripts/rag-config.json`](scripts/rag-config.json). The pipeline:
 
-```
+```text
 query ──embed──► dense prefetch (bge-small)   ─┐
         embed──► sparse prefetch (bm25)        ─┴─►  RRF fuse  ──►  rerank top-N  ──►  top-k
 ```

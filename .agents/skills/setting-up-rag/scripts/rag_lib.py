@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""rag_lib.py — shared helpers for the `rag` skill's local Qdrant pipeline.
+"""rag_lib.py — shared helpers for the `setting-up-rag` skill's local Qdrant pipeline.
 
 Local-first by design: embeddings run on CPU via FastEmbed (ONNX, no torch, no
 cloud); the vector store is Qdrant, reached over HTTP when a server is up

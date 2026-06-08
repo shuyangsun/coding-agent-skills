@@ -57,8 +57,8 @@ a _lift_: "is RAG worth it at all" and "is this config better than the dumb one"
 This repo ships a measurement harness that automates exactly this loop —
 deterministic gold set, floor/baseline/skill cells, recall/nDCG/MRR, and a
 keep/revert scoreboard — under
-[`improving-docs-and-rag-skills`](../improving-docs-and-rag-skills/SKILL.md), with
-example results in [`docs/benchmarks/`](../../../docs/benchmarks/). Use it (or its
-gold-set + scorer scripts, `gold.py` / `check-retrieval.py`) as the template for
+[`improving-context-retrieval-skills`](../improving-context-retrieval-skills/SKILL.md),
+with example results in [`docs/benchmarks/`](../../../docs/benchmarks/). Use it (or
+its gold-set + scorer scripts, `gold.py` / `check-retrieval.py`) as the template for
 scoring your own corpus. The harness is for _authoring/validating this skill_; for
 your own project, the method above is what matters.

@@ -1,19 +1,22 @@
 ---
-name: docs
-description: Load BEFORE you read/search the repo's documentation or write a new
-  doc (issue, plan, design, benchmark, session note, runbook, decision record), so
-  you find what already exists instead of duplicating it, and write the new doc
-  where both humans and retrieval will actually find it. Repo-agnostic.
+name: updating-docs
+description: Load BEFORE you write or update a doc (issue, plan, design, benchmark,
+  session note, runbook, decision record), so you write it where both humans and
+  retrieval will actually find it, and update what exists instead of forking it.
+  Finding what's already there (the search-before-you-write step) is delegated to
+  `retrieving-context`. Repo-agnostic.
 ---
 
-# Docs
+# Updating docs
 
 **Findability is the whole job.** A doc nobody can retrieve is worth nothing — it
-gets rewritten, contradicted, or lost. This skill has two halves that share one
-goal: **find before you write** (so you don't duplicate or fork the truth), and
-**write so it is found** (by a human skimming and by a retriever ranking).
+gets rewritten, contradicted, or lost. This skill is the **write** half of that job:
+update what already exists rather than forking it, and write so the next reader (a
+human skimming, a retriever ranking) actually finds it. The **find** half — checking
+what's already there before you write — is [`retrieving-context`](../retrieving-context/SKILL.md);
+do that first.
 
-Two empirical anchors drive every rule below; treat them as the *why*:
+Two empirical anchors drive every rule below; treat them as the _why_:
 
 1. **Having the doc at all is the dominant lever.** The single biggest jump in
    findability is going from no doc to one indexed doc. So the first failure mode
@@ -23,23 +26,18 @@ Two empirical anchors drive every rule below; treat them as the *why*:
    **not** rescue an answer that isn't stated in plain, searchable words. So
    structure is necessary, not sufficient: **anchor the answer lexically** (§5).
 
-## 1. Find before you write
+## 1. Before you write: search first (don't duplicate)
 
-Never author a doc until you've checked whether it already exists. In order:
+Never author a doc until you've checked whether it already exists. Use
+[`retrieving-context`](../retrieving-context/SKILL.md) to search the corpus the way
+a reader would — read the directory index, search by concept (not just keyword),
+walk the dated/typed folders. That skill owns the _how_; what matters here is the
+rule it enforces:
 
-- **Read the directory index first.** Most doc trees have an `OVERVIEW.md` /
-  `README.md` / `index.md` per directory. Read it — it's the curated map and the
-  cheapest way to see what's already covered.
-- **Search by the concept, not just the keyword.** `rg -i` across the docs root
-  for the identifier, error string, number, or phrase you'd expect the answer to
-  contain. If you only know the topic, search the natural-language phrasing a
-  reader would use, because that is how the doc should have been written (§5).
-- **Walk the structure.** Dated / indexed / typed folders (e.g.
-  `docs/<type>/<date>/<index>-<slug>`) let you scan by recency and area without
-  opening files.
-
-If a doc already covers the concept, **update it in place** rather than adding a
-near-duplicate. Two docs that both half-answer a question are worse than one.
+- If a doc already covers the concept, **update it in place** rather than adding a
+  near-duplicate. Two docs that both half-answer a question are worse than one.
+- If nothing covers it (or the only doc is stale and half-right), that's your
+  signal to write — proceed below.
 
 ## 2. Decide where it lives: co-locate vs centralize
 
@@ -50,7 +48,7 @@ near-duplicate. Two docs that both half-answer a question are worse than one.
   design/decision record, an issue write-up, a benchmark, a runbook, a session
   note. These are not owned by one module and belong in the shared, indexed tree.
 
-When in doubt, prefer the location where the next person *looking for this* will
+When in doubt, prefer the location where the next person _looking for this_ will
 look first.
 
 ## 3. Match the repo's existing convention
@@ -135,7 +133,8 @@ A new doc that nothing points to is nearly as lost as no doc:
 
 ## Checklist before you finish
 
-- [ ] Searched first; this isn't a duplicate (or it updates the existing doc).
+- [ ] Searched first (via `retrieving-context`); this isn't a duplicate (or it
+      updates the existing doc).
 - [ ] Lives in the right place (co-located vs centralized) and follows the repo's
       naming/index convention.
 - [ ] One concept; descriptive H1 + status block; clean headings.

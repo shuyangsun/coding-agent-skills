@@ -16,9 +16,10 @@ services; the tier axes arrive with Phase-1's real providers.
   transcripts) and `code` (the `inception/` app). Both run every round, scored
   against their own corpus and reported with **separate metrics**, so code vs
   natural-language retrieval is compared (not averaged together).
-- **Consumer mode** — `simple` (ripgrep/file over `docs/`; a `docs`-only outcome)
-  and `rag` (the configured pipeline; a joint outcome). A change that wins RAG but
-  loses SIMPLE fails.
+- **Consumer mode** — `simple` (`retrieving-context`'s manual-structure navigation —
+  ripgrep/file over `docs/`; a joint `updating-docs` × `retrieving-context` outcome)
+  and `rag` (the consumer routed to the `setting-up-rag` pipeline; a joint outcome).
+  A change that wins RAG but loses SIMPLE fails.
 - **Difficulty** — `easy | medium | hard`; hard = multi-sentinel spanning distinct
   doc types. Reported as a difficulty×tier matrix.
 - **Retrieval arm** — `plain` (no per-chunk contextualization; the noise-free
