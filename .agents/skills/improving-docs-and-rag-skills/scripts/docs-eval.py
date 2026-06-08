@@ -9,6 +9,13 @@ into precision/recall/nDCG/MRR/retrieval_hit. This is enough to compute all four
 factorial cells (corpus N|D × rag b|r) and the interaction without any external
 dependency.
 
+The floor (`--no-retrieval`): the absolute baseline is "no doc, no RAG". With
+`--no-retrieval` the script builds **no index and runs no retrieval** — every
+query returns an empty ranked list (so every IR metric scores 0). Paired with the
+empty `Z` corpus (`mk-corpus.py`), this is the genuine floor that the four
+treatment cells are lifts above; run it FIRST. `--config` is optional in this mode
+since no pipeline runs.
+
 Phase-0 honesty: the dense vectors are a **deterministic hashed lexical
 embedding**, not a learned semantic model — a placeholder so the chunking, fusion,
 and rerank knobs can be exercised reproducibly. Real semantic embeddings
@@ -27,8 +34,16 @@ rag-config.json (the knobs the `rag` skill owns):
     "top_k": 20, "prefetch": 50, "provider": "local-inproc"
   }
 
+Content-type axis: `--corpus-kind code --domain code` indexes the inception/
+codebase and runs the code gold queries, so code retrieval is measured separately
+from natural-language docs (`--corpus-kind md --domain nl`, the default). Only the
+loader + which queries run change; the chunk/index/fuse/rerank path is identical,
+so code vs nl numbers are comparable.
+
 Usage:
   docs-eval.py --corpus DIR --config rag-config.json --out RUNDIR [--split all]
+  docs-eval.py --corpus DIR --no-retrieval --out RUNDIR        # the floor (no RAG)
+  docs-eval.py --corpus inception/ --corpus-kind code --domain code --config CFG --out RUNDIR
 """
 from __future__ import annotations
 
@@ -270,36 +285,88 @@ def percentile(values: list[float], p: float) -> float:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--corpus")
-    ap.add_argument("--config", required=True, help="rag-config.json")
+    ap.add_argument("--config", help="rag-config.json (omit with --no-retrieval)")
     ap.add_argument("--out", required=True, help="output run dir")
     ap.add_argument("--split", choices=["dev", "held-out", "all"], default="all")
-    ap.add_argument("--corpus-tag", default="GOLD", help="N|D|GOLD label for the row")
+    ap.add_argument("--corpus-tag", default="GOLD", help="N|D|Z|code|GOLD label for the row")
+    ap.add_argument(
+        "--corpus-kind",
+        choices=["md", "code"],
+        default="md",
+        help="md = markdown docs (nl); code = the inception/ codebase",
+    )
+    ap.add_argument(
+        "--domain",
+        choices=["nl", "code"],
+        default="nl",
+        help="content type to evaluate; selects which gold facts (queries) run",
+    )
+    ap.add_argument(
+        "--no-retrieval",
+        action="store_true",
+        help="the floor: build no index, run no retrieval; every query returns "
+        "an empty ranked list (all IR metrics score 0). 'no doc, no RAG'.",
+    )
     args = ap.parse_args(argv)
 
-    cfg = json.loads(Path(args.config).read_text(encoding="utf-8"))
-    corpus_root = gold.find_corpus_root(args.corpus)
-    docs = gold.load_corpus(corpus_root)
-    facts = [f for f in gold.FACTS if args.split in ("all", gold.split_of(f.id))]
+    # Guard: domain and corpus-kind must agree, else a code run could be scored
+    # against the nl corpus (or vice-versa) and mis-grade via cross-domain
+    # sentinel overlap (e.g. a transcript that quotes code identifiers).
+    if (args.domain == "code") != (args.corpus_kind == "code"):
+        ap.error("--domain and --corpus-kind must agree: use "
+                 "'--domain code --corpus-kind code' or '--domain nl --corpus-kind md'")
 
-    idx = Index(cfg)
-    index_ms = idx.build(docs)
+    if args.corpus_kind == "code":
+        corpus_root = gold.find_code_corpus_root(args.corpus)
+        if corpus_root is None:
+            ap.error("--corpus-kind code: inception/ corpus not found; pass --corpus DIR")
+    else:
+        corpus_root = gold.find_corpus_root(args.corpus)
+    docs = gold.load_corpus(corpus_root, kind=args.corpus_kind)
+    facts = [
+        f for f in gold.FACTS
+        if args.split in ("all", gold.split_of(f.id)) and f.domain == args.domain
+    ]
 
-    out_dir = Path(args.out).expanduser().resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
-    lat: list[float] = []
-    with (out_dir / "run.jsonl").open("w", encoding="utf-8") as fh:
+    if args.no_retrieval:
+        # Floor: no index, no retrieval — the absolute "no doc, no RAG" baseline.
+        cfg = {"rag_config_id": "none"}
+        index_ms = 0.0
+        n_chunks = 0
+        mean_chunk_words = 0.0
+        lat: list[float] = []
+        runs = [{"query_id": f.id, "ranked": [], "retrieval_ms": 0.0} for f in facts]
+    else:
+        if not args.config:
+            ap.error("--config is required unless --no-retrieval is given")
+        cfg = json.loads(Path(args.config).read_text(encoding="utf-8"))
+        idx = Index(cfg)
+        index_ms = idx.build(docs)
+        n_chunks = len(idx.chunk_tokens)
+        mean_chunk_words = round(sum(len(t) for t in idx.chunk_tokens) / max(1, n_chunks), 1)
+        lat = []
+        runs = []
         for fact in facts:
             ranked, ms = retrieve(idx, fact.query, cfg)
             lat.append(ms)
-            fh.write(json.dumps({"query_id": fact.id, "ranked": ranked, "retrieval_ms": ms}) + "\n")
+            runs.append({"query_id": fact.id, "ranked": ranked, "retrieval_ms": ms})
+
+    out_dir = Path(args.out).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / "run.jsonl").open("w", encoding="utf-8") as fh:
+        for rec in runs:
+            fh.write(json.dumps(rec) + "\n")
 
     timings = {
         "rag_config_id": cfg.get("rag_config_id", "unnamed"),
         "corpus_tag": args.corpus_tag,
+        "domain": args.domain,
+        "corpus_kind": args.corpus_kind,
+        "no_retrieval": bool(args.no_retrieval),
         "split": args.split,
         "n_docs": len(docs),
-        "n_chunks": len(idx.chunk_tokens),
-        "mean_chunk_words": round(sum(len(t) for t in idx.chunk_tokens) / max(1, len(idx.chunk_tokens)), 1),
+        "n_chunks": n_chunks,
+        "mean_chunk_words": mean_chunk_words,
         "index_ms": round(index_ms, 2),
         "retrieval_ms_p50": round(percentile(lat, 50), 3),
         "retrieval_ms_p95": round(percentile(lat, 95), 3),

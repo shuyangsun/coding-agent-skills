@@ -6,8 +6,16 @@ services; the tier axes arrive with Phase-1's real providers.
 
 ## Mandatory axes (every round)
 
+- **Floor first** — `Z` (empty corpus + `--no-retrieval`), the absolute "no doc,
+  no RAG" baseline, run **before** the treatment cells every round. Scores 0 by
+  construction; the four cells are reported as lifts above it.
 - **Factorial cell** — `Nb`, `Nr`, `Db`, `Dr` (corpus N|D × rag b|r). All four,
-  always — the interaction needs all four.
+  always — the interaction needs all four. Mapped to the named conditions:
+  `Db` = docs-only, `Nr` = RAG-only, `Dr` = docs+RAG (`Nb` = neither-skill control).
+- **Content type (domain)** — `nl` (natural-language docs incl. coding-session
+  transcripts) and `code` (the `inception/` app). Both run every round, scored
+  against their own corpus and reported with **separate metrics**, so code vs
+  natural-language retrieval is compared (not averaged together).
 - **Consumer mode** — `simple` (ripgrep/file over `docs/`; a `docs`-only outcome)
   and `rag` (the configured pipeline; a joint outcome). A change that wins RAG but
   loses SIMPLE fails.
