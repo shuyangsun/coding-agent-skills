@@ -3,7 +3,7 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "bash .agents/skills/vcs/scripts/antigravity-hook.sh pre-invocation",
+        "command": "repo=\"$(jj root 2>/dev/null || git rev-parse --show-toplevel)\" && bash \"$repo/.agents/skills/vcs/scripts/antigravity-hook.sh\" pre-invocation",
         "timeout": 30
       }
     ],
@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .agents/skills/vcs/scripts/antigravity-hook.sh pre-tool-use",
+            "command": "repo=\"$(jj root 2>/dev/null || git rev-parse --show-toplevel)\" && bash \"$repo/.agents/skills/vcs/scripts/antigravity-hook.sh\" pre-tool-use",
             "timeout": 30
           }
         ]
