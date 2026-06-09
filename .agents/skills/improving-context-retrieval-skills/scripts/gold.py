@@ -86,6 +86,17 @@ EXCLUDE_GLOBS = [
     "benchmarks/*setting-up-rag*.md",
     "benchmarks/*updating-docs*.md",
     "benchmarks/*retrieving-context*.md",
+    # Phase-1 RAG eval set: the gold questions/sentinels for the 207-query set live
+    # here (overview + per-repo files + eval-set.json). Indexing them would let a
+    # retriever "answer" a coding-agent-skills query by returning the file that
+    # quotes its own sentinel (0003 plan §"Self-reference exclusion"). Globs span
+    # '/', so the trailing pattern also covers the subdirectory's files.
+    "plans/2026-06-08/0003-rag-eval-set-phase-1.md",
+    "plans/2026-06-08/0003-rag-eval-set-phase-1*",
+    # the consolidated Phase-2 plan restates benchmark decisions/sentinels and the
+    # pre-work harness lives in its sibling subdir — exclude both (0008 plan §2).
+    "plans/2026-06-08/0008-consolidated-rag-optimization-phase-2.md",
+    "plans/2026-06-08/0008-consolidated-rag-optimization-phase-2*",
     "OVERVIEW.md",
     "*/OVERVIEW.md",
 ]
