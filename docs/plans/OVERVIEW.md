@@ -12,3 +12,7 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `plans/` tree.
 
 - [`0001` — VCS guardrails for jj workspace isolation](2026-06-07/0001-vcs-guardrails-for-jj-workspace-isolation.md) — the guard-hook design that the [issues](../issues/OVERVIEW.md) 0002/0004/0005 motivated.
 - [`0002` — `improving-docs-and-rag-skills` harness](2026-06-07/0002-improving-docs-and-rag-skills.md) — co-optimizing a `docs` and a `rag` skill; §10 specifies this very `docs/` convention.
+
+### 2026-06-08
+
+- [`0003` — RAG eval set Phase 1](2026-06-08/0003-rag-eval-set-phase-1/README.md) — 84 source-grounded candidate Q&A pairs across `coding-agent-skills`, the Alpha Zero repos, and `website` for optimizing `setting-up-rag` and `retrieving-context`.
