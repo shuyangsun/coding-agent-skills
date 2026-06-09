@@ -26,6 +26,6 @@ docs/coding-sessions/YYYY-MM-DD/NNNN-<ide>-slug.md
   permissions, and the first rounds of `improving-vcs-skill`.
 - [`2026-06-07/`](2026-06-07/) — `0017`–`0028`: `vcs` guardrails, jj-vs-Git
   benchmarks, the docs/rag harness, and inception tooling.
-- [`2026-06-08/`](2026-06-08/) — `0034`–`0042`: context-retrieval skill
+- [`2026-06-08/`](2026-06-08/) — `0034`–`0043`: context-retrieval skill
   restructuring, RAG/GraphRAG/graphify benchmarks, Phase 1 RAG eval-set
-  collection, and session-export follow-through.
+  collection + consolidation, and session-export follow-through.

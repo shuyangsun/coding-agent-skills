@@ -15,4 +15,4 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `plans/` tree.
 
 ### 2026-06-08
 
-- [`0003` — RAG eval set Phase 1](2026-06-08/0003-rag-eval-set-phase-1/README.md) — 84 source-grounded candidate Q&A pairs across `coding-agent-skills`, the Alpha Zero repos, and `website` for optimizing `setting-up-rag` and `retrieving-context`.
+- [`0003` — RAG eval set Phase 1](2026-06-08/0003-rag-eval-set-phase-1.md) — **207** verified, source-grounded gold Q&A pairs (paraphrased query + grep-checked sentinels + primary paths, `code`/`nl` split) across `coding-agent-skills`, the four Alpha Zero repos, and `website`, for optimizing `setting-up-rag` and `retrieving-context`. Consolidates the Claude + Codex passes; machine-readable [`eval-set.json`](2026-06-08/0003-rag-eval-set-phase-1/eval-set.json).
