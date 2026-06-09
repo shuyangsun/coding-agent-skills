@@ -39,9 +39,7 @@
       "Read(**/*.key)",
       "Read(**/id_rsa*)",
       "Read(~/.ssh/**)",
-      "Read(~/.aws/**)",
-      "Bash(curl *)",
-      "Bash(wget *)"
+      "Read(~/.aws/**)"
     ]
   },
   "hooks": {
