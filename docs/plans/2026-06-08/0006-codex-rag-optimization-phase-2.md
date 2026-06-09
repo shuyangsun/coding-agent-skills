@@ -6,7 +6,7 @@
 - **Repo:** `coding-agent-skills`
 - **Prompt:** [`0005` - Optimizing RAG Setup](../../prompts/2026-06-08/0005-optimizing-rag-setup.md)
 - **Phase 1 input:** [`0003` - RAG eval set Phase 1](0003-rag-eval-set-phase-1.md), with 207 verified gold facts in [`eval-set.json`](0003-rag-eval-set-phase-1/eval-set.json)
-- **Research note:** [`0003` - Codex Phase 2 RAG optimization techniques](../../research/2026-06-08/0003-codex-rag-optimization-techniques-phase-2.md)
+- **Research note:** [`0003` - Codex Phase 2 RAG optimization techniques](../../research/2026-06-08/0007-codex-rag-optimization-techniques-phase-2.md)
 - **Target skills:** [`setting-up-rag`](../../../.agents/skills/setting-up-rag/SKILL.md) and [`retrieving-context`](../../../.agents/skills/retrieving-context/SKILL.md)
 
 ## Summary
@@ -19,7 +19,7 @@ stack, then test one retrieval or answer-generation variable at a time. Store
 research under `docs/research/`, experiment reports under `docs/benchmarks/`, and
 promote only measured wins into `setting-up-rag` or `retrieving-context`.
 
-The Phase 2 plan deliberately lives in this separate `codex-phase-2.md` file
+The Phase 2 plan deliberately lives in this separate `0006-codex-rag-optimization-phase-2.md` file
 rather than being folded into the Phase 1 eval-set plan. Phase 1 remains the
 gold-set source of truth; this Codex-authored document owns the optimization plan.
 
@@ -54,7 +54,7 @@ gold-set source of truth; this Codex-authored document owns the optimization pla
 - Do not tune on the held-out split. Use a stable dev/held-out partition derived
   from query IDs.
 - Do not let `coding-agent-skills` retrieve its own eval files. Exclude this
-  `codex-phase-2.md` plan, the Phase 1 plan/subdirectory, and related benchmark
+  `0006-codex-rag-optimization-phase-2.md` plan, the Phase 1 plan/subdirectory, and related benchmark
   reports from the `coding-agent-skills` corpus when scoring.
 - Do not start with RL-trained retrievers, full LLM GraphRAG, or heavy learned
   compressors. First prove cheap local inference-time variants beat the current

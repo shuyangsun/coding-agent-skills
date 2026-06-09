@@ -35,8 +35,8 @@ Other agents are running in parallel, so mark your file names as codex results. 
 
 I renamed the Codex-owned files so they were explicitly disambiguated from parallel agents:
 
-- `docs/plans/2026-06-08/codex-phase-2.md`
-- `docs/research/2026-06-08/0003-codex-rag-optimization-techniques-phase-2.md`
+- `docs/plans/2026-06-08/0006-codex-rag-optimization-phase-2.md`
+- `docs/research/2026-06-08/0007-codex-rag-optimization-techniques-phase-2.md`
 
 I updated the titles, metadata, internal links, and directory overviews to use those Codex-marked filenames and confirmed the old unmarked filenames were absent.
 
@@ -82,8 +82,8 @@ I ran `jj git fetch` and rebased this Codex change onto `main`. The rebase produ
 
 I resolved both by keeping Cursor's index entries and adding the Codex entries below them. I verified that the Codex plan and research filenames remained clearly marked with `codex`:
 
-- `docs/plans/2026-06-08/codex-phase-2.md`
-- `docs/research/2026-06-08/0003-codex-rag-optimization-techniques-phase-2.md`
+- `docs/plans/2026-06-08/0006-codex-rag-optimization-phase-2.md`
+- `docs/research/2026-06-08/0007-codex-rag-optimization-techniques-phase-2.md`
 
 I then allocated this transcript path with the export helper:
 

@@ -48,7 +48,7 @@ The timer is armed as a safety net. I'll keep working now (the timer is just a f
 
 _↳ tool result: vcs-rename-work: renamed jj workspace 'claude-pending-6a829df6' to 'claude-rag-phase2' MODE=jj WORKSPACE=<workspace> WORK_REF=claude-rag-phase2 …[truncated]_
 
-_↳ tool result: PreToolUse:Bash hook error: [${CLAUDE_PROJECT_DIR}/.agents/skills/vcs/scripts/vcs-check.sh hook --agent claude]: vcs-check: VCS write refused: current cwd is the shared jj default workspace, but this  …[truncated]_
+_↳ tool result: PreToolUse:Bash hook error: [${CLAUDE_PROJECT_DIR}/.agents/skills/vcs/scripts/vcs-check.sh hook --agent claude]: vcs-check: VCS write refused: current cwd is the shared jj default workspace, but this …[truncated]_
 
 ## Assistant
 
@@ -68,7 +68,7 @@ _↳ tool result: 1 # Research: Contextual Retrieval Techniques for Doc Authors 
 
 🔧 **Read** — <repo>/docs/research/2026-06-08/0002-contextual-retrieval-and-graphify.md
 
-_↳ tool result: 1 # Research: Contextual Retrieval and Graphify 2 3 **Date:** 2026-06-08 4 **Status:** Research complete; awaiting implementation decision 5 **Area:** contextual retrieval, GraphRAG, graphify, hybrid  …[truncated]_
+_↳ tool result: 1 # Research: Contextual Retrieval and Graphify 2 3 **Date:** 2026-06-08 4 **Status:** Research complete; awaiting implementation decision 5 **Area:** contextual retrieval, GraphRAG, graphify, hybrid …[truncated]_
 
 ## Assistant
 
@@ -90,7 +90,7 @@ _↳ tool result: 1 --- 2 name: setting-up-rag 3 description: Load when STANDING
 
 🔧 **Read** — <repo>/.agents/skills/retrieving-context/SKILL.md
 
-_↳ tool result: 1 --- 2 name: retrieving-context 3 description: Load when you need to FIND or RETRIEVE context (docs, prior decisions, 4 code) to answer a question or do a task — and BEFORE you grind ripgrep blindly  …[truncated]_
+_↳ tool result: 1 --- 2 name: retrieving-context 3 description: Load when you need to FIND or RETRIEVE context (docs, prior decisions, 4 code) to answer a question or do a task — and BEFORE you grind ripgrep blindly …[truncated]_
 
 ## Assistant
 
@@ -106,7 +106,7 @@ _↳ tool result: === setting-up-rag dir === total 56 drwxr-xr-x@ 8 shuyang staf
 
 🔧 **Read** — <repo>/.agents/skills/setting-up-rag/RETRIEVAL.md
 
-_↳ tool result: 1 # RETRIEVAL — hybrid search, fusion, reranking, and the knobs that matter 2 3 The retrieve path is in [`scripts/query.py`](scripts/query.py); knobs are the 4 `hybrid` / `rerank` / `top_k` blocks of  …[truncated]_
+_↳ tool result: 1 # RETRIEVAL — hybrid search, fusion, reranking, and the knobs that matter 2 3 The retrieve path is in [`scripts/query.py`](scripts/query.py); knobs are the 4 `hybrid` / `rerank` / `top_k` blocks of …[truncated]_
 
 _↳ tool result: 1 # Benchmark: Qdrant/FastEmbed RAG vs Local GraphRAG 2 3 **Date:** 2026-06-08 4 **Status:** Research benchmark; no skill changes made. 5 **Harness:** [`improving-context-retrieval-skills`](../../../. …[truncated]_
 
@@ -158,9 +158,10 @@ The research workflow (8 SOTA axes × research+verify with live web search) is r
 
 **Safety timer:** Armed a 30-min wakeup (fires ~22:49) as the usage-limit fallback you asked for. The workflow will also auto-notify me the moment it finishes, so I'll continue on whichever fires first.
 
-**Grounding done.** I read the current `setting-up-rag` stack (Qdrant + FastEmbed CPU: bge-small dense + bm25 sparse + RRF + ms-marco-MiniLM rerank, `contextual_retrieval: false`), the consumer skill `retrieving-context`, the harness, the Phase-1 eval set (207 Q/A, 137 code + 70 prose across 6 repos), and the three prior research notes (0000–0002: contextual retrieval / GraphRAG / graphify) + benchmark 0008. So the research is scoped to go *beyond* what's already been studied.
+**Grounding done.** I read the current `setting-up-rag` stack (Qdrant + FastEmbed CPU: bge-small dense + bm25 sparse + RRF + ms-marco-MiniLM rerank, `contextual_retrieval: false`), the consumer skill `retrieving-context`, the harness, the Phase-1 eval set (207 Q/A, 137 code + 70 prose across 6 repos), and the three prior research notes (0000–0002: contextual retrieval / GraphRAG / graphify) + benchmark 0008. So the research is scoped to go _beyond_ what's already been studied.
 
 **Research workflow launched** — 8 parallel axes, each web-researched then adversarially verified for over-claimed numbers/specs:
+
 1. Dense embeddings SOTA (Qwen3-Embedding, EmbeddingGemma, BGE-M3, NV-Embed…) for GPU serving
 2. Code-specialized embeddings + AST/tree-sitter code chunking
 3. Rerankers (Qwen3-Reranker, BGE-v2-m3, ColBERT late-interaction, listwise-LLM)
@@ -170,7 +171,7 @@ The research workflow (8 SOTA axes × research+verify with live web search) is r
 7. Sparse/learned-sparse + fusion math + Qdrant knobs (quantization, HNSW, multivector)
 8. Local LLM + GPU serving plan for the 2× RTX Pro 6000 Blackwell (the local-LLM decision)
 
-**Deliverables once results land:** research note(s) under `docs/research/2026-06-08/` (next index 0003+), and the new plan at `docs/plans/2026-06-08/0004-rag-optimization-phase-2.md` (a separate "phase-2" doc, *not* folded into 0003, following the repo's `NNNN-slug` convention — I'll flag the name in my final summary). The plan will explicitly answer the local-LLM question and list local deps to pre-install.
+**Deliverables once results land:** research note(s) under `docs/research/2026-06-08/` (next index 0003+), and the new plan at `docs/plans/2026-06-08/0004-rag-optimization-phase-2.md` (a separate "phase-2" doc, _not_ folded into 0003, following the repo's `NNNN-slug` convention — I'll flag the name in my final summary). The plan will explicitly answer the local-LLM question and list local deps to pre-install.
 
 I'll continue automatically when the workflow reports back.
 
@@ -350,7 +351,7 @@ Now the third research doc — the local-LLM + GPU serving plan (which answers y
 
 🔧 **Write** — <workspace>/docs/research/2026-06-08/0005-local-llm-gpu-serving-plan.md
 
-_↳ tool result: File created successfully at: <workspace>/docs/research/2026-06-08/0005-local-llm-gpu-serving-plan.md (file state is current in your context —  …[truncated]_
+_↳ tool result: File created successfully at: <workspace>/docs/research/2026-06-08/0005-local-llm-gpu-serving-plan.md (file state is current in your context — …[truncated]_
 
 ## Assistant
 
@@ -423,23 +424,27 @@ Phase 2 is complete. Here's the summary.
 ## What I delivered
 
 **The new plan** (separate from `0003`, as you asked — I followed the repo's `NNNN-slug` convention so it's findable, while clearly being the "phase-2" doc):
+
 - **`docs/plans/2026-06-08/0004-rag-optimization-phase-2.md`** — the Phase-3 optimization roadmap, ordered cheapest-/highest-confidence-first, with keep/revert discipline and per-cohort (code vs prose) scoring.
 
 **Three research notes under `docs/research/2026-06-08/`** (indexed in `OVERVIEW.md`):
+
 - `0003` — SOTA retrieval substrate: embeddings, code chunking, sparse, fusion, reranking, Qdrant knobs
 - `0004` — contextual indexing, query routing, and answer-generation faithfulness
 - `0005` — local-LLM + GPU serving plan for your 2× RTX PRO 6000 Blackwell
 
 ## Your two direct questions, answered
 
-**Do you need a local LLM? → Yes — and your hardware is overkill for it.** Needed for three roles: **index-time contextualization** (Anthropic Contextual Retrieval — the best-supported retrieval lever), **answer generation**, and **faithfulness judging**. *Not* needed for retrieval itself (embedding/sparse/reranking are GPU-*served* models, not chat LLMs). Hosting it locally takes the entire campaign to **zero API token cost**. (There's also an LLM-free contextualization path — Perplexity's MIT `pplx-embed-context` — but answer-gen + judging still want a generator.)
+**Do you need a local LLM? → Yes — and your hardware is overkill for it.** Needed for three roles: **index-time contextualization** (Anthropic Contextual Retrieval — the best-supported retrieval lever), **answer generation**, and **faithfulness judging**. _Not_ needed for retrieval itself (embedding/sparse/reranking are GPU-_served_ models, not chat LLMs). Hosting it locally takes the entire campaign to **zero API token cost**. (There's also an LLM-free contextualization path — Perplexity's MIT `pplx-embed-context` — but answer-gen + judging still want a generator.)
 
 **Local deps to pre-install:** vLLM (answer/judge) + SGLang (prefix-cached contextualization) + TEI/Infinity (GPU embedder+reranker); models — Qwen3-Embedding, Qwen3-Reranker/mxbai-rerank-v2, Qwen3-32B & Llama-3.3-70B FP8, a contextualizer, Lynx + HHEM judges; tree-sitter/Chonkie + ragas. Full list in `0005 §6` and the plan. **Key hardware constraint: no NVLink → one model per card** (don't tensor-parallel across both).
 
 ## Top recommendations the plan front-loads
+
 Biggest code-cohort lever is the **dense embedder** (Qwen3-Embedding replaces bge-small); then GPU reranker (kills the CPU latency), contextual chunk headers + parent-doc + dual-field, per-cohort weighted RRF, and Anthropic-CR-vs-pplx-embed contextualization. The published skill default stays CPU-portable Apache/MIT; the GPU stack is the opt-in campaign config.
 
 ## Process notes
+
 - The 8-axis research ran with **adversarial verification**, which caught real errors I corrected before writing (mislabeled MTEB-Code scores, Qdrant's RRF `k`=2 not 60, several non-commercial licenses that disqualify "default" candidates, a fabricated Pass@10 figure).
 - **The session limit was hit** mid-research (~2am ET reset); I **resumed the workflow** after the reset (cached agents returned instantly, only the 9 failed agents re-ran) — so nothing was lost and all 8 axes completed.
 - Work lives in the jj workspace `claude-rag-phase2` and is **not committed** — say the word and I'll commit/integrate it.
@@ -469,13 +474,13 @@ All Phase 2 deliverables are present and tracked in the workspace (4 new files +
 
 ## Phase 2: complete ✓
 
-| Deliverable | Path |
-|---|---|
-| Plan (new, separate from `0003`) | `docs/plans/2026-06-08/0004-rag-optimization-phase-2.md` |
-| Research — retrieval substrate | `docs/research/2026-06-08/0003-sota-local-retrieval-substrate.md` |
+| Deliverable                                | Path                                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Plan (new, separate from `0003`)           | `docs/plans/2026-06-08/0004-rag-optimization-phase-2.md`                                 |
+| Research — retrieval substrate             | `docs/research/2026-06-08/0003-sota-local-retrieval-substrate.md`                        |
 | Research — advanced retrieval + answer-gen | `docs/research/2026-06-08/0004-contextual-indexing-query-routing-answer-faithfulness.md` |
-| Research — local-LLM/GPU serving | `docs/research/2026-06-08/0005-local-llm-gpu-serving-plan.md` |
-| Index | `docs/research/OVERVIEW.md` (updated) |
+| Research — local-LLM/GPU serving           | `docs/research/2026-06-08/0005-local-llm-gpu-serving-plan.md`                            |
+| Index                                      | `docs/research/OVERVIEW.md` (updated)                                                    |
 
 **Answers locked in:** local LLM = **yes** (contextualization, answer-gen, judging — not retrieval); deps + the 2× RTX PRO 6000 (no-NVLink) serving plan documented; all numbers adversarially verified and corrected; per-cohort keep/revert roadmap ready for Phase 3.
 
@@ -483,7 +488,7 @@ Work lives uncommitted in jj workspace `claude-rag-phase2`. Say the word to comm
 
 ## User
 
-Other agents were doing similar work. Advance main, rebased onto main and resolve conflicts if you see any. Make sure all of your files are clearly renamed with `claude` keyword. Then export session transcript, use the /vcs  skill to integrate, commit and push.
+Other agents were doing similar work. Advance main, rebased onto main and resolve conflicts if you see any. Make sure all of your files are clearly renamed with `claude` keyword. Then export session transcript, use the /vcs skill to integrate, commit and push.
 
 ## Assistant
 
@@ -518,8 +523,9 @@ _↳ tool result: === research/2026-06-08 ON MAIN === docs/research/2026-06-08/0
 ## Assistant
 
 Now I see the picture — **Codex and Cursor both already landed Phase-2 work**, creating index collisions with mine:
+
 - research: `0003-codex-...` and `0003-cursor-...` exist (my `0003`/`0004`/`0005` need fresh indices + `claude`)
-- plans: `0004-cursor-...` and `codex-phase-2.md` exist (my plan `0004` collides with cursor's)
+- plans: `0004-cursor-...` and `0006-codex-rag-optimization-phase-2.md` exist (my plan `0004` collides with cursor's)
 
 The likely content conflict is `docs/research/OVERVIEW.md` (everyone edits it). Let me check main's OVERVIEW.md, then rebase.
 
@@ -537,7 +543,7 @@ Conflict will be in `OVERVIEW.md` (everyone appends there). My plan: rebase onto
 
 🔧 **Bash** — Rebase my working-copy change onto advanced main
 
-_↳ tool result: === rebase @ onto main === Rebased 1 commits to destination Working copy (@) now at: ynkwkvsm b4d61c0b claude-rag-phase2* | (conflict) (no description set) Parent commit (@-) : tntwslzw ffc3abf8 main  …[truncated]_
+_↳ tool result: === rebase @ onto main === Rebased 1 commits to destination Working copy (@) now at: ynkwkvsm b4d61c0b claude-rag-phase2\* | (conflict) (no description set) Parent commit (@-) : tntwslzw ffc3abf8 main …[truncated]_
 
 ## Assistant
 
@@ -551,7 +557,7 @@ _↳ tool result: docs/research/2026-06-08/0004-claude-rag-retrieval-substrate.m
 
 ## Assistant
 
-Now I need to fix the display-label indices inside the docs (the link *targets* are updated, but labels like ``[`0003` ...]`` still show old numbers). Let me update those, anchored on distinctive title text so the unrelated eval-set `0003` reference is untouched.
+Now I need to fix the display-label indices inside the docs (the link _targets_ are updated, but labels like ``[`0003` ...]`` still show old numbers). Let me update those, anchored on distinctive title text so the unrelated eval-set `0003` reference is untouched.
 
 ## Assistant
 
@@ -622,4 +628,3 @@ Schema understood: 67 user records (most are harness-injected task-notifications
 ## Assistant
 
 🔧 **Bash** — Render session transcript to markdown
-
