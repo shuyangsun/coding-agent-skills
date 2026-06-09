@@ -237,6 +237,73 @@ is_safe_jj_main_push_command() {
   [[ "$seen_bookmark" -eq 1 ]]
 }
 
+is_safe_jj_main_describe_command() {
+  local c="$1"
+  [[ "$(current_mode)" == "jj" ]] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 - "$main_ref" "$c" <<'PYDESCRIBE'
+import shlex
+import sys
+
+main_ref = sys.argv[1]
+command = sys.argv[2]
+
+try:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    words = list(lexer)
+except ValueError:
+    sys.exit(1)
+
+if any(word and set(word) <= set(";|&<>") for word in words):
+    sys.exit(1)
+
+while words:
+    first = words[0]
+    if first == "env" or ("=" in first and not first.startswith("-")):
+        words = words[1:]
+        continue
+    break
+
+if len(words) < 4 or words[:2] != ["jj", "describe"]:
+    sys.exit(1)
+
+seen_revision = False
+seen_message = False
+i = 2
+while i < len(words):
+    arg = words[i]
+    if arg in ("-r", "--revision"):
+        i += 1
+        if i >= len(words) or words[i] != main_ref:
+            sys.exit(1)
+        seen_revision = True
+        i += 1
+    elif arg.startswith("-r=") or arg.startswith("--revision="):
+        if arg.split("=", 1)[1] != main_ref:
+            sys.exit(1)
+        seen_revision = True
+        i += 1
+    elif arg in ("-m", "--message"):
+        i += 1
+        if i >= len(words) or not words[i]:
+            sys.exit(1)
+        seen_message = True
+        i += 1
+    elif arg.startswith("--message="):
+        if not arg.split("=", 1)[1]:
+            sys.exit(1)
+        seen_message = True
+        i += 1
+    else:
+        sys.exit(1)
+
+sys.exit(0 if seen_revision and seen_message else 1)
+PYDESCRIBE
+}
+
+
 jj_bookmark_exists() {
   local name="$1"
   jj --ignore-working-copy bookmark list "$name" 2>/dev/null | grep -Eq "^${name}:"
@@ -316,6 +383,9 @@ check_pre_vcs_write() {
   local command="${1:-}"
   [[ "${VCS_GUARD_ALLOW_SHARED:-}" == "1" ]] && return 0
   if [[ -n "$command" && "$command" == "jj git export" ]]; then
+    return 0
+  fi
+  if [[ -n "$command" ]] && is_safe_jj_main_describe_command "$command"; then
     return 0
   fi
   if [[ -n "$command" ]] && is_owned_safe_jj_cleanup_command "$command"; then
