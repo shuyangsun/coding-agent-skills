@@ -29,3 +29,5 @@ docs/coding-sessions/YYYY-MM-DD/NNNN-<ide>-slug.md
 - [`2026-06-08/`](2026-06-08/) — `0034`–`0043`: context-retrieval skill
   restructuring, RAG/GraphRAG/graphify benchmarks, Phase 1 RAG eval-set
   collection + consolidation, and session-export follow-through.
+- [`2026-06-09/`](2026-06-09/) — `0044`–`0045`: Cursor and Codex Phase 2 RAG
+  optimization research, planning, and session-export follow-through.
