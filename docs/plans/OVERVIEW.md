@@ -16,3 +16,4 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `plans/` tree.
 ### 2026-06-08
 
 - [`0003` — RAG eval set Phase 1](2026-06-08/0003-rag-eval-set-phase-1.md) — **207** verified, source-grounded gold Q&A pairs (paraphrased query + grep-checked sentinels + primary paths, `code`/`nl` split) across `coding-agent-skills`, the four Alpha Zero repos, and `website`, for optimizing `setting-up-rag` and `retrieving-context`. Consolidates the Claude + Codex passes; machine-readable [`eval-set.json`](2026-06-08/0003-rag-eval-set-phase-1/eval-set.json).
+- [`0004` — RAG optimization Phase 2 (cursor)](2026-06-08/0004-cursor-rag-optimization-phase-2.md) — SOTA research synthesis, local dependency checklist, local-LLM decision, and prioritized Phase 3 experiment matrix (Waves 1–3). Research detail in [`0003` research](../research/2026-06-08/0003-cursor-rag-optimization-phase-2-sota-techniques.md).
