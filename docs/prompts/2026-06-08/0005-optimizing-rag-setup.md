@@ -143,6 +143,144 @@ To expose it over the LAN, on the **GPU workstation**:
 On the **harness machine**: point the OpenAI-compatible client at
 `http://<gpu-host>:<port>/v1` with the shared key (`OPENAI_API_BASE` / the harness
 model config), and run a health check (one completion + one embedding call) from
-this machine *before* starting Wave 3/4 so a LAN or firewall problem surfaces
+this machine _before_ starting Wave 3/4 so a LAN or firewall problem surfaces
 before a long indexing run. Keep all of this in the **campaign** config; the
 portable `setting-up-rag` default stays CPU-only and requires no network LLM.
+
+##### The live endpoint on this workstation (concrete values)
+
+The GPU box already runs this stack, so the harness can target it directly instead
+of the `<gpu-host>:<port>` placeholders above:
+
+- **Base URL:** `https://llm.shuyangsun.com/v1` (OpenAI-compatible). A custom DNS
+  record points `llm.shuyangsun.com` at the workstation, so the same URL resolves
+  from any machine on the `192.168.0.0/24` LAN (and from the box itself). TLS
+  terminates at an nginx front (TLS 1.3, HTTP/2 + HTTP/3) that reverse-proxies to
+  the LiteLLM proxy on `127.0.0.1:8080`; access is IP-allowlisted to the LAN plus
+  localhost, so the port is not open to the public internet.
+- **API key:** every request needs `Authorization: Bearer <key>`. Source the
+  LiteLLM proxy key from your secret manager into the environment — never hard-code
+  it in the harness or commit it:
+
+  ```sh
+  export LITELLM_API_KEY="<your-litellm-proxy-key>"      # from your secret manager
+  export OPENAI_API_BASE="https://llm.shuyangsun.com/v1"
+  export OPENAI_API_KEY="$LITELLM_API_KEY"               # OpenAI-style SDKs read these
+  ```
+
+- **Served model name:** `gemma-4` — Gemma-4-31B-IT (NVFP4 quant, 256K context),
+  served by vLLM behind the proxy. This is the generative model for contextual
+  headers, query rewrites, graph/source-map summaries, answer generation, and
+  advisory judges (Wave 4+). Embedding/reranker models are **not** on the proxy yet;
+  they are added as extra `model_list` entries on this same LiteLLM gateway when
+  Wave 3 brings TEI/Infinity retrieval serving online. Always discover what is live
+  with `/v1/models` rather than assuming.
+
+Smoke-test the endpoint before any long Wave-3/4 run (this is the "one completion +
+one embedding" health check):
+
+```sh
+# 1) list the models the proxy currently serves
+curl -s https://llm.shuyangsun.com/v1/models \
+  -H "Authorization: Bearer $LITELLM_API_KEY" | jq -r '.data[].id'
+
+# 2) one chat completion against the generative model
+curl -s https://llm.shuyangsun.com/v1/chat/completions \
+  -H "Authorization: Bearer $LITELLM_API_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"gemma-4","messages":[{"role":"user","content":"ping"}],"max_tokens":8}' \
+  | jq -r '.choices[0].message.content'
+```
+
+From Python (the harness uses the OpenAI SDK):
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://llm.shuyangsun.com/v1",
+    api_key=os.environ["LITELLM_API_KEY"],
+)
+print(
+    client.chat.completions.create(
+        model="gemma-4",
+        messages=[{"role": "user", "content": "ping"}],
+        max_tokens=8,
+    ).choices[0].message.content
+)
+```
+
+The proxy runs with `drop_params: true`, so Anthropic-only request fields are
+silently dropped and OpenAI-style calls just work. Once a Wave-3 embedding model is
+registered on the proxy, add a one-shot `client.embeddings.create(...)` to the
+health check so a LAN/firewall/serving problem surfaces before a long indexing run.
+
+##### Models staged on the NAS (downloaded and ready)
+
+Embedding and reranker weights are already downloaded to the Synology NAS at
+`/mnt/nas/home/ml/model/{embedding,reranker}/` (full HF snapshots, verified
+complete; generative LLMs are managed separately under `…/model/llm/`). The
+campaign serves these from the GPU box via TEI/Infinity by pointing the server at
+the local dir — no re-download. **`license` drives the deliverable split: only
+Apache-2.0 / MIT models may ship in the portable `setting-up-rag` default;**
+everything else (Gemma-, `other`-, and `cc-by-nc`-licensed) is **campaign-only**,
+and non-commercial weights are flagged **NC** so they never leak into the portable
+default. The portable defaults (`bge-small`, MiniLM reranker) are also fetched
+automatically by FastEmbed on first use; the NAS copies exist for offline/campaign
+serving.
+
+Embedding — `…/model/embedding/<dir>`:
+
+| dir                              | HF repo                                 | size  | license             | role                                                                      |
+| -------------------------------- | --------------------------------------- | ----- | ------------------- | ------------------------------------------------------------------------- |
+| `bge-small-en-v1.5`              | BAAI/bge-small-en-v1.5                  | 0.4 G | MIT                 | **portable dense default** (current), 384-d, ONNX/CPU                     |
+| `bge-base-en-v1.5`               | BAAI/bge-base-en-v1.5                   | 1.3 G | MIT                 | portable dense alt, 768-d, ONNX/CPU                                       |
+| `splade-pp-en-v1`                | prithivida/Splade_PP_en_v1              | 0.9 G | Apache-2.0          | portable learned-sparse (prose A/B vs BM25), ONNX/CPU                     |
+| `mxbai-embed-large-v1`           | mixedbread-ai/mxbai-embed-large-v1      | 5.0 G | Apache-2.0          | portable strong English dense (335 M), ONNX                               |
+| `bge-m3`                         | BAAI/bge-m3                             | 4.3 G | MIT                 | portable multilingual + long-context (8 k); dense/sparse/ColBERT          |
+| `multilingual-e5-large-instruct` | intfloat/multilingual-e5-large-instruct | 3.2 G | MIT                 | portable multilingual (good for the xiang-qi Chinese slice)               |
+| `snowflake-arctic-embed-l-v2.0`  | Snowflake/snowflake-arctic-embed-l-v2.0 | 9.1 G | Apache-2.0          | strong multilingual dense (568 M), Matryoshka; GPU-preferred              |
+| `embeddinggemma-300m`            | google/embeddinggemma-300m              | 1.2 G | Gemma               | small strong dense (308 M); Gemma license → campaign, not the OSI default |
+| `qwen3-embedding-0.6b`           | Qwen/Qwen3-Embedding-0.6B               | 1.2 G | Apache-2.0          | campaign dense, fast                                                      |
+| `qwen3-embedding-4b`             | Qwen/Qwen3-Embedding-4B                 | 7.6 G | Apache-2.0          | **campaign dense sweet spot**                                             |
+| `qwen3-embedding-8b`             | Qwen/Qwen3-Embedding-8B                 | 15 G  | Apache-2.0          | campaign dense, MTEB-ceiling quality                                      |
+| `bge-code-v1`                    | BAAI/bge-code-v1                        | 5.8 G | Apache-2.0          | **campaign code embedder** (permissive)                                   |
+| `sfr-embedding-code-2b-r`        | Salesforce/SFR-Embedding-Code-2B_R      | 4.9 G | cc-by-nc-4.0 **NC** | campaign code embedder (non-commercial)                                   |
+
+Reranker — `…/model/reranker/<dir>`:
+
+| dir                          | HF repo                              | size  | license             | role                                                        |
+| ---------------------------- | ------------------------------------ | ----- | ------------------- | ----------------------------------------------------------- |
+| `ms-marco-minilm-l6-v2-onnx` | Xenova/ms-marco-MiniLM-L-6-v2        | 0.3 G | Apache-2.0\*        | **portable rerank default** (current), ONNX/CPU             |
+| `ms-marco-minilm-l6-v2`      | cross-encoder/ms-marco-MiniLM-L-6-v2 | 0.8 G | Apache-2.0          | same model, PyTorch/sentence-transformers source            |
+| `bge-reranker-v2-m3`         | BAAI/bge-reranker-v2-m3              | 2.2 G | Apache-2.0          | **campaign reranker, permissive** (568 M, multilingual)     |
+| `qwen3-reranker-0.6b`        | Qwen/Qwen3-Reranker-0.6B             | 1.2 G | Apache-2.0          | campaign reranker, fast                                     |
+| `qwen3-reranker-4b`          | Qwen/Qwen3-Reranker-4B               | 7.6 G | Apache-2.0          | **campaign reranker, SOTA** (plan's pick)                   |
+| `mxbai-rerank-base-v2`       | mixedbread-ai/mxbai-rerank-base-v2   | 1.0 G | Apache-2.0          | campaign reranker (0.5 B)                                   |
+| `mxbai-rerank-large-v2`      | mixedbread-ai/mxbai-rerank-large-v2  | 2.9 G | Apache-2.0          | campaign reranker (1.5 B)                                   |
+| `zerank-1-small`             | zeroentropy/zerank-1-small           | 3.3 G | Apache-2.0          | campaign instruction reranker (permissive)                  |
+| `zerank-2`                   | zeroentropy/zerank-2                 | 7.6 G | cc-by-nc-4.0 **NC** | campaign instruction reranker, newest SOTA (non-commercial) |
+
+\* `Xenova/ms-marco-MiniLM-L-6-v2` is an ONNX re-export of the Apache-2.0
+`cross-encoder/ms-marco-MiniLM-L-6-v2`; its card omits the field but the weights
+inherit Apache-2.0.
+
+Starting picks per the plan's hypotheses (Wave 3 embed/rerank sweep):
+
+- **Portable default (ships in the skill — Apache/MIT, CPU-only):** dense
+  `bge-small-en-v1.5`, then A/B `bge-base-en-v1.5` and `mxbai-embed-large-v1`;
+  sparse BM25 for code with `splade-pp-en-v1` as the prose A/B; rerank
+  `ms-marco-MiniLM-L-6-v2`. Promote a heavier model into this default **only** if
+  it is Apache/MIT and clears the promotion gate on CPU.
+- **Campaign dense (GPU):** `qwen3-embedding-4b` is the primary sweep point
+  (`0.6b` for latency, `8b` for the ceiling). For the code-heavy repos add
+  `bge-code-v1` (permissive) and, for local-only runs, `sfr-embedding-code-2b-r`
+  (**NC**). `bge-m3`, `snowflake-arctic-embed-l-v2.0`, and
+  `multilingual-e5-large-instruct` cover long prose and the xiang-qi Chinese terms.
+- **Campaign reranker (GPU):** baseline `bge-reranker-v2-m3` (permissive) vs
+  `qwen3-reranker-4b` (SOTA) and `mxbai-rerank-large-v2`; `zerank-1-small`
+  (Apache) and `zerank-2` (**NC**) add instruction-aware, calibrated reranking.
+
+Remember the Qwen3 decoder embedders/rerankers need the correct query-vs-document
+instruction prefixes wired into both the index and query paths before the numbers
+are trustworthy (plan Wave 3, step 2).
