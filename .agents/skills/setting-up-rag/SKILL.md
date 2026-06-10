@@ -101,3 +101,33 @@ All knobs are in [`scripts/rag-config.json`](scripts/rag-config.json) (models,
 chunk sizes, fusion, prefetch, rerank, top-k) and documented inline. Pass an
 edited copy with `--config`. Provider/model alternatives (bigger dense model,
 SPLADE sparse, Ollama embeddings) are noted there and in SETUP.md.
+
+## 6. Optional: local-GPU campaign upgrades (not in the CPU default)
+
+The default above is CPU-only and ships as-is. With a local GPU and an
+OpenAI-compatible LLM endpoint, **contextual retrieval** is a measured upgrade for
+mixed **code**+docs corpora — generate a 1–2-sentence "situating context" per chunk
+with a local model and prepend it to the **embedding/sparse** field, keeping
+`raw_text` byte-verbatim for citations:
+
+```text
+[repo] path :: heading/symbol (lang)     # deterministic header — keep it
+<LLM: "Defines the MctsConfig struct … for Monte-Carlo Tree Search.">
+                                         # blank line
+<verbatim raw_text>                      # embedded AND what is retrieved/cited
+```
+
+Measured on a six-repo gold set (held-out): **nDCG +0.031 overall, +0.045 on the code
+domain, sentinel coverage +0.080**, and it is **index-time only** — query latency and
+answer-context token cost are unchanged (the context is embedded, never packed into the
+answer). Lessons that transfer:
+
+- **Contextualize all chunks, code included** — the "it'll dilute identifiers" worry was
+  wrong; code is exactly where it helps (prose is usually already near ceiling).
+- **Keep the deterministic header** — dropping it regresses prose retrieval.
+- **Serve the generator with vLLM** (NVFP4/FP8), not llama.cpp GGUF-Q8: ~25× faster for
+  this bulk index-time pass (≈8 vs ≈0.3 chunk/s on a Blackwell GPU).
+- It needs an index-time LLM, so it is **campaign-only**; the portable default stays CPU.
+
+Method + numbers: `docs/benchmarks/2026-06-10/0014`–`0015` and the campaign harness
+(`wave4_context.py`) under `docs/plans/2026-06-08/0008-…/`. Re-validate on YOUR corpus (§4).

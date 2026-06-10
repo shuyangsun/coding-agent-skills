@@ -195,21 +195,35 @@ def span_chunks(text: str, kind: str, cfg: dict) -> list[Chunk]:
     return out or [mk(0, len(text), "", 0, len(text))]
 
 
-def contextual_text(repo: str, path: str, c: Chunk, kind: str, header: bool) -> str:
-    if not header:
-        return c.raw_text
+def _header_line(repo: str, path: str, c: Chunk, kind: str) -> str:
     loc = c.heading_path or c.symbol
-    head = f"[{repo}] {path}" + (f" :: {loc}" if loc else "") + f" ({kind})"
-    return f"{head}\n\n{c.raw_text}"
+    return f"[{repo}] {path}" + (f" :: {loc}" if loc else "") + f" ({kind})"
+
+
+def contextual_text(repo: str, path: str, c: Chunk, kind: str, header: bool,
+                    llm_ctx: str | None = None) -> str:
+    """Build the retrieval/embedding field. Optional deterministic header (Wave-2 win)
+    + optional LLM situating context (Wave-4 contextual retrieval) prepended to the
+    verbatim chunk. With neither, returns raw_text (the plain baseline)."""
+    head = _header_line(repo, path, c, kind) if header else ""
+    if not head and not llm_ctx:
+        return c.raw_text
+    import wave4_context as W4  # lazy: keeps chunk-report stdlib-only when no LLM ctx
+    return W4.compose_embedded(head, llm_ctx, c.raw_text)
 
 
 def doc_points(repo: str, path: str, kind: str, lang: str, text: str, cfg: dict,
-               header: bool) -> list[dict]:
+               header: bool, llm_cache: dict | None = None,
+               apply_to: tuple[str, ...] = ("md", "code")) -> list[dict]:
     chunks = span_chunks(text, kind, cfg)
     n = len(chunks)
     points = []
     for i, c in enumerate(chunks):
-        ctx = contextual_text(repo, path, c, kind, header)
+        llm_ctx = None
+        if llm_cache is not None and kind in apply_to:
+            import wave4_context as W4
+            llm_ctx = llm_cache.get(W4.chunk_key(path, c.start_byte, c.end_byte)) or None
+        ctx = contextual_text(repo, path, c, kind, header, llm_ctx)
         points.append({
             "repo": repo, "kind": kind, "lang": lang,
             "doc_id": path, "path": path,
@@ -236,12 +250,27 @@ def index_repo(repo_name: str, collection: str, cfg: dict, kinds: tuple[str, ...
 
     repo = M.REPOS[repo_name]
     corpus = M.load_repo_corpus(repo, kinds=kinds)
+    # Wave-4 contextual retrieval: load this repo's cached LLM situating contexts.
+    cl = cfg.get("contextual_llm", {})
+    llm_cache = None
+    apply_to: tuple[str, ...] = ("md", "code")
+    if cl.get("enabled"):
+        import wave4_context as W4
+        llm_cache = W4.load_cache(cl["model"], repo_name)
+        apply_to = tuple(cl.get("apply_to", ["md", "code"]))
     all_points: list[dict] = []
     for path, payload in corpus.items():
         all_points.extend(doc_points(repo_name, path, payload["kind"], payload["lang"],
-                                     payload["text"], cfg, header))
+                                     payload["text"], cfg, header, llm_cache, apply_to))
     if not all_points:
         sys.exit(f"enriched_index: no chunks for {repo_name} (kinds={kinds})")
+    if llm_cache is not None:
+        keyset = {k for k in llm_cache if k != "__meta__" and llm_cache[k]}
+        covered = sum(1 for p in all_points if p["kind"] in apply_to
+                      and f"{p['path']}\t{p['start_byte']}\t{p['end_byte']}" in keyset)
+        eligible = sum(1 for p in all_points if p["kind"] in apply_to)
+        print(f"enriched_index: contextual_llm={cl['model']} apply_to={','.join(apply_to)} "
+              f"coverage={covered}/{eligible} eligible chunks")
 
     client, where = R.get_client(force_local=force_local)
     emb = cfg["embedding"]

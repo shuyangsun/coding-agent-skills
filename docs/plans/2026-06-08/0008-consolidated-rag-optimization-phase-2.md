@@ -1,7 +1,7 @@
 # Plan: Consolidated RAG Optimization Phase 2
 
 - **Date created:** 2026-06-09
-- **Status:** Phase 3 **Waves 0-3 executed** on the Ubuntu GPU box (2026-06-09) — see "Phase 3 Execution Progress" below and `docs/benchmarks/2026-06-09/0010-0013`. Waves 4-7 not yet started.
+- **Status:** Phase 3 **Waves 0-3 executed** (2026-06-09) and **Wave 4 (contextual retrieval) executed 2026-06-10** on the Ubuntu GPU box — see "Phase 3 Execution Progress" below, `docs/benchmarks/2026-06-09/0010-0013`, and `docs/benchmarks/2026-06-10/0014` (gemma-4 contextual retrieval — the top win) + `0015` (generator-model comparison). Waves 5-7 not yet started.
 - **Repo:** `coding-agent-skills`
 - **Prompt:** [`0005` - Optimizing RAG Setup](../../prompts/2026-06-08/0005-optimizing-rag-setup.md)
 - **Phase 1 input:** [`0003` - RAG eval set Phase 1](0003-rag-eval-set-phase-1.md), with 207 verified gold facts in [`eval-set.json`](0003-rag-eval-set-phase-1/eval-set.json)
@@ -39,11 +39,14 @@ Full reports + TSV/JSON: [`docs/benchmarks/2026-06-09/0010-0013`](../../benchmar
 | **2** contextual headers    | [`0012`](../../benchmarks/2026-06-09/0012-wave2-contextual-headers-rag.md) | deterministic `[repo] path :: symbol/heading (lang)` header → held-out **nDCG +0.056, primary-MRR +0.055, NO slice regresses**                                      | **PROMOTE (top win)**      |
 | **3** reranker bge-m3 (GPU) | [`0013`](../../benchmarks/2026-06-09/0013-wave3-gpu-substrate-rag.md)      | `bge-reranker-v2-m3` strictly beats MiniLM (4.5× faster), **fixes the 2 weak repos**, big answer-grounding gains; a coverage-vs-precision lever vs no-rerank        | campaign reranker          |
 | **3** embedder bge-base     | `0013`                                                                     | `bge-base` (768-d) vs `bge-small` (384-d) is a **wash** — nl +0.023 nDCG but code −0.008, ~flat overall at 2× vector size; representation (headers) ≫ embedder swap | `bge-small` stays portable |
+| **4** contextual retrieval (gemma-4) | [`0014`](../../benchmarks/2026-06-10/0014-wave4-contextual-gemma4-rag.md) | LLM 1–2-sentence situating context per chunk → embedded field (raw_text stays verbatim): held-out **nDCG +0.031, primary-MRR +0.033, sentinel +0.080, hit@5 +0.054**, **code domain nDCG +0.045 / sentinel +0.123**; nl already at ceiling (flat); **index-time only — no query-latency or answer-context cost** | **PROMOTE (campaign / GPU)** |
+| **4** apply-to + header ablation | `0014` | Contextualize **all chunks** (code+md) ≫ prose-only (code nDCG +0.045 vs +0.019) — the "code-dilution" worry was wrong; **keep the deterministic header** (dropping it regresses nl, e.g. website-nl −0.084) | all-chunks + header |
+| **4** generator-model comparison | [`0015`](../../benchmarks/2026-06-10/0015-wave4-generator-model-comparison-rag.md) | context generator matters on a hard corpus: **Nemotron-120B held-out code nDCG +0.089 (~2× gemma-4-31B's +0.037), no code regression** (but verbose contexts regress some nl); gemma-4≈Qwen-27B. Serving: vLLM NVFP4 ~8 ch/s ≫ TRT-LLM Docker ~2.6–3.4 ch/s ≫ llama.cpp GGUF-Q8 ~0.3–0.8 ch/s | gemma-4 **default** (throughput); Nemotron **ceiling** (code) |
 
-**Current best config after Wave 0-3:**
+**Current best config after Wave 0-4:**
 
-- **Portable default (CPU, ships):** bge-small dense + bm25 sparse, RRF, **contextual headers ON, rerank OFF**, `top_k=20` → held-out nDCG@10 **0.737**, primary-MRR **0.675** (vs shipped baseline 0.670 / 0.586).
-- **Campaign (GPU):** + `bge-reranker-v2-m3` rerank → best sentinel coverage (0.888) + answer hit@5; Apache-2.0.
+- **Portable default (CPU, ships):** bge-small dense + bm25 sparse, RRF, **contextual headers ON, rerank OFF**, `top_k=20` → held-out nDCG@10 **0.737**, primary-MRR **0.675** (vs shipped baseline 0.670 / 0.586). **Unchanged by Wave 4** — contextual retrieval needs an index-time LLM, so it stays campaign-side.
+- **Campaign (GPU):** header **+ LLM situating context on all chunks** (Wave 4, `w4-llm-all`, gemma-4 generator) → held-out nDCG@10 **0.765**, primary-MRR **0.702**, sentinel **0.913**, hit@5 **0.847** (code domain nDCG **+0.045**); compose with the `bge-reranker-v2-m3` rerank (Wave 3) for the best sentinel coverage. All index-time; query latency and answer-context token cost unchanged.
 
 **Promoted into the shipped `setting-up-rag` this session** (proven, CPU-clean, license-neutral):
 

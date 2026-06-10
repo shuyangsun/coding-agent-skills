@@ -75,6 +75,7 @@ DEFAULT_DEPTH = 200
 def index_key(cfg: dict) -> str:
     emb = cfg["embedding"]
     ch = cfg.get("chunker", {})
+    cl = cfg.get("contextual_llm", {})
     sig = {
         "dense": emb["dense_model"], "sparse": emb["sparse_model"],
         "dim": emb.get("dense_dim"), "dist": emb.get("distance", "cosine"),
@@ -82,6 +83,12 @@ def index_key(cfg: dict) -> str:
                                            "code_size", "code_overlap", "strategy")},
         "header": bool(cfg.get("contextual_header", False)),
     }
+    # Wave-4: LLM situating context changes the embedded text -> new index. Added
+    # ONLY when enabled, so non-LLM arms keep their pre-Wave-4 key and reuse indices.
+    if cl.get("enabled"):
+        sig["llm_ctx"] = {"model": cl.get("model"),
+                          "apply": sorted(cl.get("apply_to", ["md", "code"])),
+                          "pv": cl.get("prompt_version", "v1")}
     return hashlib.sha256(json.dumps(sig, sort_keys=True).encode()).hexdigest()[:10]
 
 
