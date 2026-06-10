@@ -81,10 +81,14 @@ branch/bookmark deletion when no real remote backs it, parking jj `default` on
 are mechanically additive and structurally valid. If it prints `NEXT_CWD=...`,
 run any later shell command from that live directory because your jj workspace
 was intentionally removed.
-In jj mode, a final remote sync may still be needed after the helper finishes;
-run exactly `jj git push --bookmark main` from the live `NEXT_CWD`/`default`
-workspace when you need to publish the already-landed `main` bookmark. That
-push is a post-integration sync, not a substitute for `integrate.sh`.
+In jj mode, `integrate.sh` now also **publishes** `main` to its remote itself
+(mirroring git mode) and removes the retired workspace's owner marker, so a clean
+run leaves nothing to finish — you are not stranded in the shared `default`. Only
+if it reports it could **not** auto-publish (e.g. the remote moved) run exactly
+`jj git push --bookmark main` from the live `NEXT_CWD`/`default` workspace as the
+fallback. Run it **bare** — that lone push is the one VCS write the guard allows
+from the shared checkout; bundling it (`… && jj git push …`) makes the guard
+reject it.
 
 Direct file edits, raw VCS writes, and raw publishes may also be guarded by
 `vcs-check.sh` through agent hooks. Treat a guard denial as a cwd/ownership bug:

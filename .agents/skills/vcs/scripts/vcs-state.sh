@@ -174,6 +174,20 @@ vcs_current_marker_path() {
   vcs_marker_path_for "$mode" "$workspace"
 }
 
+# Remove the owner marker for (mode, workspace), if present. The symmetric
+# counterpart to vcs_record_current_session: integrate.sh calls this when it
+# retires a landed workspace so the marker can't outlive the workspace it
+# describes. A stale marker otherwise lingers in agent-sessions/ and keeps
+# vcs_session_owns_ref matching a workspace that no longer exists, which
+# confuses later guard checks. Best-effort: never fails the caller.
+vcs_remove_owner_marker() {
+  local mode="$1" workspace="$2" marker
+  [[ -n "$mode" && -n "$workspace" ]] || return 0
+  marker="$(vcs_marker_path_for "$mode" "$workspace" 2>/dev/null)" || return 0
+  [[ -n "$marker" && -f "$marker" ]] && rm -f "$marker" 2>/dev/null
+  return 0
+}
+
 vcs_session_id() {
   if [[ -n "${VCS_SESSION_ID:-}" ]]; then
     printf '%s\n' "$VCS_SESSION_ID"

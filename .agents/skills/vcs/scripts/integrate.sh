@@ -488,6 +488,7 @@ jj_finish() {
   jj_retire_landed_workspaces
   jj_abandon_orphan_empty_heads "$anchor"
   jj_git_export_if_colocated
+  jj_push_main_if_remote
   msg "DONE mode=jj main=$main_ref work=$work_ref"
 }
 
@@ -526,6 +527,21 @@ jj_abandon_orphan_empty_heads() {
 
 jj_git_export_if_colocated() {
   [[ -d "$(jj root 2>/dev/null)/.git" ]] && jj git export >/dev/null 2>&1 || true
+}
+
+# Publish the landed main to its remote, mirroring git mode (git_publish_loop
+# pushes; jj mode historically stopped at the local landing and left the push to
+# the agent — but the agent's workspace is gone and the guard refuses VCS writes
+# from the shared default it was dropped into, so it was stranded). Best-effort:
+# skip when there is no remote (local-only repo), and on a rejected/failed push
+# keep the manual fallback rather than failing the already-completed landing.
+jj_push_main_if_remote() {
+  [[ -n "$(jj git remote list 2>/dev/null)" ]] || return 0
+  if jj git push --bookmark "$main_ref" >/dev/null 2>&1; then
+    msg "published '$main_ref' to remote"
+  else
+    msg "could not auto-publish '$main_ref' (the remote may have moved); run from NEXT_CWD: jj git push --bookmark $main_ref"
+  fi
 }
 
 jj_bookmark_remote_backed() {
@@ -591,6 +607,10 @@ jj_retire_landed_workspaces() {
     if [[ -n "$root" && "$root" != "/" && -d "$root" ]]; then
       rm -rf "$root"
     fi
+    # Remove the owner marker too: a marker that outlives its workspace keeps
+    # vcs_session_owns_ref matching a workspace that no longer exists and leaves
+    # stale state in agent-sessions/ that strands later guard checks.
+    vcs_remove_owner_marker jj "$name"
     msg "retired jj workspace '$name'"
   done <<<"$listing"
 
