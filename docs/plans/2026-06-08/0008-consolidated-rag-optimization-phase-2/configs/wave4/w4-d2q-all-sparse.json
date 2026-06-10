@@ -1,0 +1,37 @@
+{
+  "rag_config_id": "w4-d2q-all-sparse",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": { "fusion": "rrf", "prefetch": 60 },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "doc2query": {
+    "enabled": true,
+    "model": "gemma-4",
+    "apply_to": ["md", "code"],
+    "field": "sparse",
+    "n": 4,
+    "prompt_version": "d2q-v1"
+  },
+  "arm": "w4-d2q-all-sparse",
+  "_doc": "Wave-4 step 4 Doc2Query: gemma-4 predicts 4 search queries per chunk; appended to apply_to=md,code chunks in the sparse field (sparse=lexical/BM25 only, dense untouched; both=dense+sparse). header ON. Re-indexes; needs the gemma-4 d2q cache (wave4_doc2query.py generate)."
+}

@@ -89,6 +89,22 @@ def index_key(cfg: dict) -> str:
         sig["llm_ctx"] = {"model": cl.get("model"),
                           "apply": sorted(cl.get("apply_to", ["md", "code"])),
                           "pv": cl.get("prompt_version", "v1")}
+    # Wave-4 late chunking: precomputed dense source (naive vs late pooling) is part of
+    # the index identity so the two modes never share a collection. Added only when set.
+    ds = emb.get("dense_source")
+    if ds:
+        sig["dense_source"] = {"kind": ds.get("kind"), "mode": ds.get("mode"),
+                               "model": ds.get("model")}
+    # Wave-4 Doc2Query: lexical expansion changes the BM25 (or both) field -> new index.
+    dq = cfg.get("doc2query", {})
+    if dq.get("enabled"):
+        sig["d2q"] = {"model": dq.get("model"), "field": dq.get("field", "sparse"),
+                      "apply": sorted(dq.get("apply_to", ["md", "code"])),
+                      "n": dq.get("n"), "pv": dq.get("prompt_version", "d2q-v1")}
+    # Wave-4 session metadata: deterministic transcript capsule changes the embedded text.
+    sm = cfg.get("session_meta", {})
+    if sm.get("enabled"):
+        sig["sess"] = {"pv": sm.get("prompt_version", "sess-v1")}
     return hashlib.sha256(json.dumps(sig, sort_keys=True).encode()).hexdigest()[:10]
 
 
@@ -172,6 +188,20 @@ def infinity_rerank(query: str, texts: list[str], endpoint: str, model: str) -> 
     return scores
 
 
+def _embed_query(query: str, cfg: dict):
+    """(dense, sparse) for a query. Wave-4 late-chunk arms read the dense query vector
+    from the bge-m3 cache (precomputed on GPU by wave4_latechunk) so the runner needs no
+    torch; sparse/BM25 stays FastEmbed. All other arms use the shipped FastEmbed path."""
+    emb = cfg["embedding"]
+    ds = emb.get("dense_source")
+    if ds and ds.get("kind") == "latechunk":
+        import wave4_latechunk as LC
+        dv = LC.lookup_query(query, ds.get("model", LC.MODEL_TAG))
+        sv = list(R._sparse(emb["sparse_model"]).query_embed(query))[0]
+        return dv, sv
+    return R.embed_query(query, cfg)
+
+
 def retrieve_chunks(client, coll: str, query: str, cfg: dict, mode: str, depth: int):
     """Return a ranked list of Qdrant points (chunks) for the arm's mode.
 
@@ -181,7 +211,7 @@ def retrieve_chunks(client, coll: str, query: str, cfg: dict, mode: str, depth: 
     """
     from qdrant_client import models
 
-    dv, sv = R.embed_query(query, cfg)
+    dv, sv = _embed_query(query, cfg)
     hyb = cfg.get("hybrid", {})
     prefetch = int(hyb.get("prefetch", 60))
     sp = _search_params(cfg)

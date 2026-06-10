@@ -1,0 +1,33 @@
+{
+  "rag_config_id": "w4-lc-bge-m3-naive",
+  "embedding": {
+    "dense_model": "bge-m3-naive",
+    "dense_dim": 1024,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25",
+    "dense_source": { "kind": "latechunk", "mode": "naive", "model": "bge-m3" }
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60
+  },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "arm": "w4-lc-bge-m3-naive",
+  "_doc": "Wave-4 late-chunking CONTROL: bge-m3 dense, each chunk embedded ALONE (mean-pool, no document context) — an embedder swap with no contextualization. sparse=BM25 over the deterministic header field; header ON. Dense vectors precomputed on GPU by wave4_latechunk (mode=naive). The naive->late delta isolates the late-chunking method."
+}

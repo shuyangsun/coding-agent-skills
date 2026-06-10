@@ -55,11 +55,19 @@ bi-encoder similarity. It re-scores the fused `rerank.top_n` (default 50) and th
 ## 5. When to reach for more (add only if measured to help)
 
 - **Contextual Retrieval** (Anthropic): prepend a one-line, LLM-generated summary
-  of the chunk's place in its document _before embedding_. Reported to cut
-  retrieval-failure rate substantially on prose; it costs one cheap LLM call per
-  chunk at index time and is the optional "full" arm vs the "plain" no-context
-  default. Enable via `contextual_retrieval` once you have an index-time LLM and a
-  gold set to prove the lift. (Plain is the noise-free cross-run comparison.)
+  of the chunk's place in its document _before embedding_. **Measured** on a six-repo
+  code+docs gold set: held-out nDCG +0.031 (code domain +0.045), index-time only — the
+  **cleanest** index-time-LLM win. One cheap LLM call per chunk at index time. Apply to
+  **all** chunks (code included); prose-only **regressed code**. Campaign-only (needs an
+  index-time LLM); see SKILL.md §6.
+- **Doc2Query / document expansion** (LLM): append a few predicted queries each chunk
+  answers to a **separate BM25 field**. Measured: a code win (+0.030 nDCG, +0.082 sentinel),
+  ≈ contextual-retrieval quality but it costs some prose slices — prefer contextual retrieval;
+  use Doc2Query when code recall is the priority. All-chunks, never prose-only.
+- **Late chunking** (long-context embed + per-chunk pooling): **tested and rejected** on this
+  corpus — whole-document pooling _blurs_ within-document discrimination and regressed every
+  slice. Document context helps only when it _sharpens_ a chunk's identity (contextual
+  retrieval, Doc2Query), not when it averages chunks toward a shared vector.
 - **Query transforms** (HyDE, multi-query expansion): help when queries are terse
   or vocabulary-mismatched to the corpus; they add latency and can hurt precise
   lexical queries — gate on the gold set.

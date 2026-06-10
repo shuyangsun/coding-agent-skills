@@ -131,3 +131,25 @@ answer). Lessons that transfer:
 
 Method + numbers: `docs/benchmarks/2026-06-10/0014`–`0015` and the campaign harness
 (`wave4_context.py`) under `docs/plans/2026-06-08/0008-…/`. Re-validate on YOUR corpus (§4).
+
+### Other index-time techniques, measured on the same gold set
+
+The **one rule** that explains all of them: index-time context helps only when it **sharpens** a
+chunk's identity, and it must apply to **code**, not just prose.
+
+- **Doc2Query / document expansion** (campaign, index-time LLM — `0018`): generate a few search
+  queries each chunk answers and append them to a **separate BM25 field** (lexical only — leave
+  dense and `raw_text` untouched). A real **code** win (held-out nDCG +0.030, sentinel +0.082) at
+  ≈ contextual-retrieval quality, but it regresses some prose slices, so contextual retrieval is the
+  cleaner default. Apply to **all** chunks — prose-only **regressed code**.
+- **Session metadata capsule** (portable, deterministic, **no LLM** — `0017`): for session/coding
+  **transcripts** (`…/coding-sessions/…`, `…/llm-sessions-history/…`), prepend `session <id>
+<vendor> <date> — <name>; files: <files it touched>` to each chunk. The live signal is the
+  **mentioned-file list** (the path already gives date/index/vendor). Optional, corpus-conditional —
+  it drove transcript retrieval to near-perfect on a transcript-heavy repo; flat elsewhere. Enable +
+  validate on a gold set; don't ship it as a forced default.
+- **Late chunking / LLM-free contextual embedding** — **tested and rejected** (`0016`): pooling each
+  chunk over whole-document context (bge-m3) **blurs** within-document discrimination and regressed
+  every slice (nDCG −0.115). There is no cheap LLM-free substitute for contextual retrieval here.
+- **Measurement caveat:** Qdrant HNSW re-indexing is non-deterministic at ~**0.03** per single
+  slice — trust domain aggregates + cross-split replication, not a lone small per-slice delta.

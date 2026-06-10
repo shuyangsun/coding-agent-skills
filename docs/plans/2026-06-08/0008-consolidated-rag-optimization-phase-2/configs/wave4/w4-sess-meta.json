@@ -1,0 +1,36 @@
+{
+  "rag_config_id": "w4-sess-meta",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60
+  },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "session_meta": {
+    "enabled": true,
+    "prompt_version": "sess-v1"
+  },
+  "arm": "w4-sess-meta",
+  "_doc": "Wave-4 step 5: deterministic (LLM-free) session capsule — `session <idx> <vendor> <date> — <name>; files: ...` parsed from the transcript path + mentioned-file list — prepended to every chunk of a coding-sessions / llm-sessions-history transcript, on top of the Wave-2 header. Portable-eligible (no LLM). Targets the 33 session-prompting questions (15 of whose primaries are transcripts, mostly website). Re-indexes."
+}

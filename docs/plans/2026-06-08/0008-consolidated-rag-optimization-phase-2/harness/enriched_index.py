@@ -212,19 +212,67 @@ def contextual_text(repo: str, path: str, c: Chunk, kind: str, header: bool,
     return W4.compose_embedded(head, llm_ctx, c.raw_text)
 
 
+# --- Wave-4 step 5: deterministic session metadata capsule (LLM-free) --------
+# Transcripts (docs/coding-sessions/<date>/<NNNN>-<vendor>-<name>.md and
+# llm-sessions-history/<date>/...) bury the session's identity + the files it touched
+# inside a long User/Assistant turn stream; a chunk mid-transcript loses that anchor.
+# This capsule (session tag + the mentioned-file list parsed from the WHOLE doc) is
+# prepended to every chunk of the session. Purely deterministic -> portable-eligible.
+_SESSION_RE = re.compile(
+    r"(?:^|/)(?:coding-sessions|llm-sessions-history)/(\d{4}-\d{2}-\d{2})/"
+    r"(\d{2,4})-([a-z]+)-(.+)\.md$")
+_PATHTOKEN = re.compile(r"(?:[\w.\-]+/){1,}[\w.\-]+\.[A-Za-z]{1,5}\b")
+_FILETOKEN = re.compile(
+    r"\b[\w\-]+\.(?:py|cc|cpp|cu|cuh|h|hpp|ts|tsx|js|jsx|md|json|jsonc|ya?ml|toml|sh|cmake|rs|go)\b")
+
+
+def _mentioned_files(text: str, cap: int = 10) -> list[str]:
+    from collections import Counter
+
+    c: Counter = Counter()
+    for m in _PATHTOKEN.finditer(text):
+        tok = m.group(0)
+        if len(tok) <= 80 and "://" not in tok:
+            c[tok] += 1
+    if len(c) < cap:  # backfill with bare filenames when few full paths are present
+        for m in _FILETOKEN.finditer(text):
+            c[m.group(0)] += 1
+    return [f for f, _n in c.most_common(cap)]
+
+
+def session_capsule(path: str, text: str) -> str | None:
+    """`session <idx> <vendor> <date> — <name>; files: a.py, b.cc, …` or None (not a transcript)."""
+    m = _SESSION_RE.search(path)
+    if not m:
+        return None
+    date, idx, vendor, name = m.groups()
+    cap = f"session {idx} {vendor} {date} — {name.replace('-', ' ')}"
+    files = _mentioned_files(text)
+    if files:
+        cap += "; files: " + ", ".join(files)
+    return cap
+
+
 def doc_points(repo: str, path: str, kind: str, lang: str, text: str, cfg: dict,
                header: bool, llm_cache: dict | None = None,
-               apply_to: tuple[str, ...] = ("md", "code")) -> list[dict]:
+               apply_to: tuple[str, ...] = ("md", "code"),
+               d2q_cache: dict | None = None, d2q_apply_to: tuple[str, ...] = ("md", "code"),
+               d2q_field: str = "sparse", session_meta: dict | None = None) -> list[dict]:
     chunks = span_chunks(text, kind, cfg)
     n = len(chunks)
+    # Wave-4 step 5: per-doc session capsule (deterministic; same for every chunk of the doc).
+    sess_cap = session_capsule(path, text) if (session_meta and session_meta.get("enabled")) else None
     points = []
     for i, c in enumerate(chunks):
-        llm_ctx = None
-        if llm_cache is not None and kind in apply_to:
-            import wave4_context as W4
-            llm_ctx = llm_cache.get(W4.chunk_key(path, c.start_byte, c.end_byte)) or None
+        ck = f"{path}\t{c.start_byte}\t{c.end_byte}"  # == wave4_context.chunk_key
+        llm_ctx = (llm_cache.get(ck) or None) if (llm_cache is not None and kind in apply_to) else None
+        if llm_ctx is None and sess_cap:  # deterministic capsule reuses the situating-context slot
+            llm_ctx = sess_cap
         ctx = contextual_text(repo, path, c, kind, header, llm_ctx)
-        points.append({
+        # Wave-4 Doc2Query: predicted queries expand the LEXICAL field only (field="sparse")
+        # so code identifiers/dense are untouched, OR both fields (field="both").
+        d2q = (d2q_cache.get(ck) or None) if (d2q_cache is not None and kind in d2q_apply_to) else None
+        pt = {
             "repo": repo, "kind": kind, "lang": lang,
             "doc_id": path, "path": path,
             "heading_path": c.heading_path, "symbol": c.symbol,
@@ -236,7 +284,15 @@ def doc_points(repo: str, path: str, kind: str, lang: str, text: str, cfg: dict,
             "raw_text": c.raw_text,
             "contextualized_text": ctx,
             "text": ctx,  # retrieval/display field (shipped query.py reads "text")
-        })
+        }
+        if d2q:
+            exp = d2q.strip()
+            if d2q_field == "both":
+                pt["contextualized_text"] = pt["text"] = f"{ctx}\n{exp}"
+                pt["bm25_text"] = f"{ctx}\n{exp}"
+            else:  # sparse-only (faithful Doc2Query: lexical expansion, dense stays clean)
+                pt["bm25_text"] = f"{ctx}\n{exp}"
+        points.append(pt)
     return points
 
 
@@ -258,10 +314,21 @@ def index_repo(repo_name: str, collection: str, cfg: dict, kinds: tuple[str, ...
         import wave4_context as W4
         llm_cache = W4.load_cache(cl["model"], repo_name)
         apply_to = tuple(cl.get("apply_to", ["md", "code"]))
+    # Wave-4 Doc2Query: load this repo's cached predicted-query expansions (lexical field).
+    dq = cfg.get("doc2query", {})
+    d2q_cache = None
+    d2q_apply_to: tuple[str, ...] = ("md", "code")
+    d2q_field = dq.get("field", "sparse")
+    if dq.get("enabled"):
+        import wave4_doc2query as D2Q
+        d2q_cache = D2Q.load_cache(dq["model"], repo_name)
+        d2q_apply_to = tuple(dq.get("apply_to", ["md", "code"]))
+    session_meta = cfg.get("session_meta")  # Wave-4 step 5: deterministic transcript capsule
     all_points: list[dict] = []
     for path, payload in corpus.items():
         all_points.extend(doc_points(repo_name, path, payload["kind"], payload["lang"],
-                                     payload["text"], cfg, header, llm_cache, apply_to))
+                                     payload["text"], cfg, header, llm_cache, apply_to,
+                                     d2q_cache, d2q_apply_to, d2q_field, session_meta))
     if not all_points:
         sys.exit(f"enriched_index: no chunks for {repo_name} (kinds={kinds})")
     if llm_cache is not None:
@@ -274,6 +341,15 @@ def index_repo(repo_name: str, collection: str, cfg: dict, kinds: tuple[str, ...
 
     client, where = R.get_client(force_local=force_local)
     emb = cfg["embedding"]
+    # Wave-4 late chunking (LLM-free contextual embedding): dense vectors are
+    # precomputed on GPU by wave4_latechunk (naive per-chunk vs late whole-doc pooling)
+    # and loaded here; sparse/BM25 + the deterministic header path are unchanged, so the
+    # ONLY variable vs the FastEmbed arms is the dense doc vector. See wave4_latechunk.py.
+    ds = emb.get("dense_source")
+    lc_doc = None
+    if ds and ds.get("kind") == "latechunk":
+        import wave4_latechunk as LC
+        lc_doc = LC.load_doc_cache(ds.get("model", LC.MODEL_TAG), ds["mode"], repo_name)
     if client.collection_exists(collection):
         client.delete_collection(collection)
     client.create_collection(
@@ -290,7 +366,18 @@ def index_repo(repo_name: str, collection: str, cfg: dict, kinds: tuple[str, ...
     print(f"enriched_index: {len(corpus)} docs -> {n} chunks -> '{collection}' ({where}) header={header}")
     for start in range(0, n, batch):
         chunk_payloads = all_points[start:start + batch]
-        dense, sparse = R.embed_documents([p["contextualized_text"] for p in chunk_payloads], cfg)
+        # dense embeds the (header[+llm-ctx]) field; sparse/BM25 embeds bm25_text when a
+        # Doc2Query expansion exists for that chunk (else the same field). Splitting the two
+        # texts is what lets Doc2Query expand the lexical arm without touching dense.
+        dense_texts = [p["contextualized_text"] for p in chunk_payloads]
+        sparse_texts = [p.get("bm25_text", p["contextualized_text"]) for p in chunk_payloads]
+        if lc_doc is not None:  # late-chunk dense from cache
+            import wave4_latechunk as LC
+            dense = [lc_doc[LC.chunk_key(p["path"], p["start_byte"], p["end_byte"])].tolist()
+                     for p in chunk_payloads]
+        else:
+            dense = [v.tolist() for v in R._dense(emb["dense_model"]).embed(dense_texts)]
+        sparse = list(R._sparse(emb["sparse_model"]).embed(sparse_texts))
         pts = [models.PointStruct(
             id=sf.next_id(),
             vector={"dense": dense[j], "sparse": R.to_sparse_vector(sparse[j])},
