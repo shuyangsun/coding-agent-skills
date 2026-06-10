@@ -24,3 +24,7 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `issues/` tree
 - [`0006` — agent inspected another agent's workspace during cleanup](2026-06-07/0006-agent-inspected-and-asked-about-another-agents-workspace-during-cleanup.md)
 - [`0007` — workspace cleanup left an unreferenced empty side-head](2026-06-07/0007-workspace-cleanup-left-unreferenced-empty-side-head.md)
 - [`0008` — vcs guard hook traps agent on cwd drift / unmarked workspaces](2026-06-07/0008-vcs-guard-hook-cwd-drift-and-missing-owner-marker-trap.md)
+
+### 2026-06-09
+
+- [`0009` — vcs hook refuses read-only Bash after Claude Code resets cwd to shared workspace](2026-06-09/0009-vcs-hook-refuses-read-only-bash-after-claude-cwd-reset.md)

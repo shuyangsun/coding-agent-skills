@@ -125,6 +125,16 @@ Recommended before GPU and LLM-backed experiments:
 - optional `pplx-embed-context-v1` for the LLM-free contextual-embedding arm;
 - `ragas`, MiniCheck/HHEM/Lynx packages, or other advisory judge packages pointed at local endpoints.
 
+#### Installed on the Ubuntu workstation PC (2026-06-09)
+
+_(Workstation-specific — applies only to this Ubuntu GPU box (`delos`), not the portable skill. All native, no Docker, for max performance. System `python3` is pyenv 3.14 (too new for ML wheels), so every venv pins uv-managed CPython 3.12.13.)_
+
+- **Portable skill stack** — `~/.cache/rag-skill/venv`: `qdrant-client` 1.18.0 + `fastembed` 0.8.0, FastEmbed models warmed (bge-small, BM25/SPLADE, MiniLM). `check-local-rag.sh` → `READY (server)` against the **native Qdrant 1.17.1** already running on `:6333` (no container; the `rag-qdrant` Docker path in `setup-local-rag.sh` is skipped because healthz answers).
+- **Campaign harness venv** — `~/developer/third-party/python_venvs/rag_campaign_env/.venv` (Waves 0–7 scoring/chunking/judges): `ranx` 0.3.21, `ir-measures` 0.4.3, `pytrec_eval`, `rapidfuzz` 3.14.5, `tree-sitter` + `tree-sitter-language-pack` 1.8.1 (cpp/cuda/c/python/typescript/bash/markdown grammars verified), `networkx` 3.6.1, `scikit-learn` 1.9.0, `umap-learn` 0.5.12, `hdbscan` 0.8.44, `openai` 1.109.1, `ragas` 0.2.15 (pinned with the langchain 0.3 family for import compat), plus `qdrant-client[fastembed]`. SQLite FTS5 ships in the stdlib `sqlite3`.
+- **Wave-3 GPU embed/rerank serving** — `~/developer/third-party/python_venvs/infinity_env/.venv`: **Infinity** (`infinity-emb` 0.0.77) on `torch` 2.11.0+cu130 (Blackwell `sm_120`), `optimum` pinned to 1.23.3. Verified loading NAS-staged models on the free card (`CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1`; GPU0 is saturated by the gemma-4 vLLM server): bge-small embeds (384-d) and ms-marco-MiniLM reranks correctly on GPU. **TEI was not installed** — its prebuilt binaries don't target Blackwell `sm_120` and a CUDA-13 source build is heavy; Infinity (torch-based) is the native embed/rerank server here.
+- **Reused as-is (not reinstalled):** NVIDIA driver 590.44.01 / CUDA 13.1; `vLLM` 0.20.0 + `LiteLLM` 1.83.14 in `~/developer/third-party/python_venvs/llm_env/.venv` serving `gemma-4` behind nginx TLS at `llm.shuyangsun.com` (left untouched; reuse for Wave-4+ generation, and add the Infinity embed/rerank endpoints to its `model_list` when Wave 3 goes live); `bun`, `ripgrep`, `uv`, `cargo`.
+- **Deferred / needs sudo:** `universal-ctags` (optional, Wave 5) — `apt` needs a password, so run `sudo apt install -y universal-ctags` manually. `SGLang` not installed (gemma-4/vLLM already covers generation + index-time contextualization). Generative judges (MiniCheck/HHEM/Lynx) and `pplx-embed-context-v1` are HF model pulls for Wave 4/7, deferred until needed.
+
 ### Local LLM and GPU Setup
 
 The consolidated local-LLM decision is:
