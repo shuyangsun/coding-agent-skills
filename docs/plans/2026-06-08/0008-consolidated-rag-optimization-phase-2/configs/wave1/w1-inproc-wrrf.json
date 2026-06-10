@@ -1,0 +1,14 @@
+{
+  "arm": "w1-wrrf",
+  "_doc": "Wave-1 in-process weighted RRF sweep (rerank OFF to isolate fusion). Tunes rrf_k (Qdrant server RRF hard-codes k=2) and global dense/sparse weights. Shares the base index.",
+  "base_arm": "plain-current-no-rerank",
+  "grid": {
+    "hybrid.rrf_k": [2, 10, 60],
+    "hybrid.weights": [
+      { "dense": 1.0, "sparse": 1.0 },
+      { "dense": 1.0, "sparse": 1.5 },
+      { "dense": 1.5, "sparse": 1.0 },
+      { "dense": 1.0, "sparse": 2.0 }
+    ]
+  }
+}

@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -43,8 +44,19 @@ def _need_deps():
 
 
 # --- corpus loading ---------------------------------------------------------
-CODE_EXTS = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs",
-             ".java", ".rb", ".css", ".html", ".json", ".md")
+# Language-aware code set. The C/C++/CUDA/CMake/shell/config extensions (and the
+# extensionless build files below) were added 2026-06-09: the original JS/TS/Python
+# list silently skipped every `.cc`/`.h`/`.cuh`/`CMakeLists.txt`, so on a C++/CUDA
+# repo the `code` corpus loaded almost nothing. (`.md` stays here so `--kind code`
+# co-indexes a repo's docs with its code — they are one retrieval task.)
+CODE_EXTS = (".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs",
+             ".py", ".go", ".rs", ".java", ".rb",
+             ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh", ".hxx", ".cu", ".cuh",
+             ".cmake", ".sh", ".bash", ".zsh", ".yml", ".yaml", ".toml",
+             ".css", ".scss", ".less", ".html", ".json", ".jsonc", ".wgsl", ".glsl",
+             ".md", ".mdx")
+# Extensionless / fixed-name build files that are code by filename, not extension.
+CODE_FILENAMES = frozenset({"CMakeLists.txt", "Makefile", "Dockerfile"})
 SKIP_DIRS = {"node_modules", "dist", "build", ".output", ".vite", ".nitro",
              ".git", ".jj", ".turbo", "coverage", ".cache", "__pycache__", ".venv"}
 SKIP_FILES = {"bun.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
@@ -53,6 +65,29 @@ VCS_BOUNDARY_MARKERS = (".git", ".jj")
 
 def _is_vcs_root(path: Path) -> bool:
     return any((path / marker).exists() for marker in VCS_BOUNDARY_MARKERS)
+
+
+def _git_unignored_files(base: Path) -> set[str] | None:
+    """Paths under `base` that git does NOT ignore (tracked + untracked-but-unignored),
+    base-relative POSIX. None when `base` is not inside a git work tree or git is
+    unavailable, so the caller falls back to a plain walk.
+
+    This makes the corpus respect `.gitignore`: generated/build output (an ML repo's
+    git-ignored `artifacts/` of multi-MB training traces, a `dist/`/`build/` tree, model
+    checkpoints, logs) is never indexed — it is retrieval noise that also blows up index
+    time. `-co --exclude-standard` keeps new untracked source you have not committed yet,
+    dropping only what `.gitignore` (and global/info excludes) actually ignore.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(base), "ls-files", "-co", "--exclude-standard", "-z"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    return {p for p in out.stdout.split("\0") if p}
 
 
 def _iter_corpus_files(base: Path, kind: str):
@@ -67,7 +102,7 @@ def _iter_corpus_files(base: Path, kind: str):
             return name.endswith(".md")
     elif kind == "code":
         def wanted(name: str) -> bool:
-            return name.endswith(CODE_EXTS)
+            return name.endswith(CODE_EXTS) or name in CODE_FILENAMES
     else:
         sys.exit(f"rag: unknown corpus kind {kind!r} (use md|code)")
 
@@ -99,11 +134,14 @@ def load_corpus(root: str, kind: str = "md") -> dict[str, str]:
     base = Path(root).expanduser().resolve()
     if not base.is_dir():
         sys.exit(f"rag: corpus dir not found: {base}")
+    unignored = _git_unignored_files(base)  # respect .gitignore; None => not a git repo
     docs: dict[str, str] = {}
     for path in _iter_corpus_files(base, kind):
         rel = path.relative_to(base).as_posix()
         if path.name in SKIP_FILES:
             continue
+        if unignored is not None and rel not in unignored:
+            continue  # git-ignored generated/build output — never indexed
         try:
             docs[rel] = path.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:  # pragma: no cover - defensive

@@ -26,7 +26,9 @@ corpus it measures.
 from __future__ import annotations
 
 import fnmatch
+import functools
 import os
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -59,6 +61,9 @@ _MD_EXTS: frozenset[str] = frozenset(e for e, l in LANG_BY_EXT.items() if l == "
 
 # Dirs never indexed: VCS, dependency, and build output. A nested .git/.jj marks a
 # nested workspace/worktree and is pruned regardless of name (see iter_repo_files).
+# This is a coarse fast-path; the AUTHORITATIVE generated-file filter is the
+# .gitignore-respecting git-tracked allowlist below (tracked_files / iter_repo_files),
+# which is why ad-hoc names like `artifacts/` are deliberately NOT enumerated here.
 SKIP_DIRS: frozenset[str] = frozenset({
     ".git", ".jj", "node_modules", "dist", "build", ".output", ".vite", ".nitro",
     ".turbo", "coverage", ".cache", "__pycache__", ".venv", "venv", "out", "target",
@@ -113,11 +118,24 @@ class Repo:
     exclude_globs: tuple[str, ...] = ()
 
 
+# Repo roots resolve under the developer tree of whatever machine runs the harness.
+# The eval set was authored on macOS (/Users/shuyang/developer/…); this Ubuntu GPU
+# box ("delos") has the same layout under /home/ssun/developer/…. Both are exactly
+# `Path.home()/"developer"/<tail>`, so derive the base from $HOME (override with
+# $RAG_DEV_ROOT) instead of pinning a macOS path that does not exist here. This is a
+# pure portability fix — on the Mac it resolves to the identical original paths.
+_DEV_ROOT = Path(os.environ.get("RAG_DEV_ROOT", str(Path.home() / "developer")))
+
+
+def _root(*parts: str) -> str:
+    return str(_DEV_ROOT.joinpath(*parts))
+
+
 # Roots come from eval-set.json; descriptions are abridged from that file.
 REPOS: dict[str, Repo] = {
     "coding-agent-skills": Repo(
         name="coding-agent-skills",
-        root="/Users/shuyang/developer/coding-agent-skills",
+        root=_root("coding-agent-skills"),
         code_corpus_desc="inception/, .agents/skills/*/scripts/, scripts/, root config",
         nl_corpus_desc="docs/coding-sessions/, docs/{benchmarks,issues,plans,prompts,research}, .agents/skills/**/*.md",
         exclude_globs=(
@@ -132,31 +150,31 @@ REPOS: dict[str, Repo] = {
     ),
     "alpha-zero": Repo(
         name="alpha-zero",
-        root="/Users/shuyang/developer/alpha-zero/alpha-zero",
+        root=_root("alpha-zero", "alpha-zero"),
         code_corpus_desc="src/ include/ (MCTS/inference/training), gui/, tests/",
         nl_corpus_desc="docs/ (transformer/inference/perf design docs)",
     ),
     "alpha-zero-api": Repo(
         name="alpha-zero-api",
-        root="/Users/shuyang/developer/alpha-zero/alpha-zero-api",
+        root=_root("alpha-zero", "alpha-zero-api"),
         code_corpus_desc="src/ include/, test/",
         nl_corpus_desc="doc/report.md, doc/migration-guides/",
     ),
     "az-game-tic-tac-toe": Repo(
         name="az-game-tic-tac-toe",
-        root="/Users/shuyang/developer/alpha-zero/az-game-tic-tac-toe",
+        root=_root("alpha-zero", "az-game-tic-tac-toe"),
         code_corpus_desc="src/ include/ tests/",
         nl_corpus_desc="memory/ (constitution, rules, mcts/augmentation/history)",
     ),
     "az-game-xiang-qi": Repo(
         name="az-game-xiang-qi",
-        root="/Users/shuyang/developer/alpha-zero/az-game-xiang-qi",
+        root=_root("alpha-zero", "az-game-xiang-qi"),
         code_corpus_desc="src/ include/ tests/, gui/",
         nl_corpus_desc="memory/ (game_design/rules + details/, gui_design, …)",
     ),
     "website": Repo(
         name="website",
-        root="/Users/shuyang/developer/website",
+        root=_root("website"),
         code_corpus_desc="shuyang-website/src/ + config, tools/, scripts/",
         nl_corpus_desc="llm-sessions-history/, prompts/, docs/{design,plan,research}",
     ),
@@ -171,6 +189,35 @@ def _is_vcs_root(path: Path) -> bool:
     return any((path / m).exists() for m in VCS_MARKERS)
 
 
+@functools.lru_cache(maxsize=None)
+def tracked_files(root: str) -> frozenset[str] | None:
+    """The repo's git-tracked files (repo-root-relative POSIX paths), or None when
+    `root` is not a git work tree.
+
+    This is how the corpus RESPECTS .gitignore: generated / ignored output is never
+    tracked, so an allowlist of tracked files excludes it without enumerating dir
+    names. The audit that motivated this: alpha-zero's `artifacts/` (git-ignored)
+    held 1.47 M words — 84% of that repo's text, ~15 k of ~17.6 k chunks — of
+    machine-generated self-play traces (`selfplay_traces/trace_*.json`, 50-84 k words
+    each). They are never a gold primary (0 of 207) and are pure retrieval noise that
+    also made CPU indexing intractable. `git ls-files` drops them for free, and all
+    207 gold primaries are tracked (verified), so nothing pinned is lost. The shipped
+    `setting-up-rag` loader has the same gap and should gain the same filter — a
+    promotion candidate (CPU-clean, license-neutral); see the Wave-0 report.
+
+    Best-effort: returns None on any git failure so callers fall back to a plain walk."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", root, "ls-files", "-z", "--cached"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    return frozenset(p for p in out.stdout.split("\0") if p)
+
+
 def iter_repo_files(repo: Repo, kinds: tuple[str, ...] = ("md", "code")):
     """Yield (relpath, kind, lang) for indexable files under repo.root.
 
@@ -181,6 +228,7 @@ def iter_repo_files(repo: Repo, kinds: tuple[str, ...] = ("md", "code")):
     base = Path(repo.root).expanduser().resolve()
     if not base.is_dir():
         return
+    tracked = tracked_files(str(base))  # .gitignore-respecting allowlist (None => walk-only)
     for dirpath, dirnames, filenames in os.walk(base):
         current = Path(dirpath)
         if current != base and _is_vcs_root(current):
@@ -197,6 +245,8 @@ def iter_repo_files(repo: Repo, kinds: tuple[str, ...] = ("md", "code")):
             if fn in SKIP_FILES:
                 continue
             rel = (current / fn).relative_to(base).as_posix()
+            if tracked is not None and rel not in tracked:
+                continue  # git-ignored / untracked generated output — never indexed
             k = kind_of(rel)
             if k is None or k not in kinds:
                 continue

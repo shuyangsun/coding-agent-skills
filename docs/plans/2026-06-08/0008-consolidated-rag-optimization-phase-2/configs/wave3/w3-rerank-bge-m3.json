@@ -1,0 +1,42 @@
+{
+  "rag_config_id": "w3-rerank-bge-m3",
+  "_note": "Default config the `setting-up-rag` skill applies to a doc set. Local-first: Qdrant + FastEmbed (CPU, no cloud). Heading-aware chunking with a min-merge floor (avoids the tiny-section chunk explosion), hybrid dense+sparse retrieval fused with RRF, then a local cross-encoder rerank. Validate and adjust against a held-out gold set per TUNING.md before trusting a change; never keep a knob that does not beat the baseline.",
+  "collection": "phase3_plain_current",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25",
+    "_alt_dense": "BAAI/bge-base-en-v1.5 (768d, higher quality, slower) \u2014 re-index if changed",
+    "_alt_sparse": "prithivida/Splade_PP_en_v1 (learned sparse; better recall, larger/slower than bm25)"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20,
+    "_note": "size/overlap/min_words in WORDS. min_words merges tiny heading sections so a heading-dense doc does not explode into hundreds of one-line chunks. code_* apply when --kind code."
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60,
+    "_note": "Each arm (dense, sparse) fetches `prefetch` candidates; RRF fuses their rank lists. DBSF is the score-based alternative."
+  },
+  "rerank": {
+    "enabled": true,
+    "backend": "infinity",
+    "endpoint": "http://localhost:7997",
+    "model": "bge-reranker-v2-m3",
+    "top_n": 50,
+    "_doc": "GPU reranker via Infinity (Apache-2.0, 568M). Replaces the harmful CPU MiniLM."
+  },
+  "top_k": 20,
+  "contextual_retrieval": false,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": false,
+  "arm": "w3-rerank-bge-m3",
+  "_doc": "Wave-3: swap the CPU MiniLM reranker for bge-reranker-v2-m3 on GPU (Infinity). Base index (no re-index); one variable = the reranker model."
+}

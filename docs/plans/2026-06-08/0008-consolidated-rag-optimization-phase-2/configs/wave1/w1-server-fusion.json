@@ -1,0 +1,9 @@
+{
+  "arm": "w1-srv",
+  "_doc": "Wave-1 server-side fusion + prefetch sweep (rerank OFF). RRF vs DBSF across prefetch depth. Shares the base index.",
+  "base_arm": "plain-current-no-rerank",
+  "grid": {
+    "hybrid.prefetch": [60, 120, 200],
+    "hybrid.fusion": ["rrf", "dbsf"]
+  }
+}

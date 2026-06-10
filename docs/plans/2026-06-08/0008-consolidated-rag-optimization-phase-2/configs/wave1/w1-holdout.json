@@ -1,0 +1,9 @@
+{
+  "arm": "w1-ho",
+  "_doc": "Wave-1 held-out confirmation: prefetch depth x HNSW exactness (rerank OFF, server RRF). Shares base index.",
+  "base_arm": "plain-current-no-rerank",
+  "grid": {
+    "hybrid.prefetch": [60, 120, 200],
+    "hybrid.search": [{ "exact": false }, { "exact": true }]
+  }
+}

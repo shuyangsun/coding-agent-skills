@@ -18,11 +18,31 @@ Usage:
 Exit code is non-zero if any hard check (1-3) fails. Check 4 is advisory only.
 """
 from __future__ import annotations
-import argparse, json, re, sys
+import argparse, json, os, re, sys
 from pathlib import Path
 
 LEXICAL_OVERLAP_MAX = 0.30
 _word = re.compile(r"[A-Za-z0-9_]+")
+
+
+def resolve_root(root: str) -> Path:
+    """Portable repo root. The eval set pins the authoring machine's macOS paths
+    (/Users/shuyang/developer/<tail>). Use the literal path when it exists (on that
+    Mac), otherwise remap the post-`developer/` tail onto THIS machine's developer
+    tree ($RAG_DEV_ROOT or $HOME/developer) — e.g. /home/ssun/developer/<tail> on the
+    Ubuntu GPU box. This verifies the same pinned gold file on either host WITHOUT
+    editing the gold data."""
+    p = Path(root).expanduser()
+    if p.is_dir():
+        return p
+    parts = Path(root).parts
+    if "developer" in parts:
+        tail = Path(*parts[parts.index("developer") + 1:])
+        base = Path(os.environ.get("RAG_DEV_ROOT", str(Path.home() / "developer")))
+        cand = base.joinpath(tail)
+        if cand.is_dir():
+            return cand
+    return p
 
 
 def trigram_jaccard(a: str, b: str) -> float:
@@ -49,7 +69,7 @@ def main() -> int:
     total = 0
 
     for repo in repos:
-        root = Path(repo["root"]).expanduser()
+        root = resolve_root(repo["root"])
         rname = repo.get("name", str(root))
         kept = repo.get("kept") or repo.get("questions") or []
         print(f"\n=== {rname}  ({len(kept)} questions) ===")

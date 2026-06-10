@@ -1,7 +1,7 @@
 # Plan: Consolidated RAG Optimization Phase 2
 
 - **Date created:** 2026-06-09
-- **Status:** Consolidated Phase 2 synthesis complete; Phase 3 implementation should start from the pre-work checklist below.
+- **Status:** Phase 3 **Waves 0-3 executed** on the Ubuntu GPU box (2026-06-09) — see "Phase 3 Execution Progress" below and `docs/benchmarks/2026-06-09/0010-0013`. Waves 4-7 not yet started.
 - **Repo:** `coding-agent-skills`
 - **Prompt:** [`0005` - Optimizing RAG Setup](../../prompts/2026-06-08/0005-optimizing-rag-setup.md)
 - **Phase 1 input:** [`0003` - RAG eval set Phase 1](0003-rag-eval-set-phase-1.md), with 207 verified gold facts in [`eval-set.json`](0003-rag-eval-set-phase-1/eval-set.json)
@@ -22,6 +22,44 @@ The consolidated decision is:
 - **Protect source truth:** use `raw_text` for citations and sentinel verification; use `contextualized_text` only for retrieval fields.
 - **Keep graph systems secondary:** test graph/source-map overlays, not graph-first replacement, until held-out metrics beat Qdrant without code or provenance regressions.
 - **Use a local LLM for the full campaign, not the first baseline:** no LLM is needed to establish current retrieval metrics; a local LLM/GPU stack is needed for contextual retrieval, answer generation, judging, query transforms, and zero API-token cost.
+
+## Phase 3 Execution Progress (2026-06-09)
+
+Waves 0-3 executed on the Ubuntu GPU box `delos`. The benchmark runner
+(`harness/run_benchmark.py`, `report.py`, `serve_infinity.py`) drives the 207-query gold set
+over a **dedicated isolated Qdrant on `:6343`** (never the unrelated face-embed `:6333`).
+Full reports + TSV/JSON: [`docs/benchmarks/2026-06-09/0010-0013`](../../benchmarks/2026-06-09/).
+
+| wave                        | benchmark                                                                  | headline                                                                                                                                                            | disposition                |
+| --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| **0** baseline              | [`0010`](../../benchmarks/2026-06-09/0010-wave0-baseline-rag.md)           | declared `plain-current` baseline; closed-book/wrong-context controls clean; RAG is **18× more token-efficient** than the ripgrep floor at better ranking           | reference floor            |
+| **0** pre-flight            | `0010`                                                                     | corpus must **respect `.gitignore`** — alpha-zero was **84% git-ignored `artifacts/` self-play traces** (17.6k→2.9k chunks)                                         | **promoted to skill**      |
+| **0/1** reranker            | `0010`/`0011`                                                              | shipped **CPU MiniLM reranker HURTS** held-out ranking (nDCG −0.010, hit@5 −0.081) and costs **40× latency**                                                        | drop from portable default |
+| **1** re-index-free         | [`0011`](../../benchmarks/2026-06-09/0011-wave1-reindex-free-rag.md)       | **NEGATIVE result** — no RRF-`k`/weight/DBSF/prefetch/HNSW-exact knob beats baseline on held-out (dev gains didn't replicate); ANN is not lossy                     | keep defaults              |
+| **2** contextual headers    | [`0012`](../../benchmarks/2026-06-09/0012-wave2-contextual-headers-rag.md) | deterministic `[repo] path :: symbol/heading (lang)` header → held-out **nDCG +0.056, primary-MRR +0.055, NO slice regresses**                                      | **PROMOTE (top win)**      |
+| **3** reranker bge-m3 (GPU) | [`0013`](../../benchmarks/2026-06-09/0013-wave3-gpu-substrate-rag.md)      | `bge-reranker-v2-m3` strictly beats MiniLM (4.5× faster), **fixes the 2 weak repos**, big answer-grounding gains; a coverage-vs-precision lever vs no-rerank        | campaign reranker          |
+| **3** embedder bge-base     | `0013`                                                                     | `bge-base` (768-d) vs `bge-small` (384-d) is a **wash** — nl +0.023 nDCG but code −0.008, ~flat overall at 2× vector size; representation (headers) ≫ embedder swap | `bge-small` stays portable |
+
+**Current best config after Wave 0-3:**
+
+- **Portable default (CPU, ships):** bge-small dense + bm25 sparse, RRF, **contextual headers ON, rerank OFF**, `top_k=20` → held-out nDCG@10 **0.737**, primary-MRR **0.675** (vs shipped baseline 0.670 / 0.586).
+- **Campaign (GPU):** + `bge-reranker-v2-m3` rerank → best sentinel coverage (0.888) + answer hit@5; Apache-2.0.
+
+**Promoted into the shipped `setting-up-rag` this session** (proven, CPU-clean, license-neutral):
+
+1. **`.gitignore`-respecting corpus** — `rag_lib.load_corpus` now skips git-ignored generated/build output (`git ls-files -co --exclude-standard` allowlist).
+2. **Comprehensive code extensions** — `CODE_EXTS` + `CODE_FILENAMES` now cover C/C++/CUDA/CMake/shell/config (the loader indexed _zero_ C++ before; alpha-zero 155→301 files).
+
+**Recommended next promotion** (proven at harness level; apply with a measured shipped-chunker
+implementation): **contextual headers** — the +0.055 win, deterministic, no LLM.
+
+**Immediate Wave-3 continuation:** wire an Infinity **embed** backend into the indexer/query
+(only the rerank backend exists) for the GPU embedder sweep — `qwen3-embedding-4b` (plan sweet
+spot), `mxbai-embed-large`, `bge-code-v1` — with Qwen3 query/doc instruction prefixes.
+`serve_infinity.py` already serves them; the `infinity_emb v2` CLI is broken (use the script).
+
+**Still open (cheaper-first, not yet run):** Wave-2 parent-window / small-to-big retrieval and
+code chunk-size sweeps; Waves 4-7 (deps now installed by a parallel agent).
 
 ## Phase 3 Pre-Work
 
@@ -139,12 +177,12 @@ _(Workstation-specific — applies only to this Ubuntu GPU box (`delos`), not th
 
 Downloaded to `/mnt/nas/home/ml/model/llm/` for Wave-4/7 faithfulness diagnostics. Note: `vectara/hhem-2.1-open` does not exist on HF; the actual HHEM-2.1 release is `vectara/hallucination_evaluation_model` (Apache-2.0, 438 MB, complete at first try). `bespoke-minicheck` is not on PyPI; weights are used directly via `transformers`. Lynx and MiniCheck are **NC** (cc-by-nc-4.0), campaign-only. HHEM is the only Apache-2.0 judge and is portable-eligible.
 
-| dir | HF repo | size | license | status |
-| ----------------------------------------- | ----------------------------------------------------------- | ------ | ---------------------- | --------------------------------------------------------------------- |
-| `vectara_hallucination_evaluation_model`  | vectara/hallucination_evaluation_model                      | 0.4 G  | Apache-2.0             | **complete** — portable NLI judge default (HHEMv2, Flan-T5-based, 438 MB), CPU-eligible |
-| `bespokelabs_Bespoke-MiniCheck-7B`        | bespokelabs/Bespoke-MiniCheck-7B                            | 14 G   | cc-by-nc-4.0 **NC**   | **downloading** — factuality/faithfulness judge (InternLM2-7B), campaign-only |
-| ~~`PatronusAI_Llama-3-Patronus-Lynx-8B-Instruct-v1.1`~~ | PatronusAI/Llama-3-Patronus-Lynx-8B-Instruct-v1.1 | 16 G | cc-by-nc-4.0 **NC** | **cancelled + deleted** — download stopped, dir removed from NAS |
-| ~~`PatronusAI_Llama-3-Patronus-Lynx-70B-Instruct`~~ | PatronusAI/Llama-3-Patronus-Lynx-70B-Instruct       | ~140 G | cc-by-nc-4.0 **NC**   | **cancelled + deleted** — download stopped, dir removed from NAS |
+| dir                                                     | HF repo                                           | size   | license             | status                                                                                  |
+| ------------------------------------------------------- | ------------------------------------------------- | ------ | ------------------- | --------------------------------------------------------------------------------------- |
+| `vectara_hallucination_evaluation_model`                | vectara/hallucination_evaluation_model            | 0.4 G  | Apache-2.0          | **complete** — portable NLI judge default (HHEMv2, Flan-T5-based, 438 MB), CPU-eligible |
+| `bespokelabs_Bespoke-MiniCheck-7B`                      | bespokelabs/Bespoke-MiniCheck-7B                  | 14 G   | cc-by-nc-4.0 **NC** | **downloading** — factuality/faithfulness judge (InternLM2-7B), campaign-only           |
+| ~~`PatronusAI_Llama-3-Patronus-Lynx-8B-Instruct-v1.1`~~ | PatronusAI/Llama-3-Patronus-Lynx-8B-Instruct-v1.1 | 16 G   | cc-by-nc-4.0 **NC** | **cancelled + deleted** — download stopped, dir removed from NAS                        |
+| ~~`PatronusAI_Llama-3-Patronus-Lynx-70B-Instruct`~~     | PatronusAI/Llama-3-Patronus-Lynx-70B-Instruct     | ~140 G | cc-by-nc-4.0 **NC** | **cancelled + deleted** — download stopped, dir removed from NAS                        |
 
 HHEM can run CPU-local via `sentence-transformers CrossEncoder` (now in campaign venv) or be served via Infinity as a reranker endpoint. Lynx models are available to re-download if needed for Wave-7 faithfulness validation; they require vLLM + LiteLLM proxy for GPU inference. All four stale partial-download residual dirs (`PatronusAI_Patronus-Lynx-*/` v1.0 and v1.1/70B) have been removed from NAS.
 
