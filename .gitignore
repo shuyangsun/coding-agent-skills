@@ -17,6 +17,7 @@ coding-agent-skills*/
 # Local LLM coding agent settings
 *.local.json
 *.local.md
+*.local.toml
 .claude/scheduled_tasks.lock
 
 # Node / Bun
