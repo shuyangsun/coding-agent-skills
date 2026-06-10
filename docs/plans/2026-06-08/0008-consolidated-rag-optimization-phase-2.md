@@ -139,14 +139,14 @@ _(Workstation-specific — applies only to this Ubuntu GPU box (`delos`), not th
 
 Downloaded to `/mnt/nas/home/ml/model/llm/` for Wave-4/7 faithfulness diagnostics. Note: `vectara/hhem-2.1-open` does not exist on HF; the actual HHEM-2.1 release is `vectara/hallucination_evaluation_model` (Apache-2.0, 438 MB, complete at first try). `bespoke-minicheck` is not on PyPI; weights are used directly via `transformers`. Lynx and MiniCheck are **NC** (cc-by-nc-4.0), campaign-only. HHEM is the only Apache-2.0 judge and is portable-eligible.
 
-| dir | HF repo | size | license | role |
+| dir | HF repo | size | license | status |
 | ----------------------------------------- | ----------------------------------------------------------- | ------ | ---------------------- | --------------------------------------------------------------------- |
-| `vectara_hallucination_evaluation_model`  | vectara/hallucination_evaluation_model                      | 0.4 G  | Apache-2.0             | **portable NLI judge default** (HHEMv2, Flan-T5-based, 438 MB), CPU-eligible; download complete |
-| `bespokelabs_Bespoke-MiniCheck-7B`        | bespokelabs/Bespoke-MiniCheck-7B                            | 14 G   | cc-by-nc-4.0 **NC**   | factuality/faithfulness judge (InternLM2-7B); downloading             |
-| `PatronusAI_Llama-3-Patronus-Lynx-8B-Instruct-v1.1` | PatronusAI/Llama-3-Patronus-Lynx-8B-Instruct-v1.1 | 16 G | cc-by-nc-4.0 **NC** | faithfulness judge latest v1.1 (Llama-3-8B); downloading              |
-| `PatronusAI_Llama-3-Patronus-Lynx-70B-Instruct` | PatronusAI/Llama-3-Patronus-Lynx-70B-Instruct         | ~140 G | cc-by-nc-4.0 **NC**   | faithfulness judge (Llama-3-70B); downloading                         |
+| `vectara_hallucination_evaluation_model`  | vectara/hallucination_evaluation_model                      | 0.4 G  | Apache-2.0             | **complete** — portable NLI judge default (HHEMv2, Flan-T5-based, 438 MB), CPU-eligible |
+| `bespokelabs_Bespoke-MiniCheck-7B`        | bespokelabs/Bespoke-MiniCheck-7B                            | 14 G   | cc-by-nc-4.0 **NC**   | **downloading** — factuality/faithfulness judge (InternLM2-7B), campaign-only |
+| ~~`PatronusAI_Llama-3-Patronus-Lynx-8B-Instruct-v1.1`~~ | PatronusAI/Llama-3-Patronus-Lynx-8B-Instruct-v1.1 | 16 G | cc-by-nc-4.0 **NC** | **cancelled + deleted** — download stopped, dir removed from NAS |
+| ~~`PatronusAI_Llama-3-Patronus-Lynx-70B-Instruct`~~ | PatronusAI/Llama-3-Patronus-Lynx-70B-Instruct       | ~140 G | cc-by-nc-4.0 **NC**   | **cancelled + deleted** — download stopped, dir removed from NAS |
 
-Lynx models are served via vLLM + LiteLLM proxy for GPU inference (Wave 4+). HHEM can run CPU-local via `sentence-transformers CrossEncoder` (now in campaign venv) or be served via Infinity as a reranker endpoint. Stale partial downloads (`PatronusAI_Patronus-Lynx-8B-Instruct/` and `PatronusAI_Patronus-Lynx-70B-Instruct/`) exist from killed v1.0 attempts; they hold only config/tokenizer files and the weights downloads use the correct v1.1/canonical paths above.
+HHEM can run CPU-local via `sentence-transformers CrossEncoder` (now in campaign venv) or be served via Infinity as a reranker endpoint. Lynx models are available to re-download if needed for Wave-7 faithfulness validation; they require vLLM + LiteLLM proxy for GPU inference. All four stale partial-download residual dirs (`PatronusAI_Patronus-Lynx-*/` v1.0 and v1.1/70B) have been removed from NAS.
 
 ### Local LLM and GPU Setup
 
