@@ -1,6 +1,6 @@
 # vcs guard hook refuses every read-only Bash call after Claude Code resets shell cwd to the shared workspace
 
-- **Status:** Open (observed 2026-06-09)
+- **Status:** Fixed (implemented 2026-06-11)
 - **Area:** `skills/vcs` guard hook (`.agents/skills/vcs/scripts/vcs-check.sh hook --agent claude`),
   `PreToolUse:Bash` branch — interaction with the Claude Code harness's per-call
   cwd reset.
@@ -20,6 +20,15 @@
   `docs/plans/0001-vcs-guardrails-for-jj-workspace-isolation.md` (the guard).
 
 ## Summary
+
+Fixed in `.agents/skills/vcs/scripts/vcs-check.sh` and
+`.agents/skills/vcs/scripts/vcs-state.sh`: the hook now evaluates relative actions
+from the session's single live, agent-named workspace/worktree when no tool cwd is
+provided, broadens read-only command-chain detection, and keeps explicit
+shared-default writes denied. Regression probes covered the
+`jj --version && git --version` chain, an `rg ... | head` pipeline, implicit
+no-cwd writes routed to the owned workspace, explicit default-cwd writes denied,
+and `find . -delete` denied.
 
 The hook refuses a Bash command when the shell's cwd is the shared `default`
 workspace and the session already owns an isolated workspace, with:
