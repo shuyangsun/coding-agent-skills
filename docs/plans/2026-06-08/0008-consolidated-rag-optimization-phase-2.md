@@ -223,7 +223,7 @@ Recommended before GPU and LLM-backed experiments:
 - vLLM for answer-generation and judge endpoints;
 - SGLang for prefix-heavy index-time contextualization;
 - TEI and/or Infinity for GPU embedding, reranking, and SPLADE serving;
-- model pulls — _(2026-06-09: the **embedding + reranker set is already downloaded** to `/mnt/nas/home/ml/model/{embedding,reranker}/`: Qwen3-Embedding-0.6B/4B/8B, Qwen3-Reranker-0.6B/4B, `bge-reranker-v2-m3`, mxbai-rerank-base/large-v2, `Splade_PP_en_v1`, plus bge-small/base-en-v1.5, bge-m3, mxbai-embed-large-v1, multilingual-e5-large-instruct, arctic-embed-l-v2.0, embeddinggemma-300m, code embedders bge-code-v1 / SFR-Embedding-Code-2B_R, and zerank-1-small/2; full sizes + licenses in [`0005`](../../prompts/2026-06-08/0005-optimizing-rag-setup.md) → "Models staged on the NAS". **Generative + judge LLMs still to pull:** Qwen3-32B, Llama-3.3-70B, Gemma-3-27B, Qwen3-30B-A3B or Gemma-3-12B, Lynx-8B/70B, and HHEM-2.1-Open — `gemma-4`/Gemma-4-31B-IT is already served.)_
+- model pulls — _(2026-06-09: the **embedding + reranker set is already downloaded** to `/mnt/nas/home/ml/model/{embedding,reranker}/`: Qwen3-Embedding-0.6B/4B/8B, Qwen3-Reranker-0.6B/4B, `bge-reranker-v2-m3`, mxbai-rerank-base/large-v2, `Splade_PP_en_v1`, plus bge-small/base-en-v1.5, bge-m3, mxbai-embed-large-v1, multilingual-e5-large-instruct, arctic-embed-l-v2.0, embeddinggemma-300m, code embedders bge-code-v1 / SFR-Embedding-Code-2B_R, and zerank-1-small/2; full sizes + licenses in [`0005`](../../prompts/2026-06-08/0005-optimizing-rag-setup.md) → "Models staged on the NAS". **Generative LLMs: nothing left to pull** — _(revised 2026-06-10 per owner)_ the Wave-7 generator set is pinned to the locally-downloaded models under `…/model/llm/`: `Gemma-4-31B-IT-NVFP4`, `NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4`, `Qwen3.6-27B-UD-Q8_K_XL`, `Qwen3.6-35B-A3B-FP8`, `Qwen3-Coder-Next-UD-Q8_K_XL` (see Wave 7 step 7 for serving paths). Judges on NAS: HHEM-2.1 (`vectara_hallucination_evaluation_model`, Apache, complete) and `bespokelabs_Bespoke-MiniCheck-7B` (**NC**); Lynx downloads were cancelled/deleted — re-pull only if Wave 7 needs them.)_
 - optional `pplx-embed-context-v1` for the LLM-free contextual-embedding arm;
 - `ragas`, MiniCheck/HHEM/Lynx packages, or other advisory judge packages pointed at local endpoints.
 
@@ -392,7 +392,13 @@ Goal: optimize answer quality after retrieval quality is stable.
 4. **Sentinel and nugget coverage.** Keep sentinel containment as the deterministic gate. A/B nugget scoring on a subset before committing to authoring cost.
 5. **Faithfulness diagnostics.** Use HHEM as the default-friendly deterministic NLI core, and Lynx/FaithJudge/RAGAS as advisory GPU diagnostics.
 6. **Code-cohort calibration.** All public faithfulness tools are prose-validated. Calibrate on a hand-labeled slice of C++/CUDA/TS answers before trusting code-cohort scores.
-7. **Generator choices.** Test Qwen3-32B, Llama-3.3-70B, and Gemma-3-27B or current verified successors locally. Pick on this corpus, not generic leaderboards.
+7. **Generator choices.** _(Revised 2026-06-10 per owner: test the locally-downloaded models — no new pulls.)_ The Wave-7 generator candidate set is pinned to what is staged under `/mnt/nas/home/ml/model/llm/`:
+   - **`Gemma-4-31B-IT-NVFP4`** (`gemma-4`) — the campaign default generator (vLLM NVFP4, 1 GPU, ~8 ch/s; serving cmdline saved in the serving memory / `/tmp/gemma4-vllm-cmdline.txt`);
+   - **`NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4`** — the quality ceiling (TRT-LLM Docker `nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc12`, TP=2, `kv_cache_config.mamba_ssm_cache_dtype: float16` nested + `--max_batch_size 64`, port `:8085`; `enable_thinking:false` required);
+   - **`Qwen3.6-27B-UD-Q8_K_XL`** — GGUF via llama.cpp (sm_120 build at `~/developer/third-party/llama.cpp`); fine for per-answer generation, impractical for bulk passes (~0.3–0.8 ch/s, no cross-slot prefix reuse);
+   - **`Qwen3.6-35B-A3B-FP8`** — MoE (3B active), vLLM-servable FP8 — the latency-friendly candidate;
+   - **`Qwen3-Coder-Next-UD-Q8_K_XL`** — code-specialized GGUF via llama.cpp — the code-cohort candidate.
+     Pick on this corpus, not generic leaderboards; reuse the 0015 matched-window comparison method (same prompt, same retrieval pack, per-model answer metrics).
 
 ## Repository-Specific Starting Hypotheses
 
