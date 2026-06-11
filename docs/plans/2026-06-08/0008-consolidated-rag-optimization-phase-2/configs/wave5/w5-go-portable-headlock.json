@@ -1,0 +1,41 @@
+{
+  "rag_config_id": "w5-go-portable-headlock",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60
+  },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "graph_overlay": {
+    "enabled": true,
+    "seeds": 10,
+    "lambda": 0.5,
+    "fetch": true,
+    "fetch_files": 30,
+    "rev_scale": 1.0,
+    "head_lock": 10
+  },
+  "arm": "w5-go-portable-headlock",
+  "_doc": "Damage-bounded variant: top-10 fused chunks frozen, graph re-sorts only the tail. Dev: the one genuine retrieval-shape change (R@20 +0.016, multi-primary R@20 +0.031, flat nDCG/pMRR) but sentinel coverage pays (-0.062) — the boosted files' fetched chunks displace sentinel-bearing chunks from the top-20 pack. Pinned for the held-out report of record."
+}

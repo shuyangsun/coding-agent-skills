@@ -1,0 +1,46 @@
+{
+  "rag_config_id": "w5-go-w4llm",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60
+  },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "contextual_llm": {
+    "enabled": true,
+    "model": "gemma-4",
+    "apply_to": ["md", "code"],
+    "prompt_version": "v1"
+  },
+  "graph_overlay": {
+    "enabled": true,
+    "seeds": 10,
+    "lambda": 1.0,
+    "fetch": true,
+    "fetch_files": 30,
+    "rev_scale": 1.0
+  },
+  "arm": "w5-go-w4llm",
+  "_doc": "Wave-5 graph overlay on the CAMPAIGN best (w4-ctx-llm-gemma4-all: headers + gemma-4 situating context on all chunks). Query-time only — shares w4-ctx-llm-gemma4-all's collection. Tests whether deterministic graph expansion stacks with index-time LLM context."
+}

@@ -1,0 +1,32 @@
+{
+  "rag_config_id": "w2-ctx-header-b",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60
+  },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "arm": "w2-ctx-header-b",
+  "_doc": "JITTER CONTROL: byte-identical to wave2/w2-ctx-header (same collection), run as a second arm in the same benchmark. Its delta vs w2-ctx-header is the pure query-time noise floor (Qdrant server-side RRF tie-order jitter, ~30% of positions below rank ~10 on repeat calls) — the bar any same-collection query-time technique must clear."
+}

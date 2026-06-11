@@ -1,0 +1,9 @@
+{
+  "arm": "w5p2b",
+  "base_arm": "wave5/w5-go-portable",
+  "grid": {
+    "graph_overlay.head_lock": [10],
+    "graph_overlay.lambda": [0.5, 1.0]
+  },
+  "_doc": "Wave-5 dev sweep round 2b: head-locked boost — freeze the top-10 fused chunks, let the graph re-sort only the tail (damage-bounded recall enhancer)."
+}

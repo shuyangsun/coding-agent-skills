@@ -51,6 +51,7 @@ import gold_loader as G  # noqa: E402
 import metrics as MET  # noqa: E402
 import contamination as C  # noqa: E402
 import enriched_index as E  # noqa: E402
+import wave5_graph as W5  # noqa: E402
 
 # default to the dedicated, isolated Phase-3 Qdrant (NOT the face-embed :6333)
 os.environ.setdefault("QDRANT_URL", "http://localhost:6343")
@@ -188,6 +189,69 @@ def infinity_rerank(query: str, texts: list[str], endpoint: str, model: str) -> 
     return scores
 
 
+def apply_graph_overlay(client, coll, hits, dv, sv, cfg, graph, depth: int):
+    """Wave-5 graph overlay (query-time; the index is untouched). Seeds = the top
+    files of the fused candidate list; their deterministic graph neighbors
+    (wave5_graph) get a lambda-scaled file-level boost added to every candidate
+    chunk's rank-based base score. With ``fetch`` on, strong unseen neighbors get
+    their best chunks pulled in via a doc_id-filtered hybrid query and merged
+    BEHIND the originals (base rank > depth) so they surface on graph strength
+    alone. Runs BEFORE the reranker — the plan's "expand candidates, then rerank"."""
+    from qdrant_client import models
+
+    ocfg = cfg.get("graph_overlay", {})
+    n_seeds = int(ocfg.get("seeds", 10))
+    lam = float(ocfg.get("lambda", 1.0))
+    rrf_k = 60.0
+
+    file_rank: dict[str, int] = {}
+    for h in hits:
+        did = h.payload.get("doc_id")
+        if did and did not in file_rank:
+            file_rank[did] = len(file_rank) + 1
+    seeds = {f: 1.0 / (rrf_k + r) for f, r in file_rank.items() if r <= n_seeds}
+    g = W5.expansion_scores(graph, seeds, ocfg)
+    if not g:
+        return hits
+
+    merged = list(hits)
+    if ocfg.get("fetch", True):
+        unseen = sorted((f for f in g if f not in file_rank), key=lambda f: g[f], reverse=True)
+        unseen = unseen[: int(ocfg.get("fetch_files", 30))]
+        if unseen:
+            flt = models.Filter(must=[models.FieldCondition(
+                key="doc_id", match=models.MatchAny(any=unseen))])
+            lim = min(100, 4 * len(unseen))
+            dh = client.query_points(coll, query=dv, using="dense", limit=lim,
+                                     with_payload=True, query_filter=flt).points
+            sh = client.query_points(coll, query=R.to_sparse_vector(sv), using="sparse",
+                                     limit=lim, with_payload=True, query_filter=flt).points
+            fused = weighted_rrf([("dense", dh), ("sparse", sh)], {}, 60)
+            have = {h.id for h in hits}
+            per_file: collections.Counter = collections.Counter()
+            for h in fused:
+                did = h.payload.get("doc_id")
+                if h.id in have or per_file[did] >= 2:  # at most 2 fetched chunks per file
+                    continue
+                per_file[did] += 1
+                merged.append(h)
+
+    def final_score(item: tuple[int, object]) -> float:
+        i, h = item
+        base = (1.0 / (rrf_k + i + 1) if i < len(hits)
+                else 1.0 / (rrf_k + depth + (i - len(hits)) + 1))
+        return base + lam * g.get(h.payload.get("doc_id"), 0.0)
+
+    # head_lock freezes the top-H fused chunks (the precise head RRF already got
+    # right — its rank-score curve is so flat that any useful boost otherwise
+    # leapfrogs dozens of ranks); the graph re-sorts only the tail, where base
+    # ranking is weak and the recall headroom lives.
+    head_lock = int(ocfg.get("head_lock", 0))
+    locked = merged[:head_lock]
+    rest = sorted(list(enumerate(merged))[head_lock:], key=final_score, reverse=True)
+    return locked + [h for _i, h in rest]
+
+
 def _embed_query(query: str, cfg: dict):
     """(dense, sparse) for a query. Wave-4 late-chunk arms read the dense query vector
     from the bge-m3 cache (precomputed on GPU by wave4_latechunk) so the runner needs no
@@ -202,12 +266,15 @@ def _embed_query(query: str, cfg: dict):
     return R.embed_query(query, cfg)
 
 
-def retrieve_chunks(client, coll: str, query: str, cfg: dict, mode: str, depth: int):
+def retrieve_chunks(client, coll: str, query: str, cfg: dict, mode: str, depth: int,
+                    graph=None):
     """Return a ranked list of Qdrant points (chunks) for the arm's mode.
 
     Hybrid fusion has two paths: Qdrant server-side RRF/DBSF (the Wave-0 default), or
     in-process weighted RRF (Wave 1) when `hybrid.weights` or `hybrid.rrf_k` is set —
     that path issues the two arms as separate searches and fuses with tunable k/weights.
+    `graph` (a wave5_graph.RepoGraph, passed when the arm enables `graph_overlay`)
+    expands/rescores the fused list before the reranker sees it.
     """
     from qdrant_client import models
 
@@ -241,6 +308,9 @@ def retrieve_chunks(client, coll: str, query: str, cfg: dict, mode: str, depth: 
             query=models.FusionQuery(fusion=fusion),
             limit=depth, with_payload=True,
         ).points
+
+    if graph is not None and cfg.get("graph_overlay", {}).get("enabled"):
+        hits = apply_graph_overlay(client, coll, hits, dv, sv, cfg, graph, depth)
 
     rr = cfg.get("rerank", {})
     if rr.get("enabled") and hits:
@@ -384,6 +454,9 @@ def run_arm(cfg: dict, questions: list[G.Question], repos: list[str], run_id: st
         coll = None
         if needs_index:
             coll, index_ms = ensure_index(repo, cfg, key, reindex)
+        # Wave-5 graph overlay: build (cached) the repo's deterministic file graph.
+        graph = (W5.build_graph(repo) if cfg.get("graph_overlay", {}).get("enabled")
+                 else None)
 
         if mode == "wrong-context":
             # real hybrid run for this repo, then donor rotation (within-repo,
@@ -391,7 +464,7 @@ def run_arm(cfg: dict, questions: list[G.Question], repos: list[str], run_id: st
             real = {}
             for q in qs:
                 t0 = time.time()
-                hits = retrieve_chunks(client, coll, q.question, cfg, "hybrid", depth)
+                hits = retrieve_chunks(client, coll, q.question, cfg, "hybrid", depth, graph)
                 dt = (time.time() - t0) * 1000.0
                 rf, fk, ct, ck = derive_ranking(hits, top_k)
                 real[q.id] = (rf, fk, ct, ck, dt)
@@ -414,7 +487,7 @@ def run_arm(cfg: dict, questions: list[G.Question], repos: list[str], run_id: st
                 ck = [corpus[p]["kind"] for p in rf[:top_k]]
             else:  # hybrid | dense-only | bm25-only
                 t0 = time.time()
-                hits = retrieve_chunks(client, coll, q.question, cfg, mode, depth)
+                hits = retrieve_chunks(client, coll, q.question, cfg, mode, depth, graph)
                 dt = (time.time() - t0) * 1000.0
                 rf, fk, ct, ck = derive_ranking(hits, top_k)
             rows.append(score_query_row(q, rf, fk, ct, ck, qrels[q.id], arm_cols, dt, index_ms))

@@ -1,0 +1,8 @@
+{
+  "arm": "w5p2",
+  "base_arm": "wave5/w5-go-portable",
+  "grid": {
+    "graph_overlay.lambda": [0.05, 0.1, 0.2]
+  },
+  "_doc": "Wave-5 dev sweep round 2a: tie-break-scale lambda (sweep 1 showed the RRF rank-score curve is so flat that lambda >= 0.5 scrambles the head; ~0.05-0.2 should act as a gentle nudge). fetch stays on (the recall mechanism)."
+}

@@ -1,0 +1,8 @@
+{
+  "arm": "w5p3",
+  "base_arm": "wave5/w5-go-portable-code",
+  "grid": {
+    "graph_overlay.lambda": [0.05, 0.1, 0.2]
+  },
+  "_doc": "Wave-5 dev sweep round 3: tie-break-scale lambda x CODE-DEPENDENCY EDGES ONLY (import/pair/test). Round 2 showed code gains (+0.02 nDCG/pMRR at lambda=0.05) while nl regresses via doc mention edges; code-only edges leave doc-seeded nl rankings nearly untouched, so this is the candidate Pareto point for the no-rerank portable config."
+}

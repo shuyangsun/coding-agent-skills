@@ -1,0 +1,9 @@
+{
+  "arm": "w5p",
+  "base_arm": "wave5/w5-go-portable",
+  "grid": {
+    "graph_overlay.lambda": [0.5, 1.0, 2.0, 4.0],
+    "graph_overlay.fetch": [true, false]
+  },
+  "_doc": "Wave-5 dev sweep: overlay strength x expand-and-fetch over the portable base. All 8 arms share the w2-ctx-header collection (query-time knobs only). Tune on dev, report held-out for the picked point only (Wave-1 overfit lesson: few knobs, coarse grid)."
+}
