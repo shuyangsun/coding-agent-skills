@@ -1,0 +1,48 @@
+{
+  "rag_config_id": "w6-mq-nemotron-all",
+  "embedding": {
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "dense_dim": 384,
+    "distance": "cosine",
+    "sparse_model": "Qdrant/bm25"
+  },
+  "chunker": {
+    "strategy": "heading",
+    "size": 350,
+    "overlap": 40,
+    "min_words": 80,
+    "code_size": 120,
+    "code_overlap": 20
+  },
+  "hybrid": {
+    "fusion": "rrf",
+    "prefetch": 60
+  },
+  "rerank": {
+    "enabled": false,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "top_n": 50
+  },
+  "top_k": 20,
+  "retrieval_mode": "hybrid",
+  "index_mode": "combined",
+  "contextual_header": true,
+  "contextual_llm": {
+    "enabled": true,
+    "model": "gemma-4",
+    "apply_to": ["md", "code"],
+    "prompt_version": "v1"
+  },
+  "arm": "w6-mq-nemotron-all",
+  "_doc": "Wave-6 step 4: multiquery via Nemotron-120B (offline cache 'nemotron'), gate=all. Subquery candidate lists rank-fused (weighted RRF orig 1.0 / sub 0.5); HyDE swaps only the dense vector (sparse keeps the original query).",
+  "query_transform": {
+    "enabled": true,
+    "kind": "multiquery",
+    "cache_model": "nemotron",
+    "gate": "all",
+    "w_orig": 1.0,
+    "w_sub": 0.5,
+    "rrf_k": 60,
+    "max_sub": 3
+  }
+}

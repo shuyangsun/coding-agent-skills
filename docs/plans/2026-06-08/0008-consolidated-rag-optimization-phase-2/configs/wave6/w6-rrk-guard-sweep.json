@@ -1,0 +1,24 @@
+{
+  "arm": "w6-rrk-guard",
+  "base_arm": "wave5/w4llm-rrk",
+  "grid": {
+    "rerank.guard": [
+      {
+        "protect_top1": true,
+        "margin": 0.05
+      },
+      {
+        "protect_top1": true,
+        "margin": 0.1
+      },
+      {
+        "protect_top1": true,
+        "margin": 0.2
+      },
+      {
+        "min_top_score": 0.4
+      }
+    ]
+  },
+  "_doc": "Wave-6 step 5 guard sweep: 0020 mining shows rerank damage is mostly demoting an already-correct fused top-1 (37/70 hurt queries had base pMRR==1). protect_top1 keeps the fused head unless the reranker overrules by `margin`; min_top_score keeps the fused order when the reranker is unsure about every candidate."
+}

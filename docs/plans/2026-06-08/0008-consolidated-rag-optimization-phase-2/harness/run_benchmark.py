@@ -52,6 +52,7 @@ import metrics as MET  # noqa: E402
 import contamination as C  # noqa: E402
 import enriched_index as E  # noqa: E402
 import wave5_graph as W5  # noqa: E402
+import wave6_query as W6  # noqa: E402
 
 # default to the dedicated, isolated Phase-3 Qdrant (NOT the face-embed :6333)
 os.environ.setdefault("QDRANT_URL", "http://localhost:6343")
@@ -170,13 +171,28 @@ def weighted_rrf(arm_hits: list[tuple[str, list]], weights: dict, k: int) -> lis
     return [point[i] for i in order]
 
 
-def infinity_rerank(query: str, texts: list[str], endpoint: str, model: str) -> list[float]:
-    """Rerank via an Infinity server's /rerank (Wave 3 GPU rerankers served from the
-    NAS, e.g. bge-reranker-v2-m3 / qwen3-reranker). Returns scores aligned to `texts`.
-    Campaign-only (network LLM); the portable default uses the in-process FastEmbed path."""
+_QWEN3_RR_PREFIX = ('<|im_start|>system\nJudge whether the Document meets the requirements '
+                    'based on the Query and the Instruct provided. Note that the answer can '
+                    'only be "yes" or "no".<|im_end|>\n<|im_start|>user\n')
+_QWEN3_RR_SUFFIX = '<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+_QWEN3_RR_TASK = ('Given a search query over a software repository, retrieve code and '
+                  'documentation passages that answer the query')
+
+
+def infinity_rerank(query: str, texts: list[str], endpoint: str, model: str,
+                    template: str | None = None) -> list[float]:
+    """Rerank via a /rerank endpoint (Infinity, or vLLM's Jina-compatible route).
+    Returns scores aligned to `texts`. Campaign-only (network LLM); the portable
+    default uses the in-process FastEmbed path. `template="qwen3"` wraps query and
+    documents in the official Qwen3-Reranker instruction template (decoder-based
+    reranker scored on the yes-token — without this plumbing its scores are
+    meaningless; plan Wave 3 step 5 / Wave 6 reranker A/B)."""
     import json as _json
     import urllib.request
 
+    if template == "qwen3":
+        query = f"{_QWEN3_RR_PREFIX}<Instruct>: {_QWEN3_RR_TASK}\n<Query>: {query}\n"
+        texts = [f"<Document>: {t}{_QWEN3_RR_SUFFIX}" for t in texts]
     body = _json.dumps({"model": model, "query": query, "documents": texts,
                         "return_documents": False}).encode()
     req = urllib.request.Request(endpoint.rstrip("/") + "/rerank", data=body,
@@ -266,63 +282,204 @@ def _embed_query(query: str, cfg: dict):
     return R.embed_query(query, cfg)
 
 
+def _server_fused(client, coll: str, dv, sv, cfg, limit: int, sp, flt=None):
+    """One server-side RRF/DBSF hybrid call (the Wave-0 default path), optionally
+    with a per-prefetch payload filter (Wave-6 self-query soft-filter arm)."""
+    from qdrant_client import models
+
+    hyb = cfg.get("hybrid", {})
+    prefetch = int(hyb.get("prefetch", 60))
+    fusion = models.Fusion.DBSF if hyb.get("fusion") == "dbsf" else models.Fusion.RRF
+    return client.query_points(
+        coll,
+        prefetch=[
+            models.Prefetch(query=dv, using="dense", limit=prefetch, params=sp, filter=flt),
+            models.Prefetch(query=R.to_sparse_vector(sv), using="sparse", limit=prefetch,
+                            params=sp, filter=flt),
+        ],
+        query=models.FusionQuery(fusion=fusion),
+        limit=limit, with_payload=True,
+    ).points
+
+
+def _wave6_transform_hits(client, coll, query, cfg, depth, sp, qid, route):
+    """Wave-6 query transforms (steps 3-4): decomposition / multi-query fuse the
+    per-subquery server-fused candidate LISTS with weighted RRF (rank-based — never
+    an additive score boost, the Wave-5 lesson); HyDE swaps only the DENSE query
+    vector (sparse keeps the original query so exact identifiers stay protected).
+    Returns None when the arm's gate doesn't trigger (caller falls back to plain)."""
+    tcfg = cfg["query_transform"]
+    kind = tcfg["kind"]
+    feats = W6.query_features(query)
+    if not W6.gate_triggers(tcfg.get("gate", "all"), feats):
+        route.update(action=kind, triggered=0, n_sub=0)
+        return None
+
+    if kind == "hyde":
+        passages = W6.lookup(tcfg["cache_model"], "hyde", qid)
+        if not passages:
+            route.update(action=kind, triggered=0, n_sub=0)
+            return None
+        hv, _ = R.embed_query(passages[0], cfg)   # dense from the hypothetical passage
+        _, sv = _embed_query(query, cfg)          # sparse from the original query
+        route.update(action=kind, triggered=1, n_sub=1)
+        return _server_fused(client, coll, hv, sv, cfg, depth, sp)
+
+    if kind == "decomp-det":
+        subs = W6.decompose_det(query, int(tcfg.get("max_sub", 3)))
+    else:  # decomp | multiquery via the LLM cache (generated offline, never live)
+        cache_kind = "decomp" if kind == "decomp" else "multiquery"
+        subs = W6.lookup(tcfg["cache_model"], cache_kind, qid)[: int(tcfg.get("max_sub", 4))]
+    if not subs:
+        route.update(action=kind, triggered=0, n_sub=0)
+        return None
+
+    dv, sv = _embed_query(query, cfg)
+    lists = [("orig", _server_fused(client, coll, dv, sv, cfg, depth, sp))]
+    for i, s in enumerate(subs):
+        sdv, ssv = R.embed_query(s, cfg)
+        lists.append((f"sub{i}", _server_fused(client, coll, sdv, ssv, cfg, depth, sp)))
+    weights = {"orig": float(tcfg.get("w_orig", 1.0))}
+    weights.update({f"sub{i}": float(tcfg.get("w_sub", 0.5)) for i in range(len(subs))})
+    route.update(action=kind, triggered=1, n_sub=len(subs))
+    return weighted_rrf(lists, weights, int(tcfg.get("rrf_k", 60)))[:depth]
+
+
+def _wave6_selfquery_hits(client, coll, query, cfg, depth, sp, route):
+    """Wave-6 self-query soft filters (step 2): when the query names a language /
+    doc kind / path token, fuse the plain candidate list with (a) a payload-filtered
+    hybrid arm (lang/kind) and/or (b) the path-matching SUBSEQUENCE of the plain
+    list — both rank-fused at a sub-1.0 weight so a filter misfire can only nudge,
+    never veto (filters stay soft per the plan)."""
+    from qdrant_client import models
+
+    dv, sv = _embed_query(query, cfg)
+    base_hits = _server_fused(client, coll, dv, sv, cfg, depth, sp)
+    filt = W6.selfquery_filter(query)
+    if not filt:
+        route.update(action="selfquery", triggered=0, n_sub=0)
+        return base_hits
+
+    lists = [("base", base_hits)]
+    must = []
+    if "lang" in filt:
+        must.append(models.FieldCondition(key="lang",
+                                          match=models.MatchAny(any=list(filt["lang"]))))
+    if "kind" in filt:
+        must.append(models.FieldCondition(key="kind",
+                                          match=models.MatchValue(value=filt["kind"])))
+    if must:
+        lists.append(("filtered", _server_fused(client, coll, dv, sv, cfg,
+                                                min(60, depth), sp,
+                                                flt=models.Filter(must=must))))
+    if "path_tokens" in filt:
+        toks = filt["path_tokens"]
+        sub = [h for h in base_hits
+               if any(t in (h.payload.get("path") or "").lower() for t in toks)][:60]
+        if sub:
+            lists.append(("pathsub", sub))
+    if len(lists) == 1:
+        route.update(action="selfquery", triggered=0, n_sub=0)
+        return base_hits
+    w = float(cfg["selfquery"].get("weight", 0.5))
+    weights = {"base": 1.0, "filtered": w, "pathsub": w}
+    route.update(action="selfquery", triggered=1, n_sub=len(lists) - 1)
+    return weighted_rrf(lists, weights, 60)[:depth]
+
+
 def retrieve_chunks(client, coll: str, query: str, cfg: dict, mode: str, depth: int,
-                    graph=None):
+                    graph=None, qid: str | None = None, route: dict | None = None):
     """Return a ranked list of Qdrant points (chunks) for the arm's mode.
 
     Hybrid fusion has two paths: Qdrant server-side RRF/DBSF (the Wave-0 default), or
     in-process weighted RRF (Wave 1) when `hybrid.weights` or `hybrid.rrf_k` is set —
     that path issues the two arms as separate searches and fuses with tunable k/weights.
     `graph` (a wave5_graph.RepoGraph, passed when the arm enables `graph_overlay`)
-    expands/rescores the fused list before the reranker sees it.
+    expands/rescores the fused list before the reranker sees it. Wave-6 blocks
+    (`query_transform`, `selfquery`, `rerank.gate`/`rerank.guard`) are query-time-only
+    and share the base collection; `qid` keys the offline transform cache and `route`
+    is an out-param dict logged to the route.* TSV columns.
     """
-    from qdrant_client import models
-
-    dv, sv = _embed_query(query, cfg)
+    route = route if route is not None else {}
     hyb = cfg.get("hybrid", {})
     prefetch = int(hyb.get("prefetch", 60))
     sp = _search_params(cfg)
 
-    if mode == "dense-only":
-        hits = client.query_points(coll, query=dv, using="dense", limit=depth,
-                                   with_payload=True, search_params=sp).points
-    elif mode == "bm25-only":
-        hits = client.query_points(coll, query=R.to_sparse_vector(sv), using="sparse",
-                                   limit=depth, with_payload=True, search_params=sp).points
-    elif hyb.get("weights") is not None or hyb.get("rrf_k") is not None:  # in-process weighted RRF
-        dense_hits = client.query_points(coll, query=dv, using="dense", limit=prefetch,
-                                         with_payload=True, search_params=sp).points
-        sparse_hits = client.query_points(coll, query=R.to_sparse_vector(sv), using="sparse",
-                                          limit=prefetch, with_payload=True, search_params=sp).points
-        hits = weighted_rrf([("dense", dense_hits), ("sparse", sparse_hits)],
-                            hyb.get("weights", {"dense": 1.0, "sparse": 1.0}),
-                            int(hyb.get("rrf_k", 60)))[:depth]
-    else:  # server-side RRF/DBSF (Wave-0 default)
-        fusion = models.Fusion.DBSF if hyb.get("fusion") == "dbsf" else models.Fusion.RRF
-        hits = client.query_points(
-            coll,
-            prefetch=[
-                models.Prefetch(query=dv, using="dense", limit=prefetch, params=sp),
-                models.Prefetch(query=R.to_sparse_vector(sv), using="sparse", limit=prefetch, params=sp),
-            ],
-            query=models.FusionQuery(fusion=fusion),
-            limit=depth, with_payload=True,
-        ).points
+    hits = None
+    if mode == "hybrid" and cfg.get("query_transform", {}).get("enabled"):
+        hits = _wave6_transform_hits(client, coll, query, cfg, depth, sp, qid, route)
+    elif mode == "hybrid" and cfg.get("selfquery", {}).get("enabled"):
+        hits = _wave6_selfquery_hits(client, coll, query, cfg, depth, sp, route)
+
+    if hits is None:
+        dv, sv = _embed_query(query, cfg)
+        if mode == "dense-only":
+            hits = client.query_points(coll, query=dv, using="dense", limit=depth,
+                                       with_payload=True, search_params=sp).points
+        elif mode == "bm25-only":
+            hits = client.query_points(coll, query=R.to_sparse_vector(sv), using="sparse",
+                                       limit=depth, with_payload=True, search_params=sp).points
+        elif hyb.get("weights") is not None or hyb.get("rrf_k") is not None:  # in-process weighted RRF
+            dense_hits = client.query_points(coll, query=dv, using="dense", limit=prefetch,
+                                             with_payload=True, search_params=sp).points
+            sparse_hits = client.query_points(coll, query=R.to_sparse_vector(sv), using="sparse",
+                                              limit=prefetch, with_payload=True, search_params=sp).points
+            hits = weighted_rrf([("dense", dense_hits), ("sparse", sparse_hits)],
+                                hyb.get("weights", {"dense": 1.0, "sparse": 1.0}),
+                                int(hyb.get("rrf_k", 60)))[:depth]
+        else:  # server-side RRF/DBSF (Wave-0 default)
+            hits = _server_fused(client, coll, dv, sv, cfg, depth, sp)
 
     if graph is not None and cfg.get("graph_overlay", {}).get("enabled"):
+        dv, sv = _embed_query(query, cfg)
         hits = apply_graph_overlay(client, coll, hits, dv, sv, cfg, graph, depth)
 
     rr = cfg.get("rerank", {})
     if rr.get("enabled") and hits:
-        top_n = int(rr.get("top_n", 50))
-        head = hits[:top_n]
-        texts = [h.payload.get("text", "") for h in head]
-        if rr.get("backend") == "infinity":
-            scores = infinity_rerank(query, texts, rr["endpoint"], rr["model"])
-        else:
-            scores = R.rerank(query, texts, cfg)
-        order = sorted(range(len(head)), key=lambda i: scores[i], reverse=True)
-        hits = [head[i] for i in order] + hits[top_n:]
+        do_rerank = True
+        gate_cfg = rr.get("gate")
+        if gate_cfg:
+            # CRAG-style confidence gate (Wave-6 step 5): two cheap single-arm calls
+            # expose per-arm scores + top-file agreement that server-side fusion hides.
+            dvg, svg = _embed_query(query, cfg)
+            dh = client.query_points(coll, query=dvg, using="dense", limit=60,
+                                     with_payload=True, search_params=sp).points
+            sh = client.query_points(coll, query=R.to_sparse_vector(svg), using="sparse",
+                                     limit=60, with_payload=True, search_params=sp).points
+            conf = W6.confidence_features(dh, sh, hits)
+            route["feat"] = ";".join(f"{k}={v}" for k, v in conf.items())
+            if not gate_cfg.get("log_only"):
+                do_rerank = W6.gate_decision(gate_cfg, conf)
+            route.update(action="rerank-gate", triggered=int(do_rerank))
+        if do_rerank:
+            top_n = int(rr.get("top_n", 50))
+            head = hits[:top_n]
+            texts = [h.payload.get("text", "") for h in head]
+            if rr.get("backend") == "infinity":
+                scores = infinity_rerank(query, texts, rr["endpoint"], rr["model"],
+                                         rr.get("template"))
+            else:
+                scores = R.rerank(query, texts, cfg)
+            order = sorted(range(len(head)), key=lambda i: scores[i], reverse=True)
+            guard = rr.get("guard")
+            if guard and order:
+                # Wave-6 rerank guard: 0020 mining shows the reranker's damage is
+                # mostly demoting an already-correct fused top-1 (37/70 hurt queries
+                # had pMRR==1 at base). Keep the fused head unless the reranker
+                # overrules it by a confident margin / clears a floor.
+                if guard.get("min_top_score") is not None and \
+                        max(scores) < float(guard["min_top_score"]):
+                    order = list(range(len(head)))  # reranker unsure about everything
+                    route.update(action="rerank-guard", triggered=1)
+                elif guard.get("protect_top1") and order[0] != 0 and \
+                        scores[order[0]] < scores[0] + float(guard.get("margin", 0.0)):
+                    order.remove(0)
+                    order.insert(0, 0)
+                    route.update(action="rerank-guard", triggered=1)
+                else:
+                    route.setdefault("action", "rerank-guard")
+                    route.setdefault("triggered", 0)
+            hits = [head[i] for i in order] + hits[top_n:]
     return hits
 
 
@@ -403,7 +560,7 @@ def est_tokens(texts: list[str]) -> int:
 
 # --- one query's metric row ---------------------------------------------------
 def score_query_row(q: G.Question, ranked_files, file_kind, ctx_texts, ctx_kinds,
-                    qrels_q, arm_cols, retrieval_ms, index_ms):
+                    qrels_q, arm_cols, retrieval_ms, index_ms, route: dict | None = None):
     m = MET.retrieval_metrics(
         ranked_files, qrels_q, ks=KS,
         retrieved_texts=ctx_texts, sentinels=q.sentinels, retrieved_kinds=ctx_kinds,
@@ -418,6 +575,11 @@ def score_query_row(q: G.Question, ranked_files, file_kind, ctx_texts, ctx_kinds
     row["ver.contamination_hits"] = len(contam)
     row["eff.retrieval_ms"] = round(retrieval_ms, 2)
     row["eff.index_ms"] = round(index_ms, 1)
+    route = route or {}
+    row["route.action"] = route.get("action", "")
+    row["route.triggered"] = route.get("triggered", "")
+    row["route.n_sub"] = route.get("n_sub", "")
+    row["route.feat"] = route.get("feat", "")
     return row
 
 
@@ -464,7 +626,8 @@ def run_arm(cfg: dict, questions: list[G.Question], repos: list[str], run_id: st
             real = {}
             for q in qs:
                 t0 = time.time()
-                hits = retrieve_chunks(client, coll, q.question, cfg, "hybrid", depth, graph)
+                hits = retrieve_chunks(client, coll, q.question, cfg, "hybrid", depth, graph,
+                                       qid=q.id)
                 dt = (time.time() - t0) * 1000.0
                 rf, fk, ct, ck = derive_ranking(hits, top_k)
                 real[q.id] = (rf, fk, ct, ck, dt)
@@ -476,6 +639,7 @@ def run_arm(cfg: dict, questions: list[G.Question], repos: list[str], run_id: st
             continue
 
         for q in qs:
+            route: dict = {}
             if mode == "closed-book":
                 rf, fk, ct, ck, dt = [], {}, [], [], 0.0
             elif mode == "manual-rg":
@@ -487,10 +651,12 @@ def run_arm(cfg: dict, questions: list[G.Question], repos: list[str], run_id: st
                 ck = [corpus[p]["kind"] for p in rf[:top_k]]
             else:  # hybrid | dense-only | bm25-only
                 t0 = time.time()
-                hits = retrieve_chunks(client, coll, q.question, cfg, mode, depth, graph)
+                hits = retrieve_chunks(client, coll, q.question, cfg, mode, depth, graph,
+                                       qid=q.id, route=route)
                 dt = (time.time() - t0) * 1000.0
                 rf, fk, ct, ck = derive_ranking(hits, top_k)
-            rows.append(score_query_row(q, rf, fk, ct, ck, qrels[q.id], arm_cols, dt, index_ms))
+            rows.append(score_query_row(q, rf, fk, ct, ck, qrels[q.id], arm_cols, dt,
+                                        index_ms, route))
 
     for r in rows:
         writer.row(**r)
@@ -502,7 +668,7 @@ AGG_METRICS = ["ret.recall@5", "ret.recall@20", "ret.recall@100", "ret.ndcg@10",
                "ret.mrr", "ret.primary_mrr", "ret.primary_recall@20",
                "ret.sentinel_cov", "ret.answer_hit@5", "ret.frac_code_retrieved",
                "ret.frac_md_retrieved", "ver.contamination_hits",
-               "pack.context_tokens", "eff.retrieval_ms"]
+               "pack.context_tokens", "eff.retrieval_ms", "route.triggered"]
 SLICE_AXES = [("overall", lambda r: "all"), ("domain", lambda r: r["slice.domain"]),
               ("repo", lambda r: r["slice.repo"]), ("category", lambda r: r["slice.category"]),
               ("difficulty", lambda r: r["slice.difficulty"]), ("split", lambda r: r["slice.split"]),

@@ -64,8 +64,13 @@ GEN_FIELDS = ["gen.abstained", "gen.answer_len"]
 VER_FIELDS = ["ver.sentinel_contained", "ver.citation_support", "ver.unsupported_rate",
               "ver.contamination_hits"]
 EFF_FIELDS = ["eff.retrieval_ms", "eff.index_ms"]
+# route.* — Wave-6 query routing diagnostics: which adaptive action ran for this query
+# (action), whether its gate fired (triggered), subquery count, and the compact
+# first-pass confidence feature string (feat: k=v;k=v) used to fit gates on dev.
+ROUTE_FIELDS = ["route.action", "route.triggered", "route.n_sub", "route.feat"]
 
-ROW_FIELDS = SLICE_FIELDS + ARM_FIELDS + RET_FIELDS + PACK_FIELDS + GEN_FIELDS + VER_FIELDS + EFF_FIELDS
+ROW_FIELDS = (SLICE_FIELDS + ARM_FIELDS + RET_FIELDS + PACK_FIELDS + GEN_FIELDS
+              + VER_FIELDS + EFF_FIELDS + ROUTE_FIELDS)
 
 
 def slice_columns(q: G.Question) -> dict:
@@ -145,7 +150,7 @@ def cmd_schema(args) -> int:
     print(f"{len(ROW_FIELDS)} columns across channels (one row per query × arm):\n")
     for name, fields in [("slice", SLICE_FIELDS), ("arm", ARM_FIELDS), ("ret", RET_FIELDS),
                          ("pack", PACK_FIELDS), ("gen", GEN_FIELDS), ("ver", VER_FIELDS),
-                         ("eff", EFF_FIELDS)]:
+                         ("eff", EFF_FIELDS), ("route", ROUTE_FIELDS)]:
         print(f"  {name:6s} ({len(fields)}): {', '.join(f.split('.', 1)[1] for f in fields)}")
     print("\npack./gen./ver.citation_support are filled by Wave 7 (answer generation); "
           "retrieval-only baselines leave them blank.")
