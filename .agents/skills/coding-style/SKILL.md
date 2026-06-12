@@ -33,11 +33,12 @@ why.
 
 | Technology                  | Rules file                                   | Applies to                           |
 | --------------------------- | -------------------------------------------- | ------------------------------------ |
+| Python                      | [styles/python.md](styles/python.md)         | `.py`, `pyproject.toml`, notebooks   |
 | React (19 + React Compiler) | [styles/react.md](styles/react.md)           | `.jsx`, `.tsx`; components and hooks |
 | TypeScript                  | [styles/typescript.md](styles/typescript.md) | `.ts`, `.tsx`                        |
 
-Only the technologies listed above are covered today. To cover another (e.g. C++, Python,
-CSS), see below.
+Only the technologies listed above are covered today. To cover another (e.g. C++, CSS),
+see below.
 
 ## Adding a technology
 

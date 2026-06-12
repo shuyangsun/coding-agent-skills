@@ -1,0 +1,23 @@
+line-length = 100
+
+[format]
+docstring-code-format = true
+
+[lint]
+select = [
+  "ASYNC",
+  "B",
+  "C4",
+  "E",
+  "F",
+  "I",
+  "PIE",
+  "PTH",
+  "RET",
+  "RUF",
+  "SIM",
+  "UP",
+]
+ignore = [
+  "E501", # Let the formatter handle wrapping; long URLs and literals are often intentional.
+]
