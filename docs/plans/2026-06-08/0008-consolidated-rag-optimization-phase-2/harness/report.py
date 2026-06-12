@@ -26,9 +26,13 @@ COLS = [
     ("pR@20", "ret.primary_recall@20", "{:.3f}"),
     ("sentCov", "ret.sentinel_cov", "{:.3f}"),
     ("hit@5", "ret.answer_hit@5", "{:.3f}"),
+    ("ansSent", "ver.sentinel_contained", "{:.3f}"),
+    ("cite", "ver.citation_support", "{:.3f}"),
+    ("unsup", "ver.unsupported_rate", "{:.3f}"),
     ("contam", "ver.contamination_hits", "{:.2f}"),
     ("ctxTok", "pack.context_tokens", "{:.0f}"),
     ("ms", "eff.retrieval_ms", "{:.0f}"),
+    ("genMs", "eff.generation_ms", "{:.0f}"),
 ]
 
 

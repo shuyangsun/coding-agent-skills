@@ -19,7 +19,7 @@ stronger answer prompt can never hide a weaker retriever:
   pack.*   — context packing (context_tokens, n_packed)        [filled by Wave 7]
   gen.*    — answer generation (abstained, answer_len)          [filled by Wave 7]
   ver.*    — verification (sentinel_contained, citation_support, unsupported_rate, contamination_hits)
-  eff.*    — efficiency (retrieval_ms, index_ms)
+  eff.*    — efficiency (retrieval_ms, index_ms, generation_ms)
 
 Retrieval scoring REUSES the harness's existing scorer
 (improving-context-retrieval-skills/scripts/gold.py: score_query) so there is one
@@ -63,7 +63,7 @@ PACK_FIELDS = ["pack.context_tokens", "pack.n_packed"]
 GEN_FIELDS = ["gen.abstained", "gen.answer_len"]
 VER_FIELDS = ["ver.sentinel_contained", "ver.citation_support", "ver.unsupported_rate",
               "ver.contamination_hits"]
-EFF_FIELDS = ["eff.retrieval_ms", "eff.index_ms"]
+EFF_FIELDS = ["eff.retrieval_ms", "eff.index_ms", "eff.generation_ms"]
 # route.* — Wave-6 query routing diagnostics: which adaptive action ran for this query
 # (action), whether its gate fired (triggered), subquery count, and the compact
 # first-pass confidence feature string (feat: k=v;k=v) used to fit gates on dev.

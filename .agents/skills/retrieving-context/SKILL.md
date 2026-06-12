@@ -106,6 +106,16 @@ for a three-file repo — the floor is the right tool there.
   answer beats an index or a summary that merely _cites_ it.
 - **Verify before you rely.** Retrieval surfaces candidates, not ground truth — open
   the source and confirm the fact is actually there, phrased as you'll use it.
+- **Preserve provenance when retrieved context feeds an answer.** Keep source IDs,
+  paths, headings, and line ranges attached to each chunk; don't paste anonymous
+  excerpts into the prompt. Require citations on factual answer sentences and
+  mechanically check that the cited chunk exists and contains the claimed support.
+- **Pack for the reader, not just the retriever.** For larger answer contexts, start
+  with score order or parent/section grouped packs that preserve source IDs. Use
+  source-path order only when you have measured it on that corpus; on this repo's
+  mixed code/docs benchmark it was worse for both answer sentinel containment and
+  citation support. Escalate to raw top-k only when exact literal extraction matters
+  more than token budget.
 
 ## When retrieval comes up empty — write it down
 

@@ -32,3 +32,25 @@ tree (does not restart per day).
 - [`0007` — `updating-docs` skill: contextual retrieval source maps on inception and alpha-zero](2026-06-08/0007-updating-docs-contextual-retrieval.md) · [data](2026-06-08/0007-updating-docs-contextual-retrieval-metrics.tsv)
 - [`0008` — Qdrant/FastEmbed RAG vs local GraphRAG on inception and alpha-zero](2026-06-08/0008-qdrant-vs-local-graphrag.md) · [data](2026-06-08/0008-qdrant-vs-local-graphrag-metrics.tsv)
 - [`0009` — graphify vs Qdrant RAG vs local GraphRAG on inception and alpha-zero](2026-06-08/0009-graphify-graphrag-rag.md) · [data](2026-06-08/0009-graphify-graphrag-rag-metrics.tsv) · [script](2026-06-08/0009-graphify-graphrag-rag-benchmark.py)
+
+### 2026-06-09
+
+- [`0010` — Wave 0: RAG baseline + controls, 207-query 6-repo gold set](2026-06-09/0010-wave0-baseline-rag.md) · [data](2026-06-09/0010-wave0-baseline-metrics.tsv) · [summary](2026-06-09/0010-wave0-baseline-summary.json)
+- [`0011` — Wave 1: re-index-free retrieval knobs](2026-06-09/0011-wave1-reindex-free-rag.md)
+- [`0012` — Wave 2: deterministic contextual headers](2026-06-09/0012-wave2-contextual-headers-rag.md) · [data](2026-06-09/0012-wave2-ctx-header-metrics.tsv) · [summary](2026-06-09/0012-wave2-ctx-header-summary.json)
+- [`0013` — Wave 3: GPU retrieval substrate, reranker + embedder](2026-06-09/0013-wave3-gpu-substrate-rag.md)
+
+### 2026-06-10
+
+- [`0014` — Wave 4: contextual retrieval with `gemma-4`](2026-06-10/0014-wave4-contextual-gemma4-rag.md) · [data](2026-06-10/0014-wave4-contextual-gemma4-metrics.tsv) · [summary](2026-06-10/0014-wave4-contextual-gemma4-summary.json)
+- [`0015` — Wave 4: contextual-retrieval generator-model comparison](2026-06-10/0015-wave4-generator-model-comparison-rag.md) · [data](2026-06-10/0015-wave4-model-comparison-metrics.tsv) · [summary](2026-06-10/0015-wave4-model-comparison-summary.json)
+- [`0016` — Wave 4: late chunking / LLM-free contextual embedding](2026-06-10/0016-wave4-latechunk-rag.md) · [data](2026-06-10/0016-wave4-latechunk-metrics.tsv) · [summary](2026-06-10/0016-wave4-latechunk-summary.json)
+- [`0017` — Wave 4: deterministic session metadata capsule](2026-06-10/0017-wave4-session-meta-rag.md) · [data](2026-06-10/0017-wave4-session-meta-metrics.tsv) · [summary](2026-06-10/0017-wave4-session-meta-summary.json)
+- [`0018` — Wave 4: Doc2Query / document expansion](2026-06-10/0018-wave4-doc2query-rag.md) · [data](2026-06-10/0018-wave4-doc2query-metrics.tsv) · [summary](2026-06-10/0018-wave4-doc2query-summary.json)
+- [`0019` — Wave 4: long-context reader / packing arms scoping record](2026-06-10/0019-wave4-reader-packing-rag.md)
+- [`0020` — Wave 5: deterministic graph / source-map overlay](2026-06-10/0020-wave5-graph-overlay-rag.md) · [data](2026-06-10/0020-wave5-graph-overlay-metrics.tsv) · [replicate](2026-06-10/0020-wave5-graph-overlay-replicate-metrics.tsv)
+- [`0021` — Wave 6: query routing and adaptive retrieval, plus Qwen reranker A/B](2026-06-10/0021-wave6-query-routing-rag.md) · [data](2026-06-10/0021-wave6-query-routing-metrics.tsv) · [Qwen final](2026-06-10/0021-wave6-qwen-final-metrics.tsv)
+
+### 2026-06-12
+
+- [`0022` — Wave 7: answer faithfulness on the Qwen caveat slice](2026-06-12/0022-wave7-answer-faithfulness-rag.md) · [citation data](2026-06-12/0022-wave7-caveat-metrics.tsv) · [extractive data](2026-06-12/0022-wave7-caveat-extractive-metrics.tsv)
