@@ -11,7 +11,7 @@ The skills live in `.agents/skills/`. To use them, make the relevant skill direc
 ```sh
 git submodule add https://github.com/<owner>/coding-agent-skills .agents/coding-agent-skills
 # symlink an individual skill into your runtime's skill directory:
-ln -s ../coding-agent-skills/.agents/skills/export-coding-session .agents/skills/export-coding-session
+ln -s ../coding-agent-skills/.agents/skills/export-transcript .agents/skills/export-transcript
 # or, for Claude Code, point its skills dir at the agent-neutral one:
 ln -s ../.agents/skills .claude/skills
 ```
