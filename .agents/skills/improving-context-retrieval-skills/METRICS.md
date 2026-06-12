@@ -25,12 +25,13 @@ separately from retrieval-quality lift.
 ## TSV schema (`metrics.tsv`)
 
 One row per `query × cell(corpus,rag) × domain × mode × round`. The floor is logged
-as `corpus=Z, rag=0` (all metric columns 0); code rows are `corpus=code, domain=code`.
+as `corpus=Z, rag=0` (all metric columns 0); code rows are `corpus=code,
+domain=code`; image rows are `corpus=image, domain=image`.
 Phase-0 fills what it can measure; the rest are `NA` until Phase 1. Columns emitted
 today:
 
 ```text
-round  corpus(Z|N|D|code|GOLD)  domain(nl|code)  rag(0|b|r)  rag_config_id
+round  corpus(Z|N|D|code|image|GOLD)  domain(nl|code|image)  rag(0|b|r)  rag_config_id
 mode(simple|rag)  retrieval(plain|full)  seed  query_id  qtype  difficulty
 recall@5  recall@10  recall@20  precision@5  precision@10  ndcg@10  mrr  retrieval_hit@20
 ```
@@ -47,10 +48,12 @@ host_fingerprint notes`.
    **lift above the floor**, in order: floor → docs-only (`Db`) → RAG-only (`Nr`) →
    docs+RAG (`Dr`), with `Nb` as the naive reference. Establishes that every
    reported gain is measured against nothing.
-   0b. **Content-type comparison (code vs natural language)** — when code rows are
-   present, code (`inception/`) vs natural language (structured `D` docs incl.
-   transcripts) on each domain's own corpus, per rag config. Separate metrics so
-   the code/NL retrieval gap is directly visible. The factorial below stays `nl`.
+   0b. **Content-type comparison (natural language vs code vs image)** — when
+   code/image rows are present, code (`inception/`) and image (website assets via
+   curated summaries keyed to real image paths) are compared with natural language
+   (structured `D` docs incl. transcripts) on each domain's own corpus, per rag
+   config. Separate metrics so the retrieval gaps are directly visible. The
+   factorial below stays `nl`.
 1. **Cell means** — recall@20, nDCG@10, retrieval_hit@20, MRR for the floor `Z`
    plus each of Nb/Nr/Db/Dr.
 2. **The 2×2 factorial (headline)** — the two marginal effects (`updating-docs` =

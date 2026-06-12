@@ -7,10 +7,11 @@ Three views, in order:
      `--no-retrieval`): every metric scores 0. The four treatment cells are then
      read as **lifts above this floor**, in the named order
      floor → docs-only (`Db`) → RAG-only (`Nr`) → docs+RAG (`Dr`).
-  1b. **Content-type comparison** (when code rows are present) — code vs natural
-     language on each domain's real corpus (nl = structured `D` docs incl.
-     transcripts, code = the inception/ app), per rag config, so the difference
-     between code and NL retrieval is directly visible (separate metrics).
+  1b. **Content-type comparison** (when code or image rows are present) — natural
+     language vs code vs image on each domain's real corpus (nl = structured `D`
+     docs incl. transcripts, code = the inception/ app, image = website image
+     assets represented by summaries keyed to real image paths), per rag config,
+     so retrieval differences are directly visible (separate metrics).
   2. **Cell means** — the floor plus the four cells (corpus N|D × rag b|r).
   3. **2×2 factorial (headline)** (plan §3, §9 view 4): the two marginal effects
      (`docs`, `rag`) and the **interaction (coupling)** — each paired per query
@@ -46,9 +47,9 @@ NAMED_CONDITIONS = [
     ("RAG-only", ("N", "r")),    # setting-up-rag config, naive corpus (no updating-docs structure)
     ("docs+RAG", ("D", "r")),    # both factorial skills (updating-docs × setting-up-rag, co-designed)
 ]
-# Content-type axis: each domain's "real" corpus tag for the code-vs-nl comparison
-# (nl = the structured D docs; code = the inception/ codebase, corpus tag "code").
-DOMAIN_REAL_CORPUS = {"nl": "D", "code": "code"}
+# Content-type axis: each domain's "real" corpus tag for the comparison (nl =
+# structured D docs; code = inception/; image = website image assets).
+DOMAIN_REAL_CORPUS = {"nl": "D", "code": "code", "image": "image"}
 BOOTSTRAP_B = 2000
 BOOTSTRAP_SEED = 12345
 
@@ -170,24 +171,34 @@ def main(argv=None) -> int:
         print(lift_line(f"{name} ({cell[0]}{cell[1]})", cell_mean(pqc[args.metric].get(cell, {})), fl))
     print(lift_line("naive ref (Nb)", cell_mean(pqc[args.metric].get(("N", "b"), {})), fl))
 
-    # Content-type comparison: code vs natural language, each on its own real
-    # corpus (nl = structured D docs, code = inception/), per rag config. The
-    # headline for the content-type axis — separate metrics so the difference
-    # between code and natural-language retrieval is directly visible.
-    if any(r.get("domain") == "code" or r.get("corpus") == "code" for r in select_round(rows, args.round)):
-        print("\n## Content-type comparison — code vs natural language")
+    # Content-type comparison: each content type on its own real corpus, per rag
+    # config. This is the headline for the content-type axis — separate metrics
+    # so code, natural-language, and image retrieval are visible instead of
+    # averaged together.
+    selected = select_round(rows, args.round)
+    domains_present = [
+        d
+        for d in ("nl", "code", "image")
+        if any(
+            r.get("domain") == d or r.get("corpus") == DOMAIN_REAL_CORPUS[d]
+            for r in selected
+        )
+    ]
+    if any(d != "nl" for d in domains_present):
+        print("\n## Content-type comparison — natural language vs code vs image")
         print("  domain@rag" + "".join(f"{m:>18}" for m in key_metrics) + "      n")
-        for domain in ("nl", "code"):
+        for domain in domains_present:
             corp = DOMAIN_REAL_CORPUS[domain]
             for rag in ("b", "r"):
                 dm = {m: pqc[m].get((corp, rag), {}) for m in key_metrics}
                 n = max((len(v) for v in dm.values()), default=0)
                 vals = "".join(f"{cell_mean(dm[m]):>18.3f}" if dm[m] else f"{'-':>18}" for m in key_metrics)
                 print(f"  {domain + ' @ ' + rag:<10}" + vals + f"   {n:>4}")
-        print("  (nl = structured D docs incl. transcripts; code = inception/ app. Same eval")
-        print("   path, but absolute recall is NOT cross-domain comparable while the code")
-        print("   corpus is tiny: with ~12 files < top_k, code recall@k & retrieval_hit@20 sit")
-        print("   at ceiling — only ndcg@10 / mrr / precision discriminate code rankers.)")
+        print("  (nl = structured D docs incl. transcripts; code = inception/ app;")
+        print("   image = website image assets represented by summaries keyed to real image")
+        print("   paths. Same eval path, but absolute recall is NOT cross-domain comparable")
+        print("   for tiny corpora: when files < top_k, recall@k & retrieval_hit@20 sit at")
+        print("   ceiling — only ndcg@10 / mrr / precision discriminate rankers.)")
 
     # Cell means for the key metrics (floor row first, then the four cells).
     print("\n## Cell means (corpus × rag)")

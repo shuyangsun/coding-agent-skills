@@ -13,9 +13,11 @@ services; the tier axes arrive with Phase-1's real providers.
   always — the interaction needs all four. Mapped to the named conditions:
   `Db` = docs-only, `Nr` = RAG-only, `Dr` = docs+RAG (`Nb` = neither-skill control).
 - **Content type (domain)** — `nl` (natural-language docs incl. coding-session
-  transcripts) and `code` (the `inception/` app). Both run every round, scored
-  against their own corpus and reported with **separate metrics**, so code vs
-  natural-language retrieval is compared (not averaged together).
+  transcripts), `code` (the `inception/` app), and optional `image` (image assets
+  from the project passed with `--image-corpus`, represented by summaries keyed to
+  the real image path). Each runs against its own corpus and is reported with
+  **separate metrics**, so image/code/natural-language retrieval is compared (not
+  averaged together).
 - **Consumer mode** — `simple` (`retrieving-context`'s manual-structure navigation —
   ripgrep/file over `docs/`; a joint `updating-docs` × `retrieving-context` outcome)
   and `rag` (the consumer routed to the `setting-up-rag` pipeline; a joint outcome).

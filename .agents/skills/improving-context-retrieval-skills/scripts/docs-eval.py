@@ -35,15 +35,17 @@ rag-config.json (the knobs the `setting-up-rag` skill owns):
   }
 
 Content-type axis: `--corpus-kind code --domain code` indexes the inception/
-codebase and runs the code gold queries, so code retrieval is measured separately
+codebase, and `--corpus-kind image --domain image` indexes curated summaries for
+website image assets keyed to real image file paths. These are measured separately
 from natural-language docs (`--corpus-kind md --domain nl`, the default). Only the
 loader + which queries run change; the chunk/index/fuse/rerank path is identical,
-so code vs nl numbers are comparable.
+so code vs nl vs image numbers are comparable.
 
 Usage:
   docs-eval.py --corpus DIR --config rag-config.json --out RUNDIR [--split all]
   docs-eval.py --corpus DIR --no-retrieval --out RUNDIR        # the floor (no RAG)
   docs-eval.py --corpus inception/ --corpus-kind code --domain code --config CFG --out RUNDIR
+  docs-eval.py --corpus IMAGE_CORPUS --corpus-kind image --domain image --config CFG --out RUNDIR
 """
 from __future__ import annotations
 
@@ -62,6 +64,7 @@ import gold  # noqa: E402  (sibling module, the single source of truth)
 
 BM25_K1 = 1.5
 BM25_B = 0.75
+DOMAIN_KIND = {"nl": "md", "code": "code", "image": "image"}
 
 
 # --- chunking ---------------------------------------------------------------
@@ -291,13 +294,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--corpus-tag", default="GOLD", help="N|D|Z|code|GOLD label for the row")
     ap.add_argument(
         "--corpus-kind",
-        choices=["md", "code"],
+        choices=["md", "code", "image"],
         default="md",
-        help="md = markdown docs (nl); code = the inception/ codebase",
+        help="md = markdown docs (nl); code = the inception/ codebase; image = website image summaries",
     )
     ap.add_argument(
         "--domain",
-        choices=["nl", "code"],
+        choices=["nl", "code", "image"],
         default="nl",
         help="content type to evaluate; selects which gold facts (queries) run",
     )
@@ -309,17 +312,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    # Guard: domain and corpus-kind must agree, else a code run could be scored
-    # against the nl corpus (or vice-versa) and mis-grade via cross-domain
-    # sentinel overlap (e.g. a transcript that quotes code identifiers).
-    if (args.domain == "code") != (args.corpus_kind == "code"):
-        ap.error("--domain and --corpus-kind must agree: use "
-                 "'--domain code --corpus-kind code' or '--domain nl --corpus-kind md'")
+    # Guard: domain and corpus-kind must agree, else a run could be scored against
+    # the wrong corpus and mis-grade via cross-domain sentinel overlap.
+    expected_kind = DOMAIN_KIND[args.domain]
+    if args.corpus_kind != expected_kind:
+        ap.error(f"--domain {args.domain} requires --corpus-kind {expected_kind}")
 
     if args.corpus_kind == "code":
         corpus_root = gold.find_code_corpus_root(args.corpus)
         if corpus_root is None:
             ap.error("--corpus-kind code: inception/ corpus not found; pass --corpus DIR")
+    elif args.corpus_kind == "image":
+        corpus_root = gold.find_image_corpus_root(args.corpus)
+        if corpus_root is None:
+            ap.error("--corpus-kind image: image corpus not found; pass --corpus DIR")
     else:
         corpus_root = gold.find_corpus_root(args.corpus)
     docs = gold.load_corpus(corpus_root, kind=args.corpus_kind)
