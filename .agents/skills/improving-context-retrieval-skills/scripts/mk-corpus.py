@@ -21,9 +21,11 @@ except for heading markers and file packing, `gold.py --qrels-mode sentinel`
 derives correct per-corpus labels for both, and any retrieval difference is
 attributable to **structure**, not to different facts — the docs-axis signal.
 
-It also snapshots a **code** corpus from the `inception/` app (content-type axis,
-`domain="code"`), so retrieval over CODE is measured on the same eval path as the
-natural-language docs and the two can be compared. Skipped if `inception/` is absent.
+It also snapshots optional **code** and **image** corpora (content-type axis):
+`domain="code"` from the `inception/` app, and `domain="image"` from curated image
+assets under a passed website root. Retrieval over CODE and IMAGE is measured on
+the same eval path as natural-language docs while being reported separately.
+Skipped if the matching roots are absent.
 
 This is a deterministic Phase-0 stand-in so the full factorial can be measured
 *before* the real `updating-docs` skill exists. Once `updating-docs`/`setting-up-rag`
@@ -31,13 +33,14 @@ exist, `new-corpus.sh` will author D with the actual skill and synthesize N from
 same fact payload.
 
 Usage:
-  mk-corpus.py --out DIR [--corpus SRC] [--code-corpus inception/] [--naive-files 6]
+  mk-corpus.py --out DIR [--corpus SRC] [--code-corpus inception/] [--image-corpus IMAGE_CORPUS] [--naive-files 6]
 """
 from __future__ import annotations
 
 import argparse
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -61,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--corpus")
     ap.add_argument("--code-corpus", help="inception/ root for the code domain (default: auto-locate)")
+    ap.add_argument("--image-corpus", help="website root for the image domain (or CONTEXT_RETRIEVAL_IMAGE_CORPUS)")
     ap.add_argument("--mode", choices=["perdoc", "flat"], default="perdoc")
     ap.add_argument("--naive-files", type=int, default=6, help="only used with --mode flat")
     args = ap.parse_args(argv)
@@ -111,6 +115,21 @@ def main(argv: list[str] | None = None) -> int:
             p.write_text(text, encoding="utf-8")
         n_code = len(code_docs)
 
+    # image: snapshot the actual image files. The Phase-0 loader indexes curated
+    # summaries for these relpaths, but keeping the real files in the snapshot is
+    # what lets a READ consumer decide to inspect the image itself.
+    image_src = gold.find_image_corpus_root(args.image_corpus)
+    n_image = 0
+    image_root = out / "image"
+    if image_src is not None:
+        image_docs = gold.load_corpus(image_src, kind="image")
+        for rel in image_docs:
+            src_path = image_src / rel
+            p = image_root / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_path, p)
+        n_image = len(image_docs)
+
     print(f"mk-corpus: Z=0 docs (empty baseline) -> {z_root}")
     print(f"mk-corpus: N={n_count} naive files ({args.mode}) -> {n_root}")
     print(f"mk-corpus: D={len(docs)} structured docs -> {d_root}")
@@ -118,6 +137,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"mk-corpus: code={n_code} files (inception/) -> {code_root}")
     else:
         print("mk-corpus: code=skipped (inception/ not found)")
+    if image_src is not None:
+        print(f"mk-corpus: image={n_image} files -> {image_root}")
+    else:
+        print("mk-corpus: image=skipped (pass --image-corpus, or set CONTEXT_RETRIEVAL_IMAGE_CORPUS)")
     return 0
 
 

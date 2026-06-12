@@ -27,15 +27,20 @@ Non-circularity firewall (plan §6):
     fact as an example.
 
 Content-type axis (domains): facts carry a `domain` — "nl" (natural-language docs
-under docs/, including exported coding-session transcripts) or "code" (the
-inception/ app). Each domain is validated and scored against its OWN corpus, so
-code vs natural-language retrieval can be compared with separate metrics.
+under docs/, including exported coding-session transcripts), "code" (the
+inception/ app), or "image" (website image assets represented by curated summary
+sidecars keyed to the real image path). Each domain is validated and scored
+against its OWN corpus, so code vs natural-language vs image retrieval can be
+compared with separate metrics.
 
 CLI:
-  gold.py build    [--corpus DIR] [--code-corpus DIR] [--out DIR]  # emit per-domain, validate
-  gold.py validate [--corpus DIR] [--code-corpus DIR]              # validation + firewall only
-  gold.py facts    [--split ...] [--domain nl|code|all]            # list the fact table
-  gold.py score    --run FILE --domain nl|code [--corpus DIR] [--split ...] [--k 5,10,20]
+  gold.py build    [--corpus DIR] [--code-corpus DIR] [--image-corpus DIR] [--out DIR]
+                                                   # emit per-domain, validate
+  gold.py validate [--corpus DIR] [--code-corpus DIR] [--image-corpus DIR]
+                                                   # validation + firewall only
+  gold.py facts    [--split ...] [--domain nl|code|image|all]
+                                                   # list the fact table
+  gold.py score    --run FILE --domain nl|code|image [--corpus DIR] [--split ...] [--k 5,10,20]
                                                    # score a retrieval run vs qrels
 """
 from __future__ import annotations
@@ -51,7 +56,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-GOLD_SET_VERSION = "docs-rag-gold-v1"
+GOLD_SET_VERSION = "docs-rag-gold-v2"
 
 # Token-trigram Jaccard(query, primary doc) above this is rejected as too-echoic.
 LEXICAL_OVERLAP_MAX = 0.30
@@ -112,6 +117,193 @@ CODE_SKIP_DIRS = {"node_modules", "dist", "build", ".output", ".vite", ".nitro",
                   ".git", ".jj", ".turbo", "coverage", ".cache"}
 CODE_SKIP_FILES = {"bun.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
 VCS_BOUNDARY_MARKERS = (".git", ".jj")
+IMAGE_EXTS = (".webp", ".png", ".jpg", ".jpeg", ".gif", ".avif")
+IMAGE_SKIP_DIRS = {
+    ".git", ".jj", "node_modules", "dist", "build", ".output", ".vite",
+    ".nitro", ".turbo", "coverage", ".cache",
+}
+
+
+IMAGE_SUMMARIES: dict[str, str] = {
+    "shuyang-website/public/hero.webp": """Image asset summary: shuyang-website/public/hero.webp
+
+Visual evidence from the image file: a watercolor/ink illustrated seated man in a
+white T-shirt and dark jeans, holding a teacup close to his face. The shirt area is
+blank enough for runtime text overlays.
+
+Project context: this is the full-screen illustrated landing hero after a visitor
+has made a cookie choice. The interactive landing page builds the "type on my
+t-shirt" flow, ambient thoughts, and submitted marginalia around this resting
+tea-drinking pose.
+
+Why it exists: it is the canonical resting figure pose for the personal website,
+and downstream derived assets such as arm cutouts, shirt geometry, and head traces
+are regenerated when this image changes.
+
+Context sources: shuyang-website/OVERVIEW.md; shuyang-website/public/OVERVIEW.md;
+shuyang-website/src/OVERVIEW.md; prompts/20260525-cookie-picker-gen.md.
+
+Retrieval sentinel: HERO_RESTING_TEA_LANDING
+""",
+    "shuyang-website/public/hero_arm.webp": """Image asset summary: shuyang-website/public/hero_arm.webp
+
+Visual evidence from the image file: a transparent cutout containing the
+tea-holding forearm, wristwatch, hand, and cup from the resting hero pose.
+
+Project context: the site layers this cutout above dynamic T-shirt text so typed
+words appear to pass underneath the forearm while the base hero image remains
+below the text. It is tied to the same offline Sapiens segmentation work that
+produces shirt-geometry.json.
+
+Why it exists: it preserves the visual illusion that the resting pose's cup arm is
+in front of the shirt lettering before any arm-out animation state is shown.
+
+Context sources: shuyang-website/public/OVERVIEW.md; shuyang-website/src/OVERVIEW.md;
+llm-sessions-history/2026-05-30/0079-claude-hero-cutout-layering.md.
+
+Retrieval sentinel: RESTING_ARM_TEXT_MASK
+""",
+    "shuyang-website/public/hero_arm_out.webp": """Image asset summary: shuyang-website/public/hero_arm_out.webp
+
+Visual evidence from the image file: a full illustrated seated figure variant
+where the cup hand is moved outward to the image-right side instead of covering
+the shirt.
+
+Project context: the PixiJS hero animation spike crossfades between hero.webp and
+this arm-out pose, and the site uses the related reaction when shirt text reaches
+the arm. The assets have different intrinsic framing, so the prototype
+auto-registers alpha bounds and seated-base centroid before blending the pose.
+
+Why it exists: it is the animated alternate pose for revealing more of the shirt
+area while keeping the seated figure aligned with the resting hero.
+
+Context sources: experimental/pixijs-hero-anim/OVERVIEW.md;
+experimental/phaser-landing/OVERVIEW.md; shuyang-website/public/OVERVIEW.md.
+
+Retrieval sentinel: HERO_ARM_OUT_CUP_LIFT
+""",
+    "shuyang-website/public/hero_point.webp": """Image asset summary: shuyang-website/public/hero_point.webp
+
+Visual evidence from the image file: the same seated illustrated figure holding a
+cup near the face while the other hand points across the T-shirt area.
+
+Project context: this generated pose is used when the page needs the character to
+direct attention to the shirt interaction; the documented idle nudge briefly
+crossfades to it after a visitor ignores the shirt input. The art pipeline
+regenerated it through the hero-point artifact-fix spec so old resting-arm pixels
+would not be preserved as a ghost arm.
+
+Why it exists: it gives the landing page a pointing-to-shirt pose while preserving
+the same figure identity and layout as the resting hero.
+
+Context sources: shuyang-website/public/OVERVIEW.md; tools/art-pipeline/OVERVIEW.md;
+tools/art-pipeline/specs/OVERVIEW.md.
+
+Retrieval sentinel: POINTING_SHIRT_PROMPT_POSE
+""",
+    "shuyang-website/public/hero_point_arm.webp": """Image asset summary: shuyang-website/public/hero_point_arm.webp
+
+Visual evidence from the image file: a transparent cutout of the pointing pose's
+cup-side arm and hand, sampled from the same 1122 x 1402 pointing-pose pixels.
+
+Project context: the pointing pose needed its own cup-arm overlay. A stale
+cutout from an older 1133 x 1388 pose caused doubled-arm and clipped-finger
+artifacts, so the project re-traced this asset from the regenerated
+hero_point.webp and layered it above shirt text.
+
+Why it exists: it lets shirt text tuck under the cup arm in the pointing pose
+without damaging the pointing finger or duplicating the arm.
+
+Context sources: shuyang-website/public/OVERVIEW.md;
+llm-sessions-history/2026-05-30/0081-claude-hero-point-arm-cutout.md;
+llm-sessions-history/2026-06-01/0087-claude-hero-point-arm-cutout-fix.md.
+
+Retrieval sentinel: POINTING_ARM_CUTOUT_1122
+""",
+    "shuyang-website/public/hero_cookie_selection.webp": """Image asset summary: shuyang-website/public/hero_cookie_selection.webp
+
+Visual evidence from the image file: the illustrated seated figure faces forward
+with open hands and wears a white shirt reading "Pick a cookie"; a teacup sits
+near the lower right.
+
+Project context: first-time visitors see this cookie-picker figure before the
+main landing hero. It introduces the consent choice before the saved preference
+routes visitors to the full interactive page.
+
+Why it exists: it turns consent selection into the site's visual entry state,
+matching the hero character while changing the shirt message and pose.
+
+Context sources: shuyang-website/OVERVIEW.md; shuyang-website/public/OVERVIEW.md;
+llm-sessions-history/2026-05-25/0043-claude-cookie-picker-shirt-print.md.
+
+Retrieval sentinel: COOKIE_SELECTOR_PICK_A_COOKIE
+""",
+    "shuyang-website/public/cookie_plain.webp": """Image asset summary: shuyang-website/public/cookie_plain.webp
+
+Visual evidence from the image file: a round, scalloped plain biscuit or cookie
+with small holes and no chocolate pieces.
+
+Project context: this is one of the cookie-picker option illustrations. The docs
+describe it as the essential/basic option art, distinct from the chocolate-chip
+full-experience cookie and the empty no-cookie plate.
+
+Why it exists: it gives the "essential" consent tier a concrete visual choice in
+the cookie picker.
+
+Context sources: shuyang-website/public/OVERVIEW.md; shuyang-website/OVERVIEW.md;
+llm-sessions-history/2026-05-27/0071-claude-privacy-route.md.
+
+Retrieval sentinel: COOKIE_OPTION_ESSENTIAL_PLAIN
+""",
+    "shuyang-website/public/cookie_chocolate.webp": """Image asset summary: shuyang-website/public/cookie_chocolate.webp
+
+Visual evidence from the image file: a thick chocolate-chip cookie with visible
+dark chocolate rounds and chunks.
+
+Project context: this is one of the cookie-picker option illustrations. The docs
+describe it as the full-experience cookie option.
+
+Why it exists: it gives the consent tier that allows the richer AI/analytics
+experience a more indulgent cookie illustration.
+
+Context sources: shuyang-website/public/OVERVIEW.md; shuyang-website/OVERVIEW.md;
+llm-sessions-history/2026-05-27/0071-claude-privacy-route.md.
+
+Retrieval sentinel: COOKIE_OPTION_ANALYTICS_CHOCOLATE
+""",
+    "shuyang-website/public/cookie_none.webp": """Image asset summary: shuyang-website/public/cookie_none.webp
+
+Visual evidence from the image file: an empty white doily-like plate with a few
+crumbs and a small smear, with no cookie remaining.
+
+Project context: this is one of the cookie-picker option illustrations. The docs
+describe it as the no-cookie / none-tier option art; current implementation notes
+route AI calls directly without Langfuse or gateway telemetry for that tier.
+
+Why it exists: it lets visitors choose the strictest consent tier with a visual
+that communicates no cookie rather than a different flavor.
+
+Context sources: shuyang-website/public/OVERVIEW.md; shuyang-website/OVERVIEW.md;
+llm-sessions-history/2026-05-27/0071-claude-privacy-route.md.
+
+Retrieval sentinel: COOKIE_OPTION_NO_AI_EMPTY_PLATE
+""",
+    "shuyang-website/public/link-preview.webp": """Image asset summary: shuyang-website/public/link-preview.webp
+
+Visual evidence from the image file: a social-card portrait of the seated hero
+holding tea, with "Ask me anything" written on the shirt.
+
+Project context: the public asset overview identifies this as the Open Graph /
+social sharing preview image for the site.
+
+Why it exists: it gives shared links a branded preview card that matches the
+interactive landing hero and invites questions.
+
+Context sources: shuyang-website/public/OVERVIEW.md.
+
+Retrieval sentinel: LINK_PREVIEW_ASK_ME_ANYTHING
+""",
+}
 
 
 @dataclass(frozen=True)
@@ -122,14 +314,17 @@ class Fact:
     primary:     corpus-root-relative paths hand-pinned as primary (grade 2).
                  Build-time validation asserts each sentinel occurs in each.
     qtype:       fact family (benchmark|issue|skill-behavior|cross-link|history|
-                 code|coding-session).
+                 code|coding-session|image).
     difficulty:  easy|medium|hard (hard => multi-sentinel across doc types).
     domain:      content type, which corpus the fact is scored against:
                  "nl"   = natural-language docs (markdown under docs/, incl. the
                           exported coding-session transcripts), or
                  "code" = the inception/ codebase (source + config files).
-                 The harness scores each domain separately so code vs natural-
-                 language retrieval can be compared (plan: content-type axis).
+                 "image" = website image assets, represented by curated summaries
+                          keyed to the real image file path so a consumer can
+                          choose to inspect the image.
+                 The harness scores each domain separately so natural-language,
+                 code, and image retrieval can be compared (plan: content-type axis).
                  `primary` paths are relative to that domain's corpus root.
     answerable_closed_book: if True, the model may know the sentinel without the
                  corpus (parametric leakage); such queries are excluded from the
@@ -241,6 +436,111 @@ FACTS: list[Fact] = [
         difficulty="medium",
         domain="code",
     ),
+    # --- Image: website assets (domain="image") ------------------------------
+    # These facts are scored against curated image summaries keyed by the real
+    # website image file path. The summaries are not eval questions; they are the
+    # deterministic Phase-0 proxy for a READ consumer noticing that the image file
+    # itself can be useful and choosing whether to inspect it.
+    Fact(
+        id="image-hero-resting-tea",
+        query="On the website landing page, which asset provides the seated "
+        "tea-drinking figure that the shirt interaction is built around?",
+        sentinels=("HERO_RESTING_TEA_LANDING",),
+        primary=("shuyang-website/public/hero.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-resting-arm-mask",
+        query="Which image asset makes generated shirt lettering pass underneath "
+        "the forearm in the default tea-holding pose?",
+        sentinels=("RESTING_ARM_TEXT_MASK",),
+        primary=("shuyang-website/public/hero_arm.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-arm-out-registration",
+        query="Which alternate hero pose must be automatically aligned before "
+        "crossfading because its framing differs from the resting figure?",
+        sentinels=("HERO_ARM_OUT_CUP_LIFT",),
+        primary=("shuyang-website/public/hero_arm_out.webp",),
+        qtype="image",
+        difficulty="hard",
+        domain="image",
+    ),
+    Fact(
+        id="image-pointing-arm-cutout",
+        query="After the pointing pose was regenerated, which cutout had to be "
+        "traced from matching pixels to avoid a doubled arm and clipped finger?",
+        sentinels=("POINTING_ARM_CUTOUT_1122",),
+        primary=("shuyang-website/public/hero_point_arm.webp",),
+        qtype="image",
+        difficulty="hard",
+        domain="image",
+    ),
+    Fact(
+        id="image-pointing-idle-nudge",
+        query="Which hero artwork briefly appears when a visitor has not engaged "
+        "with the shirt input and the page needs to cue the interaction?",
+        sentinels=("POINTING_SHIRT_PROMPT_POSE",),
+        primary=("shuyang-website/public/hero_point.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-cookie-selector-figure",
+        query="Which figure artwork introduces first-time visitors to consent "
+        "selection with a shirt prompt and open hands?",
+        sentinels=("COOKIE_SELECTOR_PICK_A_COOKIE",),
+        primary=("shuyang-website/public/hero_cookie_selection.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-cookie-essential-option",
+        query="Which consent-choice artwork shows the basic biscuit used for the "
+        "essential tier?",
+        sentinels=("COOKIE_OPTION_ESSENTIAL_PLAIN",),
+        primary=("shuyang-website/public/cookie_plain.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-cookie-analytics-option",
+        query="Which consent-choice artwork uses the chocolate-chip cookie for "
+        "the richer experience option?",
+        sentinels=("COOKIE_OPTION_ANALYTICS_CHOCOLATE",),
+        primary=("shuyang-website/public/cookie_chocolate.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-cookie-none-option",
+        query="Which cookie-choice illustration represents the strict no-cookie "
+        "consent tier by showing a plate without a cookie?",
+        sentinels=("COOKIE_OPTION_NO_AI_EMPTY_PLATE",),
+        primary=("shuyang-website/public/cookie_none.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
+    Fact(
+        id="image-link-preview-card",
+        query="Which public image gives shared links a preview card with the "
+        "hero figure and a question-inviting shirt message?",
+        sentinels=("LINK_PREVIEW_ASK_ME_ANYTHING",),
+        primary=("shuyang-website/public/link-preview.webp",),
+        qtype="image",
+        difficulty="medium",
+        domain="image",
+    ),
 ]
 
 
@@ -276,6 +576,23 @@ def find_code_corpus_root(explicit: str | None) -> Path | None:
     return None
 
 
+def find_image_corpus_root(explicit: str | None) -> Path | None:
+    """Locate the optional image corpus root.
+
+    Image fixtures intentionally require an explicit root (or
+    CONTEXT_RETRIEVAL_IMAGE_CORPUS) instead of assuming a host-project layout. The
+    currently bundled image facts target the `website` project, so pass that
+    project's root (or a snapshot created by mk-corpus.py).
+    """
+    raw = explicit or os.environ.get("CONTEXT_RETRIEVAL_IMAGE_CORPUS")
+    if not raw:
+        return None
+    p = Path(raw).expanduser().resolve()
+    if not p.is_dir():
+        sys.exit(f"gold.py: image corpus dir not found: {p}")
+    return p
+
+
 def is_excluded(relpath: str) -> bool:
     return any(fnmatch.fnmatch(relpath, g) for g in EXCLUDE_GLOBS)
 
@@ -301,6 +618,11 @@ def iter_corpus_files(corpus_root: Path, kind: str):
 
         def wanted(name: str) -> bool:
             return name.endswith(CODE_EXTS)
+    elif kind == "image":
+        skip_dirs = IMAGE_SKIP_DIRS
+
+        def wanted(name: str) -> bool:
+            return name.lower().endswith(IMAGE_EXTS)
     else:
         raise ValueError(f"unknown corpus kind: {kind!r}")
 
@@ -326,10 +648,14 @@ def iter_corpus_files(corpus_root: Path, kind: str):
 def load_corpus(corpus_root: Path, kind: str = "md") -> dict[str, str]:
     """Map corpus-root-relative POSIX path -> document text.
 
-    kind="md"   : every *.md under the root, minus EXCLUDE_GLOBS (the docs/NL
-                  domain: issues, benchmarks, transcripts, …).
-    kind="code" : every CODE_EXTS file under the root, skipping dependency/build
-                  dirs and lockfiles (the inception/ code domain).
+    kind="md"    : every *.md under the root, minus EXCLUDE_GLOBS (the docs/NL
+                   domain: issues, benchmarks, transcripts, …).
+    kind="code"  : every CODE_EXTS file under the root, skipping dependency/build
+                   dirs and lockfiles (the inception/ code domain).
+    kind="image" : curated summaries for known image assets. The doc id remains
+                   the real image path, and only assets with an actual file under
+                   the corpus root are loaded. Phase-0 indexes the summary text;
+                   READ consumers can decide whether to inspect the image file.
     """
     docs: dict[str, str] = {}
     for path in iter_corpus_files(corpus_root, kind):
@@ -337,6 +663,12 @@ def load_corpus(corpus_root: Path, kind: str = "md") -> dict[str, str]:
         if kind == "code":
             if path.name in CODE_SKIP_FILES:
                 continue
+        elif kind == "image":
+            summary = IMAGE_SUMMARIES.get(rel)
+            if summary is None:
+                continue
+            docs[rel] = summary
+            continue
         elif is_excluded(rel):
             continue
         try:
@@ -562,9 +894,10 @@ def load_run(run_file: Path) -> dict[str, list[str]]:
 
 def load_corpora(args) -> tuple[dict[str, dict[str, str]], Path]:
     """Load every domain corpus the fact table needs. The nl (docs) corpus is
-    always loaded; the code (inception/) corpus is loaded when any code fact
-    exists and inception/ is found. A checkout without inception/ degrades to
-    nl-only (a warning is printed and code facts are skipped, see active_facts).
+    always loaded; optional code/image corpora are loaded when their roots are
+    found. A checkout without inception/ or an image corpus degrades to nl-only
+    or nl+code (a warning is printed and absent-domain facts are skipped, see
+    active_facts).
     Returns (corpora_by_domain, nl_root)."""
     nl_root = find_corpus_root(args.corpus)
     corpora: dict[str, dict[str, str]] = {"nl": load_corpus(nl_root, kind="md")}
@@ -575,6 +908,14 @@ def load_corpora(args) -> tuple[dict[str, dict[str, str]], Path]:
         else:
             print("gold.py: warning: inception/ code corpus not found; skipping the "
                   "code domain (running natural-language facts only).", file=sys.stderr)
+    if any(f.domain == "image" for f in FACTS):
+        image_root = find_image_corpus_root(getattr(args, "image_corpus", None))
+        if image_root is not None:
+            corpora["image"] = load_corpus(image_root, kind="image")
+        else:
+            print("gold.py: warning: image corpus not found; skipping the image "
+                  "domain (pass --image-corpus, or set CONTEXT_RETRIEVAL_IMAGE_CORPUS).",
+                  file=sys.stderr)
     return corpora, nl_root
 
 
@@ -585,11 +926,15 @@ def active_facts(corpora: dict[str, dict[str, str]]) -> list[Fact]:
 
 
 def cmd_score(args) -> int:
-    kind = "code" if args.domain == "code" else "md"
+    kind = {"nl": "md", "code": "code", "image": "image"}[args.domain]
     if kind == "code":
         root = find_code_corpus_root(args.corpus)
         if root is None:
             sys.exit("gold.py: code corpus (inception/) not found; pass --corpus DIR")
+    elif kind == "image":
+        root = find_image_corpus_root(args.corpus)
+        if root is None:
+            sys.exit("gold.py: image corpus not found; pass --corpus DIR")
     else:
         root = find_corpus_root(args.corpus)
     docs = load_corpus(root, kind=kind)
@@ -670,23 +1015,25 @@ def main(argv: list[str] | None = None) -> int:
     pb = sub.add_parser("build", help="emit qrels/records/corpus and validate")
     pb.add_argument("--corpus", help="docs/ (nl) corpus root")
     pb.add_argument("--code-corpus", help="inception/ (code) corpus root")
+    pb.add_argument("--image-corpus", help="image corpus root, e.g. a website project root")
     pb.add_argument("--out")
     pb.set_defaults(func=cmd_build)
 
     pv = sub.add_parser("validate", help="validation + firewall only")
     pv.add_argument("--corpus", help="docs/ (nl) corpus root")
     pv.add_argument("--code-corpus", help="inception/ (code) corpus root")
+    pv.add_argument("--image-corpus", help="image corpus root, e.g. a website project root")
     pv.set_defaults(func=cmd_validate)
 
     pf = sub.add_parser("facts", help="list the fact table")
     pf.add_argument("--split", choices=["dev", "held-out", "all"], default="all")
-    pf.add_argument("--domain", choices=["nl", "code", "all"], default="all")
+    pf.add_argument("--domain", choices=["nl", "code", "image", "all"], default="all")
     pf.set_defaults(func=cmd_facts)
 
     ps = sub.add_parser("score", help="score a retrieval run vs qrels")
     ps.add_argument("--run", required=True)
     ps.add_argument("--corpus", help="corpus root for the chosen --domain")
-    ps.add_argument("--domain", choices=["nl", "code"], default="nl")
+    ps.add_argument("--domain", choices=["nl", "code", "image"], default="nl")
     ps.add_argument("--split", choices=["dev", "held-out", "all"], default="all")
     ps.add_argument("--k", default="5,10,20")
     ps.set_defaults(func=cmd_score)

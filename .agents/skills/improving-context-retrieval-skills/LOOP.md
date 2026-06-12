@@ -7,18 +7,29 @@ to **one** skill per round (`updating-docs`, `setting-up-rag`, or
 
 ## Phase-0 quick start (no services, no LLM)
 
-From the repo root (with `SK=.agents/skills/improving-context-retrieval-skills` and
-`H="${CONTEXT_RETRIEVAL_HARNESS_DIR:-$TMPDIR/context-retrieval-harness}"`):
+From the repo root (with `SK=.agents/skills/improving-context-retrieval-skills`,
+`H="${CONTEXT_RETRIEVAL_HARNESS_DIR:-$TMPDIR/context-retrieval-harness}"`, and
+optional `IMAGE_CORPUS` pointing at a project whose image assets should be
+evaluated):
 
 ```sh
 # 1. Build + validate the gold set (the single source of truth).
 python3 $SK/scripts/check-vcs-boundary.py
-python3 $SK/scripts/gold.py validate
-python3 $SK/scripts/gold.py build --out "$H/gold-set"
+if [ -n "${IMAGE_CORPUS:-}" ]; then
+  python3 $SK/scripts/gold.py validate --image-corpus "$IMAGE_CORPUS"
+  python3 $SK/scripts/gold.py build --out "$H/gold-set" --image-corpus "$IMAGE_CORPUS"
+else
+  python3 $SK/scripts/gold.py validate
+  python3 $SK/scripts/gold.py build --out "$H/gold-set"
+fi
 
 # 2. Build the corpus axis: Z (empty baseline), N (naive), D (structured),
-#    plus a code/ snapshot of the inception/ app (the code content-type).
-python3 $SK/scripts/mk-corpus.py --out "$H/corpora"
+#    plus code/ and, when IMAGE_CORPUS is set, image/ snapshots.
+if [ -n "${IMAGE_CORPUS:-}" ]; then
+  python3 $SK/scripts/mk-corpus.py --out "$H/corpora" --image-corpus "$IMAGE_CORPUS"
+else
+  python3 $SK/scripts/mk-corpus.py --out "$H/corpora"
+fi
 
 # 3. FLOOR FIRST — the absolute "no doc, no RAG" baseline (empty corpus + no
 #    retrieval). Every metric scores 0; the treatment cells are lifts above it.
@@ -51,8 +62,22 @@ for tag in b r; do
       --round "$ROUND" --corpus-tag code --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)" --domain code
 done
 
-# 6. Read it: baseline-first lifts above the floor, the code-vs-NL content-type
-#    comparison, cell means, then the factorial (marginals + interaction/coupling).
+# 6. IMAGE content-type: index the image snapshot under each rag config and score
+#    image gold queries. The docs-eval corpus contains summaries keyed to real
+#    image paths; the snapshot keeps the actual image files available to inspect.
+if [ -d "$H/corpora/image" ]; then
+  for tag in b r; do
+    cfg=$SK/configs/$([ $tag = b ] && echo baseline-b || echo rag-r).json
+    python3 $SK/scripts/docs-eval.py --corpus "$H/corpora/image" --corpus-kind image \
+        --config "$cfg" --out "$H/cell-image$tag" --corpus-tag image --domain image
+    python3 $SK/scripts/check-retrieval.py --run "$H/cell-image$tag/run.jsonl" \
+        --corpus "$H/corpora/image" --corpus-kind image --qrels-mode sentinel --tsv-out "$H/metrics.tsv" \
+        --round "$ROUND" --corpus-tag image --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)" --domain image
+  done
+fi
+
+# 7. Read it: baseline-first lifts above the floor, the content-type comparison,
+#    cell means, then the factorial (marginals + interaction/coupling).
 python3 $SK/scripts/scoreboard.py --tsv "$H/metrics.tsv" --metric recall@20
 ```
 

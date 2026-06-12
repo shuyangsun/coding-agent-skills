@@ -116,28 +116,34 @@ median + IQR, gate on a **paired sign/permutation test** whose CI excludes zero
 across rounds. Use **PLAIN** (no-contextualization) retrieval as the noise-free
 cross-round comparison and **FULL** as the corroborating arm.
 
-## Content-type axis: code vs natural language (separate metrics)
+## Content-type axis: natural language vs code vs image (separate metrics)
 
-Retrieval behaves differently over **prose** and over **code**, so the harness
-measures them **separately** and reports both. Each gold fact carries a `domain`:
+Retrieval behaves differently over **prose**, **code**, and **image-backed
+evidence**, so the harness measures them **separately** and reports all three. Each
+gold fact carries a `domain`:
 
 - **`nl`** — natural-language markdown under `docs/`, including the exported
   **coding-session transcripts** (long, dialog-shaped prose). This is the corpus
   the N/D/Z factorial above runs on.
 - **`code`** — the repo's own [`inception/`](../../../inception) TanStack Start app
   (source + config), indexed in place ("inception only for now").
+- **`image`** — selected image files from an external project passed with
+  `--image-corpus`. Phase 0 indexes a curated summary document whose doc id is the
+  real image path, while `mk-corpus.py` snapshots the actual image file beside it
+  so a READ consumer can decide whether to inspect the image.
 
-Both domains run the **same** chunk→index→fuse→rerank path and the same configs;
+All domains run the **same** chunk→index→fuse→rerank path and the same configs;
 only the file loader and which queries run change. `scoreboard.py` prints a
-**code-vs-natural-language** view (per rag config) on top of the factorial. The
-factorial/floor stay an `nl` story; code is its own column. Scored against its own
-corpus via `--corpus-kind code --domain code`.
+**natural-language-vs-code-vs-image** view (per rag config) on top of the
+factorial. The factorial/floor stay an `nl` story; code and image are their own
+columns. Code is scored via `--corpus-kind code --domain code`; image via
+`--corpus-kind image --domain image`.
 
 > **Caveat (Phase 0):** absolute recall is **not** cross-domain comparable while
-> the `inception/` corpus is tiny (~12 files < `top_k`): code `recall@k` and
-> `retrieval_hit@20` sit at ceiling, so only `ndcg@10`/`mrr`/`precision` tell code
-> rankers apart. Grow the code corpus/fact set (or shrink code `top_k`) before
-> reading code recall as signal; the scoreboard prints this caveat too.
+> the code/image corpora are tiny (files < `top_k`): `recall@k` and
+> `retrieval_hit@20` sit at ceiling, so only `ndcg@10`/`mrr`/`precision` tell
+> rankers apart. Grow those corpora/fact sets (or shrink `top_k`) before reading
+> their recall as signal; the scoreboard prints this caveat too.
 
 ## The metrics
 
@@ -215,9 +221,9 @@ and **no** eval-time LLM (match the `vcs` harness's restraint).
 
 | Script                                                    | Role                                                                                                                                                                                                                            |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gold.py`                                                 | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall; owns the `nl`/`code` content-type domains and their corpus loaders.                      |
+| `gold.py`                                                 | **Single source of truth**: emit per-corpus graded `qrels` + records, run surrogates, build-time validation, held-out split, firewall; owns the `nl`/`code`/`image` content-type domains and their corpus loaders.              |
 | `docs-eval.py`                                            | Phase-0 thin eval: given `(corpus, rag-config)`, chunk + index (BM25 + in-memory vectors), run gold queries, emit ranked results + per-stage timings. `--no-retrieval` runs the floor (no index, no retrieval ⇒ all metrics 0). |
-| `check-retrieval.py`                                      | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines; `--corpus-kind code --domain code` scores a code run, emits a `domain` column.                                                                          |
+| `check-retrieval.py`                                      | READ oracle: precision/recall/MRR/nDCG + factuality, `KEY=VALUE` lines; `--corpus-kind code --domain code` and `--corpus-kind image --domain image` score non-NL runs, emitting a `domain` column.                              |
 | `check-vcs-boundary.py`                                   | Hygiene metric: fixture nested Jujutsu workspaces + Git worktrees under a corpus root and assert loaders exclude them while still allowing a VCS root when selected directly.                                                   |
 | `check-convention.sh`                                     | `updating-docs` WRITE oracle: durable file signals → `CONV_OK` / `WRITE_FINDABLE`.                                                                                                                                              |
 | `check-rag-config.sh`                                     | `setting-up-rag` oracle: `rag-config.json` well-formed, reproducible, provider-portable; beats baseline.                                                                                                                        |
