@@ -54,6 +54,14 @@ change or when docs were **removed**; `--local` forces embedded mode. Use a
 distinct `--collection` per corpus or content type. Chunking adapts to `--kind`
 (heading-aware for prose/text, block-packed for code) — see [CHUNKING.md](CHUNKING.md).
 
+Every successful index run also registers the corpus in
+`$RAG_HOME/projects.json` (default `~/.cache/rag-skill/projects.json`) unless
+`--no-register` is passed. Use `--project-name <name>` to give a repo a stable
+portable handle, and omit `--collection` to get the default
+`rag_<project>_<kind>` collection name. This manifest is local machine state, not
+repo state; it lets any project that has this skill query a shared persistent
+Qdrant index by project name or root path.
+
 `--kind md` is the historical name for the prose/text corpus. It indexes common
 document and transcript formats such as `.md`, `.mdx`, `.txt`, `.rst`, `.adoc`,
 `.org`, `.tex`, `.vtt`, `.srt`, and extensionless project docs like `README` or
@@ -72,6 +80,8 @@ does not rely on it.
 
 ```sh
 python3 <skill-dir>/scripts/query.py "a natural-language question" --top-k 20
+python3 <skill-dir>/scripts/query.py "…" --project <name-or-path> --kind all
+python3 <skill-dir>/scripts/query.py --list-projects
 python3 <skill-dir>/scripts/query.py "…" --json        # JSONL for a consumer/eval
 python3 <skill-dir>/scripts/query.py "…" --no-rerank   # skip the rerank stage
 ```

@@ -59,10 +59,13 @@ sparse (lexical) retrieval and reranks the shortlist.
 
   ```sh
   python3 <setting-up-rag-dir>/scripts/query.py "a natural-language question" --top-k 20
+  python3 <setting-up-rag-dir>/scripts/query.py "…" --project <name-or-path> --kind all
+  python3 <setting-up-rag-dir>/scripts/query.py --list-projects
   ```
 
 - **Up but corpus not indexed?** Index it first (one command — see `setting-up-rag`
-  §1), then query.
+  §1), which also records the project in `$RAG_HOME/projects.json`; then query it
+  by project name or root path.
 - **Not set up at all?** If the corpus is large or you're about to make many
   queries, **set it up** via `setting-up-rag` rather than grinding `rg` — that is
   the nudge, not a detour. For a one-off lookup, drop to Tier 3 instead.

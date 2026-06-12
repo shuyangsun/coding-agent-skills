@@ -7,7 +7,7 @@ is in RETRIEVAL.md; chunking is in CHUNKING.md; knobs live in rag-config.json.
 
 Usage:
   index.py --corpus docs/ [--kind md|code] [--collection docs]
-           [--config rag-config.json] [--recreate]
+           [--project-name NAME] [--config rag-config.json] [--recreate]
 
   --kind md indexes prose/text docs (Markdown, .txt, .vtt, .rst, etc.).
   --kind code indexes source/build/config files (including CMakeLists.txt).
@@ -40,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--corpus", required=True, help="directory of docs to index")
     ap.add_argument("--kind", choices=["md", "code"], default="md")
     ap.add_argument("--collection")
+    ap.add_argument("--project-name", help="register this corpus under a stable project name")
+    ap.add_argument("--no-register", action="store_true", help="do not update the persistent project manifest")
     ap.add_argument("--config")
     ap.add_argument("--recreate", action="store_true", help="drop the collection first")
     ap.add_argument("--local", action="store_true", help="force embedded on-disk mode (skip the server probe)")
@@ -47,7 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     cfg = R.load_config(args.config)
-    coll = args.collection or cfg.get("collection", "docs")
+    project_name = args.project_name or R.default_project_name(args.corpus)
+    coll = args.collection or R.default_collection_name(args.corpus, args.kind, project_name)
     client, where = R.get_client(force_local=args.local)
     from qdrant_client import models
 
@@ -108,6 +111,19 @@ def main(argv: list[str] | None = None) -> int:
         ]
         client.upsert(coll, points=points)
         print(f"  upserted {min(start + args.batch, n)}/{n}")
+    if not args.no_register:
+        manifest = R.register_project_index(
+            args.corpus,
+            project_name=project_name,
+            kind=args.kind,
+            collection=coll,
+            source_count=len(docs),
+            chunk_count=n,
+            config=cfg,
+            config_path=args.config,
+            qdrant_location=where,
+        )
+        print(f"index: registered project '{project_name}' ({args.kind}) in {manifest}")
     print(f"index: done — {n} chunks in '{coll}'")
     return 0
 

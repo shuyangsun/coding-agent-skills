@@ -12,13 +12,16 @@ they implement is documented in RETRIEVAL.md and CHUNKING.md.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 # --- config -----------------------------------------------------------------
 DEFAULT_CONFIG = Path(__file__).with_name("rag-config.json")
@@ -27,6 +30,119 @@ DEFAULT_CONFIG = Path(__file__).with_name("rag-config.json")
 def load_config(path: str | None = None) -> dict:
     p = Path(path) if path else DEFAULT_CONFIG
     return json.loads(p.read_text(encoding="utf-8"))
+
+
+def rag_home() -> Path:
+    return Path(
+        os.environ.get("RAG_HOME")
+        or str(Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "rag-skill")
+    ).expanduser()
+
+
+def project_manifest_path() -> Path:
+    return rag_home() / "projects.json"
+
+
+def load_project_manifest() -> dict[str, Any]:
+    path = project_manifest_path()
+    if not path.exists():
+        return {"version": 1, "projects": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        sys.exit(f"rag: invalid project manifest {path}: {exc}")
+    if not isinstance(data, dict):
+        sys.exit(f"rag: invalid project manifest {path}: expected object")
+    data.setdefault("version", 1)
+    data.setdefault("projects", {})
+    if not isinstance(data["projects"], dict):
+        sys.exit(f"rag: invalid project manifest {path}: projects must be an object")
+    return data
+
+
+def save_project_manifest(data: dict[str, Any]) -> Path:
+    path = project_manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return path
+
+
+def slugify(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip().lower()).strip("-")
+    return slug or "project"
+
+
+def default_project_name(root: str | Path) -> str:
+    return slugify(Path(root).expanduser().resolve().name)
+
+
+def default_collection_name(root: str | Path, kind: str, project_name: str | None = None) -> str:
+    name = slugify(project_name or default_project_name(root))
+    return f"rag_{name}_{kind}"
+
+
+def register_project_index(
+    root: str | Path,
+    *,
+    project_name: str,
+    kind: str,
+    collection: str,
+    source_count: int,
+    chunk_count: int,
+    config: dict[str, Any],
+    config_path: str | None,
+    qdrant_location: str,
+) -> Path:
+    manifest = load_project_manifest()
+    projects = manifest["projects"]
+    key = slugify(project_name)
+    root_path = Path(root).expanduser().resolve()
+    entry = projects.setdefault(key, {})
+    existing_root = entry.get("root")
+    if existing_root and Path(existing_root).expanduser().resolve() != root_path:
+        digest = hashlib.sha1(str(root_path).encode("utf-8"), usedforsecurity=False).hexdigest()[:8]
+        key = f"{key}-{digest}"
+        entry = projects.setdefault(key, {})
+    entry["name"] = project_name
+    entry["root"] = str(root_path)
+    collections = entry.setdefault("collections", {})
+    collections[kind] = {
+        "collection": collection,
+        "indexed_at": datetime.now(timezone.utc).isoformat(),
+        "source_count": source_count,
+        "chunk_count": chunk_count,
+        "config_id": config.get("rag_config_id"),
+        "config_path": str(Path(config_path).expanduser().resolve()) if config_path else str(DEFAULT_CONFIG),
+        "qdrant_location": qdrant_location,
+    }
+    return save_project_manifest(manifest)
+
+
+def resolve_project(selector: str) -> tuple[str, dict[str, Any]]:
+    manifest = load_project_manifest()
+    projects = manifest["projects"]
+    key = slugify(selector)
+    if key in projects:
+        return key, projects[key]
+
+    expanded = Path(selector).expanduser()
+    if expanded.exists():
+        selector_root = expanded.resolve()
+        matches = []
+        for name, project in projects.items():
+            root = project.get("root")
+            if root and Path(root).expanduser().resolve() == selector_root:
+                matches.append((name, project))
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            names = ", ".join(name for name, _ in matches)
+            sys.exit(f"rag: project selector {selector!r} is ambiguous: {names}")
+
+    available = ", ".join(sorted(projects)) or "(none registered)"
+    sys.exit(f"rag: project {selector!r} is not registered. Available projects: {available}")
 
 
 def _need_deps():
