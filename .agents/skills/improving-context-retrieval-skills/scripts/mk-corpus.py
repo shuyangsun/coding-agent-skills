@@ -22,9 +22,10 @@ derives correct per-corpus labels for both, and any retrieval difference is
 attributable to **structure**, not to different facts — the docs-axis signal.
 
 It also snapshots optional **code** and **image** corpora (content-type axis):
-`domain="code"` from the `inception/` app, and `domain="image"` from curated image
-assets under a passed website root. Retrieval over CODE and IMAGE is measured on
-the same eval path as natural-language docs while being reported separately.
+`domain="code"` from the `inception/` app, and `domain="image"` from image-backed
+website project context under a passed root (source/docs/session history plus
+known image assets). Retrieval over CODE and IMAGE is measured on the same eval
+path as natural-language docs while being reported separately.
 Skipped if the matching roots are absent.
 
 This is a deterministic Phase-0 stand-in so the full factorial can be measured
@@ -115,9 +116,10 @@ def main(argv: list[str] | None = None) -> int:
             p.write_text(text, encoding="utf-8")
         n_code = len(code_docs)
 
-    # image: snapshot the actual image files. The Phase-0 loader indexes curated
-    # summaries for these relpaths, but keeping the real files in the snapshot is
-    # what lets a READ consumer decide to inspect the image itself.
+    # image: snapshot project context plus actual image files. The Phase-0 loader
+    # indexes text files verbatim and image summaries for known image relpaths;
+    # keeping the real image files in the snapshot lets a READ consumer inspect
+    # the supporting visual evidence.
     image_src = gold.find_image_corpus_root(args.image_corpus)
     n_image = 0
     image_root = out / "image"

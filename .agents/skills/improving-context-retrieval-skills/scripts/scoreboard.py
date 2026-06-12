@@ -9,9 +9,9 @@ Three views, in order:
      floor → docs-only (`Db`) → RAG-only (`Nr`) → docs+RAG (`Dr`).
   1b. **Content-type comparison** (when code or image rows are present) — natural
      language vs code vs image on each domain's real corpus (nl = structured `D`
-     docs incl. transcripts, code = the inception/ app, image = website image
-     assets represented by summaries keyed to real image paths), per rag config,
-     so retrieval differences are directly visible (separate metrics).
+     docs incl. transcripts, code = the inception/ app, image = image-backed
+     website project context with supporting image paths), per rag config, so
+     retrieval differences are directly visible (separate metrics).
   2. **Cell means** — the floor plus the four cells (corpus N|D × rag b|r).
   3. **2×2 factorial (headline)** (plan §3, §9 view 4): the two marginal effects
      (`docs`, `rag`) and the **interaction (coupling)** — each paired per query
@@ -48,7 +48,7 @@ NAMED_CONDITIONS = [
     ("docs+RAG", ("D", "r")),    # both factorial skills (updating-docs × setting-up-rag, co-designed)
 ]
 # Content-type axis: each domain's "real" corpus tag for the comparison (nl =
-# structured D docs; code = inception/; image = website image assets).
+# structured D docs; code = inception/; image = image-backed website project context).
 DOMAIN_REAL_CORPUS = {"nl": "D", "code": "code", "image": "image"}
 BOOTSTRAP_B = 2000
 BOOTSTRAP_SEED = 12345
@@ -195,7 +195,7 @@ def main(argv=None) -> int:
                 vals = "".join(f"{cell_mean(dm[m]):>18.3f}" if dm[m] else f"{'-':>18}" for m in key_metrics)
                 print(f"  {domain + ' @ ' + rag:<10}" + vals + f"   {n:>4}")
         print("  (nl = structured D docs incl. transcripts; code = inception/ app;")
-        print("   image = website image assets represented by summaries keyed to real image")
+        print("   image = image-backed website project context plus supporting real image")
         print("   paths. Same eval path, but absolute recall is NOT cross-domain comparable")
         print("   for tiny corpora: when files < top_k, recall@k & retrieval_hit@20 sit at")
         print("   ceiling — only ndcg@10 / mrr / precision discriminate rankers.)")

@@ -17,9 +17,9 @@ no LLM to produce, so it is reported as N/A here and computed by the generation
 path in Phase 1. retrieval_hit is the Phase-0 answerability proxy.
 
 Pass `--corpus-kind code --domain code` to score a code run against the inception/
-corpus, or `--corpus-kind image --domain image` to score website image-summary
-retrieval. The emitted TSV carries a `domain` column so the scoreboard can break
-code, image, and natural-language metrics apart.
+corpus, or `--corpus-kind image --domain image` to score image-backed website
+project-context retrieval. The emitted TSV carries a `domain` column so the
+scoreboard can break code, image, and natural-language metrics apart.
 
 Usage:
   check-retrieval.py --run RUN.jsonl [--corpus DIR] [--split dev|held-out|all]
@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--run", required=True)
     ap.add_argument("--corpus")
     ap.add_argument("--corpus-kind", choices=["md", "code", "image"], default="md",
-                    help="md = markdown docs (nl); code = inception/; image = website image summaries")
+                    help="md = markdown docs (nl); code = inception/; image = image-backed website project context")
     ap.add_argument("--domain", choices=["nl", "code", "image"], default="nl",
                     help="content type; selects which gold facts are scored")
     ap.add_argument("--split", choices=["dev", "held-out", "all"], default="all")

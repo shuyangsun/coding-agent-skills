@@ -49,11 +49,11 @@ host_fingerprint notes`.
    docs+RAG (`Dr`), with `Nb` as the naive reference. Establishes that every
    reported gain is measured against nothing.
    0b. **Content-type comparison (natural language vs code vs image)** — when
-   code/image rows are present, code (`inception/`) and image (website assets via
-   curated summaries keyed to real image paths) are compared with natural language
-   (structured `D` docs incl. transcripts) on each domain's own corpus, per rag
-   config. Separate metrics so the retrieval gaps are directly visible. The
-   factorial below stays `nl`.
+   code/image rows are present, code (`inception/`) and image-backed website
+   project context (source/docs/session history plus supporting image paths) are
+   compared with natural language (structured `D` docs incl. transcripts) on each
+   domain's own corpus, per rag config. Separate metrics so the retrieval gaps are
+   directly visible. The factorial below stays `nl`.
 1. **Cell means** — recall@20, nDCG@10, retrieval_hit@20, MRR for the floor `Z`
    plus each of Nb/Nr/Db/Dr.
 2. **The 2×2 factorial (headline)** — the two marginal effects (`updating-docs` =

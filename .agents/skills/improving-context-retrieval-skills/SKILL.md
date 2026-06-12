@@ -127,17 +127,20 @@ gold fact carries a `domain`:
   the N/D/Z factorial above runs on.
 - **`code`** — the repo's own [`inception/`](../../../inception) TanStack Start app
   (source + config), indexed in place ("inception only for now").
-- **`image`** — selected image files from an external project passed with
-  `--image-corpus`. Phase 0 indexes a curated summary document whose doc id is the
-  real image path, while `mk-corpus.py` snapshots the actual image file beside it
-  so a READ consumer can decide whether to inspect the image.
+- **`image`** — image-backed project context from an external project passed with
+  `--image-corpus`. Phase 0 indexes source/docs/session transcripts plus curated
+  image-summary documents whose doc ids are the real image paths. Gold questions
+  ask real development questions (for example, how an arm cutout works), with
+  grade-2 relevance on code/NL context and grade-1 relevance on supporting image
+  paths.
 
 All domains run the **same** chunk→index→fuse→rerank path and the same configs;
 only the file loader and which queries run change. `scoreboard.py` prints a
 **natural-language-vs-code-vs-image** view (per rag config) on top of the
 factorial. The factorial/floor stay an `nl` story; code and image are their own
 columns. Code is scored via `--corpus-kind code --domain code`; image via
-`--corpus-kind image --domain image`.
+`--corpus-kind image --domain image --qrels-mode pinned` so primary project
+context and supporting image paths remain distinct.
 
 > **Caveat (Phase 0):** absolute recall is **not** cross-domain comparable while
 > the code/image corpora are tiny (files < `top_k`): `recall@k` and

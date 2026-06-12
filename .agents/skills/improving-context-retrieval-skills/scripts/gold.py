@@ -28,10 +28,10 @@ Non-circularity firewall (plan §6):
 
 Content-type axis (domains): facts carry a `domain` — "nl" (natural-language docs
 under docs/, including exported coding-session transcripts), "code" (the
-inception/ app), or "image" (website image assets represented by curated summary
-sidecars keyed to the real image path). Each domain is validated and scored
-against its OWN corpus, so code vs natural-language vs image retrieval can be
-compared with separate metrics.
+inception/ app), or "image" (image-backed project context: source/docs/session
+transcripts plus curated summary records keyed to real image paths). Each domain
+is validated and scored against its OWN corpus, so code vs natural-language vs
+image-backed project retrieval can be compared with separate metrics.
 
 CLI:
   gold.py build    [--corpus DIR] [--code-corpus DIR] [--image-corpus DIR] [--out DIR]
@@ -53,10 +53,10 @@ import math
 import os
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-GOLD_SET_VERSION = "docs-rag-gold-v2"
+GOLD_SET_VERSION = "docs-rag-gold-v3"
 
 # Token-trigram Jaccard(query, primary doc) above this is rejected as too-echoic.
 LEXICAL_OVERLAP_MAX = 0.30
@@ -64,9 +64,10 @@ LEXICAL_OVERLAP_MAX = 0.30
 # Stable dev/held-out partition: held-out iff hash(query_id) is odd.
 HELD_OUT_FRACTION_NOTE = "hash(query_id) parity; even=dev, odd=held-out"
 
-# Docs excluded from every corpus snapshot: this harness's own plan + the coding
-# session that produced it + the benchmark reports it writes (all quote the gold
-# facts/sentinels as worked examples), and any directory-overview index files.
+# Docs excluded from natural-language corpus snapshots: this harness's own plan +
+# the coding session that produced it + the benchmark reports it writes (all
+# quote the gold facts/sentinels as worked examples), and directory-overview
+# index files.
 # Globs are matched against the corpus-root relative POSIX path with fnmatch, so
 # '*' spans '/'. The OVERVIEW.md globs enforce the firewall this comment has always
 # claimed: index docs aggregate many facts' sentinels, so leaving them in-corpus
@@ -118,10 +119,24 @@ CODE_SKIP_DIRS = {"node_modules", "dist", "build", ".output", ".vite", ".nitro",
 CODE_SKIP_FILES = {"bun.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
 VCS_BOUNDARY_MARKERS = (".git", ".jj")
 IMAGE_EXTS = (".webp", ".png", ".jpg", ".jpeg", ".gif", ".avif")
+IMAGE_TEXT_EXTS = (
+    ".md", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".jsonc",
+    ".css", ".html", ".txt", ".py", ".toml", ".yaml", ".yml",
+)
 IMAGE_SKIP_DIRS = {
     ".git", ".jj", "node_modules", "dist", "build", ".output", ".vite",
-    ".nitro", ".turbo", "coverage", ".cache",
+    ".nitro", ".turbo", "coverage", ".cache", "__pycache__",
+    ".agents", ".antigravitycli", ".claude", ".codex", ".cursor", ".github",
+    ".githooks", ".tanstack", ".vscode", ".wrangler", "experimental",
 }
+IMAGE_SKIP_FILES = CODE_SKIP_FILES | {"bun.lock", "AGENTS.md", "CLAUDE.md", ".mcp.json"}
+IMAGE_EXCLUDE_GLOBS = [
+    "docs/design/*",
+    "docs/OVERVIEW.md",
+    "docs/plan/OVERVIEW.md",
+    "llm-sessions-history/OVERVIEW.md",
+    "llm-sessions-history/*/OVERVIEW.md",
+]
 
 
 IMAGE_SUMMARIES: dict[str, str] = {
@@ -312,7 +327,12 @@ class Fact:
 
     sentinels:   answer strings that must appear in a relevant doc (factuality).
     primary:     corpus-root-relative paths hand-pinned as primary (grade 2).
-                 Build-time validation asserts each sentinel occurs in each.
+                 Build-time validation asserts every primary carries at least one
+                 sentinel and every sentinel occurs in at least one primary.
+    supporting:  corpus-root-relative paths that should be retrieved as
+                 corroborating context (grade 1). Image-domain facts use this
+                 for actual image paths so project-context answers carry visual
+                 provenance without making "describe this image" the task.
     qtype:       fact family (benchmark|issue|skill-behavior|cross-link|history|
                  code|coding-session|image).
     difficulty:  easy|medium|hard (hard => multi-sentinel across doc types).
@@ -320,9 +340,10 @@ class Fact:
                  "nl"   = natural-language docs (markdown under docs/, incl. the
                           exported coding-session transcripts), or
                  "code" = the inception/ codebase (source + config files).
-                 "image" = website image assets, represented by curated summaries
-                          keyed to the real image file path so a consumer can
-                          choose to inspect the image.
+                 "image" = image-backed project context: source/docs/session
+                          transcripts plus curated summaries keyed to real image
+                          file paths so a consumer can choose to inspect images
+                          as supporting evidence.
                  The harness scores each domain separately so natural-language,
                  code, and image retrieval can be compared (plan: content-type axis).
                  `primary` paths are relative to that domain's corpus root.
@@ -338,6 +359,7 @@ class Fact:
     qtype: str
     difficulty: str
     domain: str = "nl"
+    supporting: tuple[str, ...] = ()
     answerable_closed_book: bool = False
 
 
@@ -436,108 +458,187 @@ FACTS: list[Fact] = [
         difficulty="medium",
         domain="code",
     ),
-    # --- Image: website assets (domain="image") ------------------------------
-    # These facts are scored against curated image summaries keyed by the real
-    # website image file path. The summaries are not eval questions; they are the
-    # deterministic Phase-0 proxy for a READ consumer noticing that the image file
-    # itself can be useful and choosing whether to inspect it.
+    # --- Image-backed project context (domain="image") -----------------------
+    # These are development questions about the website project, not image
+    # caption questions. Grade-2 primaries are code/docs/session transcripts that
+    # answer the question; grade-1 supporting paths are the real images a human
+    # answer should cite or inspect as visual evidence.
     Fact(
-        id="image-hero-resting-tea",
-        query="On the website landing page, which asset provides the seated "
-        "tea-drinking figure that the shirt interaction is built around?",
-        sentinels=("HERO_RESTING_TEA_LANDING",),
-        primary=("shuyang-website/public/hero.webp",),
-        qtype="image",
-        difficulty="medium",
-        domain="image",
-    ),
-    Fact(
-        id="image-resting-arm-mask",
-        query="Which image asset makes generated shirt lettering pass underneath "
-        "the forearm in the default tea-holding pose?",
-        sentinels=("RESTING_ARM_TEXT_MASK",),
-        primary=("shuyang-website/public/hero_arm.webp",),
-        qtype="image",
-        difficulty="medium",
-        domain="image",
-    ),
-    Fact(
-        id="image-arm-out-registration",
-        query="Which alternate hero pose must be automatically aligned before "
-        "crossfading because its framing differs from the resting figure?",
-        sentinels=("HERO_ARM_OUT_CUP_LIFT",),
-        primary=("shuyang-website/public/hero_arm_out.webp",),
-        qtype="image",
+        id="image-arm-cutout-dom-layering",
+        query="How does the website make shirt text pass under the hero's arm "
+        "even though the figure itself is rendered with Phaser?",
+        sentinels=("a single canvas can't sandwich", ".sprite-frame__cutout", "z-index 3"),
+        primary=(
+            "shuyang-website/src/components/phaser-figure-stage.tsx",
+            "shuyang-website/src/styles.css",
+            "shuyang-website/src/components/OVERVIEW.md",
+            "llm-sessions-history/2026-05-30/0079-claude-hero-cutout-layering.md",
+        ),
+        supporting=(
+            "shuyang-website/public/hero.webp",
+            "shuyang-website/public/hero_arm.webp",
+            "shuyang-website/public/hero_point.webp",
+            "shuyang-website/public/hero_point_arm.webp",
+        ),
+        qtype="image-project-context",
         difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-pointing-arm-cutout",
-        query="After the pointing pose was regenerated, which cutout had to be "
-        "traced from matching pixels to avoid a doubled arm and clipped finger?",
-        sentinels=("POINTING_ARM_CUTOUT_1122",),
-        primary=("shuyang-website/public/hero_point_arm.webp",),
-        qtype="image",
+        id="image-pointing-cutout-regeneration",
+        query="What went wrong after the pointing hero artwork changed, and "
+        "which derived files need to stay synchronized with that pose?",
+        sentinels=("1133×1388", "When a pose IMAGE is regenerated", "HERO_POINT_CUTOUT"),
+        primary=(
+            "llm-sessions-history/2026-06-01/0087-claude-hero-point-arm-cutout-fix.md",
+            "docs/research/sapiens-poc/OVERVIEW.md",
+            "shuyang-website/src/components/interactive-landing.tsx",
+        ),
+        supporting=(
+            "shuyang-website/public/hero_point.webp",
+            "shuyang-website/public/hero_point_arm.webp",
+            "shuyang-website/public/hero.webp",
+        ),
+        qtype="image-project-context",
         difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-pointing-idle-nudge",
-        query="Which hero artwork briefly appears when a visitor has not engaged "
-        "with the shirt input and the page needs to cue the interaction?",
-        sentinels=("POINTING_SHIRT_PROMPT_POSE",),
-        primary=("shuyang-website/public/hero_point.webp",),
-        qtype="image",
-        difficulty="medium",
+        id="image-sapiens-arm-cutout-method",
+        query="How is the blocking arm extracted from the illustrated hero, and "
+        "why did the implementation avoid keeping only one connected blob?",
+        sentinels=("drop_speckle", "largest_blob", "image-right collision arm", "edge_x"),
+        primary=(
+            "docs/research/sapiens-poc/arm_cutout.py",
+            "docs/research/sapiens-poc/OVERVIEW.md",
+            "llm-sessions-history/2026-05-24/0019-claude-arm-cutout-text-reveal.md",
+        ),
+        supporting=(
+            "shuyang-website/public/hero.webp",
+            "shuyang-website/public/hero_arm.webp",
+            "shuyang-website/public/hero_point.webp",
+            "shuyang-website/public/hero_point_arm.webp",
+        ),
+        qtype="image-project-context",
+        difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-cookie-selector-figure",
-        query="Which figure artwork introduces first-time visitors to consent "
-        "selection with a shirt prompt and open hands?",
-        sentinels=("COOKIE_SELECTOR_PICK_A_COOKIE",),
-        primary=("shuyang-website/public/hero_cookie_selection.webp",),
-        qtype="image",
-        difficulty="medium",
+        id="image-pointing-cup-arm-selection",
+        query="For the pointing hero pose, which arm actually needs the text-mask "
+        "cutout and what browser evidence corrected the first attempt?",
+        sentinels=("My `image-left` asset cut the wrong arm", "--arm image-right", "pointing hand sits left of the print box"),
+        primary=(
+            "llm-sessions-history/2026-05-30/0081-claude-hero-point-arm-cutout.md",
+            "docs/research/sapiens-poc/arm_cutout.py",
+            "docs/research/sapiens-poc/OVERVIEW.md",
+            "shuyang-website/src/components/phaser-figure-stage.tsx",
+        ),
+        supporting=(
+            "shuyang-website/public/hero_point.webp",
+            "shuyang-website/public/hero_point_arm.webp",
+        ),
+        qtype="image-project-context",
+        difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-cookie-essential-option",
-        query="Which consent-choice artwork shows the basic biscuit used for the "
-        "essential tier?",
-        sentinels=("COOKIE_OPTION_ESSENTIAL_PLAIN",),
-        primary=("shuyang-website/public/cookie_plain.webp",),
-        qtype="image",
-        difficulty="medium",
+        id="image-pointing-pose-registration",
+        query="Why does the shirt text need a special horizontal adjustment "
+        "during the pointing pose, and how is that offset measured?",
+        sentinels=("registerPrintShift", "chestCenterX", "6.85–6.9%", "printShiftX"),
+        primary=(
+            "shuyang-website/src/lib/figure-align.ts",
+            "shuyang-website/src/components/interactive-landing.tsx",
+            "shuyang-website/src/components/shirt-text.tsx",
+            "llm-sessions-history/2026-05-31/0082-claude-hero-point-text-align.md",
+            "shuyang-website/src/components/OVERVIEW.md",
+        ),
+        supporting=(
+            "shuyang-website/public/hero.webp",
+            "shuyang-website/public/hero_point.webp",
+        ),
+        qtype="image-project-context",
+        difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-cookie-analytics-option",
-        query="Which consent-choice artwork uses the chocolate-chip cookie for "
-        "the richer experience option?",
-        sentinels=("COOKIE_OPTION_ANALYTICS_CHOCOLATE",),
-        primary=("shuyang-website/public/cookie_chocolate.webp",),
-        qtype="image",
-        difficulty="medium",
+        id="image-hero-point-art-pipeline",
+        query="Why did the project need a repeatable image-generation pipeline "
+        "for the pointing hero pose, and how did the later prompt avoid the old "
+        "arm artifact?",
+        sentinels=("composite-lock", "lockedRegionFidelity", "hero-point-artifact-fix", "old-arm artifact"),
+        primary=(
+            "tools/art-pipeline/OVERVIEW.md",
+            "tools/art-pipeline/specs/OVERVIEW.md",
+            "tools/art-pipeline/specs/hero-point-artifact-fix.json",
+            "docs/plan/image-generation-pipeline-2026-05.md",
+            "llm-sessions-history/2026-06-01/0085-claude-art-pipeline-hero-point.md",
+            "llm-sessions-history/2026-06-01/0088-codex-hero-point-artifact-fix.md",
+        ),
+        supporting=(
+            "shuyang-website/public/hero.webp",
+            "shuyang-website/public/hero_point.webp",
+        ),
+        qtype="image-project-context",
+        difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-cookie-none-option",
-        query="Which cookie-choice illustration represents the strict no-cookie "
-        "consent tier by showing a plate without a cookie?",
-        sentinels=("COOKIE_OPTION_NO_AI_EMPTY_PLATE",),
-        primary=("shuyang-website/public/cookie_none.webp",),
-        qtype="image",
-        difficulty="medium",
+        id="image-cookie-consent-assets",
+        query="How do the cookie illustrations connect to the site's consent "
+        "tiers and first-visit gate rather than acting as decorative assets?",
+        sentinels=("COOKIE_CHOICES", "shirt-consent-v1", "window.location.replace(\"/cookies\")", "chooseTier"),
+        primary=(
+            "shuyang-website/src/components/cookie-picker.tsx",
+            "shuyang-website/src/routes/cookies.tsx",
+            "shuyang-website/src/routes/__root.tsx",
+            "shuyang-website/src/lib/consent.md",
+            "docs/plan/cookie-consent-2026-05.md",
+        ),
+        supporting=(
+            "shuyang-website/public/hero_cookie_selection.webp",
+            "shuyang-website/public/cookie_plain.webp",
+            "shuyang-website/public/cookie_chocolate.webp",
+            "shuyang-website/public/cookie_none.webp",
+        ),
+        qtype="image-project-context",
+        difficulty="hard",
         domain="image",
     ),
     Fact(
-        id="image-link-preview-card",
-        query="Which public image gives shared links a preview card with the "
-        "hero figure and a question-inviting shirt message?",
-        sentinels=("LINK_PREVIEW_ASK_ME_ANYTHING",),
-        primary=("shuyang-website/public/link-preview.webp",),
-        qtype="image",
+        id="image-privacy-cookie-selection",
+        query="How does the privacy page reuse the cookie art to explain the "
+        "choices and mark the currently selected tier?",
+        sentinels=("COOKIE_CARDS", "CookieRing", "privacy-card-ring-draw", "you picked this"),
+        primary=(
+            "shuyang-website/src/routes/privacy.tsx",
+            "shuyang-website/src/styles.css",
+            "shuyang-website/src/lib/consent.md",
+            "shuyang-website/src/routes/OVERVIEW.md",
+            "llm-sessions-history/2026-05-30/0080-claude-privacy-selected-cookie-ring.md",
+        ),
+        supporting=(
+            "shuyang-website/public/cookie_plain.webp",
+            "shuyang-website/public/cookie_chocolate.webp",
+            "shuyang-website/public/cookie_none.webp",
+        ),
+        qtype="image-project-context",
+        difficulty="hard",
+        domain="image",
+    ),
+    Fact(
+        id="image-social-preview-wiring",
+        query="Where is the website's social sharing card wired into the app, "
+        "and what project history explains the asset's purpose?",
+        sentinels=("og:image", "twitter:image", "link-preview.webp", "social link preview"),
+        primary=(
+            "shuyang-website/src/routes/__root.tsx",
+            "shuyang-website/public/OVERVIEW.md",
+            "llm-sessions-history/2026-05-24/0018-gemini-tanstack-start-link-preview.md",
+        ),
+        supporting=("shuyang-website/public/link-preview.webp",),
+        qtype="image-project-context",
         difficulty="medium",
         domain="image",
     ),
@@ -590,6 +691,15 @@ def find_image_corpus_root(explicit: str | None) -> Path | None:
     p = Path(raw).expanduser().resolve()
     if not p.is_dir():
         sys.exit(f"gold.py: image corpus dir not found: {p}")
+    # The bundled image-backed facts target the website monorepo root. If a user
+    # passes the nested app (`.../website/shuyang-website`), widen to the parent
+    # when it contains the project history/tools needed for deep answers.
+    if (
+        p.name == "shuyang-website"
+        and (p / "public" / "hero.webp").is_file()
+        and (p.parent / "llm-sessions-history").is_dir()
+    ):
+        return p.parent
     return p
 
 
@@ -622,7 +732,8 @@ def iter_corpus_files(corpus_root: Path, kind: str):
         skip_dirs = IMAGE_SKIP_DIRS
 
         def wanted(name: str) -> bool:
-            return name.lower().endswith(IMAGE_EXTS)
+            low = name.lower()
+            return low.endswith(IMAGE_EXTS) or low.endswith(IMAGE_TEXT_EXTS)
     else:
         raise ValueError(f"unknown corpus kind: {kind!r}")
 
@@ -652,10 +763,11 @@ def load_corpus(corpus_root: Path, kind: str = "md") -> dict[str, str]:
                    domain: issues, benchmarks, transcripts, …).
     kind="code"  : every CODE_EXTS file under the root, skipping dependency/build
                    dirs and lockfiles (the inception/ code domain).
-    kind="image" : curated summaries for known image assets. The doc id remains
-                   the real image path, and only assets with an actual file under
-                   the corpus root are loaded. Phase-0 indexes the summary text;
-                   READ consumers can decide whether to inspect the image file.
+    kind="image" : image-backed project context. Text/code/config files are
+                   indexed verbatim, while known image assets are represented by
+                   curated summaries whose doc id remains the real image path.
+                   Phase-0 indexes text; READ consumers can decide whether to
+                   inspect the image file named by a supporting hit.
     """
     docs: dict[str, str] = {}
     for path in iter_corpus_files(corpus_root, kind):
@@ -664,11 +776,18 @@ def load_corpus(corpus_root: Path, kind: str = "md") -> dict[str, str]:
             if path.name in CODE_SKIP_FILES:
                 continue
         elif kind == "image":
-            summary = IMAGE_SUMMARIES.get(rel)
-            if summary is None:
+            if rel.startswith("."):
                 continue
-            docs[rel] = summary
-            continue
+            if path.name in IMAGE_SKIP_FILES:
+                continue
+            if any(fnmatch.fnmatch(rel, g) for g in IMAGE_EXCLUDE_GLOBS):
+                continue
+            if path.suffix.lower() in IMAGE_EXTS:
+                summary = IMAGE_SUMMARIES.get(rel)
+                if summary is None:
+                    continue
+                docs[rel] = summary
+                continue
         elif is_excluded(rel):
             continue
         try:
@@ -702,10 +821,10 @@ def build_qrels(
 ) -> dict[str, dict[str, int]]:
     """Graded relevance labels per query, in one of two modes:
 
-    - ``pinned`` (GOLD/D plane): hand-pinned primary docs are grade 2; any other
-      corpus doc that contains a sentinel is grade 1 (corroborating). Used where
-      the structured doc paths are stable. Plan §6: never singletons when the
-      corpus genuinely repeats a fact.
+    - ``pinned`` (GOLD/D plane): hand-pinned primary docs are grade 2; supporting
+      docs are grade 1; any other corpus doc that contains a sentinel is grade 1
+      (corroborating). Used where structured paths are stable. Plan §6: never
+      singletons when the corpus genuinely repeats a fact.
     - ``sentinel`` (per-corpus N/D plane): purely sentinel-derived, so it works
       for any corpus structure (naive dumps with opaque filenames included). A
       doc containing ALL of a fact's sentinels is grade 2; a doc containing some
@@ -718,6 +837,8 @@ def build_qrels(
         if mode == "pinned":
             for p in fact.primary:
                 rel[p] = 2
+            for p in fact.supporting:
+                rel[p] = max(rel.get(p, 0), 1)
             for doc_id, text in docs.items():
                 if doc_id in rel:
                     continue
@@ -745,9 +866,10 @@ def split_of(query_id: str) -> str:
 def validate(facts: list[Fact], corpora: dict[str, dict[str, str]]) -> list[str]:
     """Return a list of error strings (empty => valid).
 
-    `corpora` maps domain ("nl"|"code") -> that domain's {path: text}. Each fact
-    is validated against the corpus for its own domain, so a code fact's primary
-    is checked in inception/ and an nl fact's in docs/."""
+    `corpora` maps domain ("nl"|"code"|"image") -> that domain's {path: text}.
+    Each fact is validated against the corpus for its own domain, so a code
+    fact's primary is checked in inception/, an nl fact's in docs/, and an image
+    fact's primaries/supporting paths in the image-backed project corpus."""
     errors: list[str] = []
     seen_ids: set[str] = set()
     for fact in facts:
@@ -761,14 +883,29 @@ def validate(facts: list[Fact], corpora: dict[str, dict[str, str]]) -> list[str]
             errors.append(f"[{fact.id}] no corpus loaded for domain {fact.domain!r} "
                           f"(have: {sorted(corpora)})")
             continue
-        # primary docs exist and contain every sentinel
+        # Primary docs exist and carry sentinels. For multi-primary facts, a
+        # question may need both code and a session transcript; requiring every
+        # sentinel in every primary would force unnatural duplicate anchors.
+        sentinel_hits = {s: 0 for s in fact.sentinels}
         for p in fact.primary:
             if p not in docs:
                 errors.append(f"[{fact.id}] primary doc missing from corpus: {p}")
                 continue
+            present_in_primary = 0
             for s in fact.sentinels:
-                if s not in docs[p]:
-                    errors.append(f"[{fact.id}] sentinel {s!r} not in primary {p}")
+                if s in docs[p]:
+                    sentinel_hits[s] += 1
+                    present_in_primary += 1
+            if present_in_primary == 0:
+                errors.append(f"[{fact.id}] no sentinel occurs in primary {p}")
+        for s, count in sentinel_hits.items():
+            if count == 0:
+                errors.append(f"[{fact.id}] sentinel {s!r} not found in any primary")
+        # supporting docs exist; they need not contain the sentinel because they
+        # may be image paths whose visual evidence backs the code/NL primary.
+        for p in fact.supporting:
+            if p not in docs:
+                errors.append(f"[{fact.id}] supporting doc missing from corpus: {p}")
         # firewall 1a: query must not echo a sentinel verbatim
         q_low = fact.query.lower()
         for s in fact.sentinels:
@@ -840,6 +977,7 @@ def emit(out_dir: Path, facts: list[Fact], docs: dict[str, str], qrels) -> None:
                         "query": fact.query,
                         "sentinels": list(fact.sentinels),
                         "gold_doc_paths": list(fact.primary),
+                        "supporting_doc_paths": list(fact.supporting),
                         "qrels": qrels[fact.id],
                         "difficulty": fact.difficulty,
                         "qtype": fact.qtype,

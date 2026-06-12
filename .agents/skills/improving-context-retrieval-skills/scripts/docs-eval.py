@@ -35,11 +35,12 @@ rag-config.json (the knobs the `setting-up-rag` skill owns):
   }
 
 Content-type axis: `--corpus-kind code --domain code` indexes the inception/
-codebase, and `--corpus-kind image --domain image` indexes curated summaries for
-website image assets keyed to real image file paths. These are measured separately
-from natural-language docs (`--corpus-kind md --domain nl`, the default). Only the
-loader + which queries run change; the chunk/index/fuse/rerank path is identical,
-so code vs nl vs image numbers are comparable.
+codebase, and `--corpus-kind image --domain image` indexes image-backed website
+project context: source/docs/session history plus summaries keyed to real image
+file paths. These are measured separately from natural-language docs
+(`--corpus-kind md --domain nl`, the default). Only the loader + which queries run
+change; the chunk/index/fuse/rerank path is identical, so code vs nl vs image
+numbers are comparable.
 
 Usage:
   docs-eval.py --corpus DIR --config rag-config.json --out RUNDIR [--split all]
@@ -296,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
         "--corpus-kind",
         choices=["md", "code", "image"],
         default="md",
-        help="md = markdown docs (nl); code = the inception/ codebase; image = website image summaries",
+        help="md = markdown docs (nl); code = the inception/ codebase; image = image-backed website project context",
     )
     ap.add_argument(
         "--domain",

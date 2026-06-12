@@ -62,16 +62,16 @@ for tag in b r; do
       --round "$ROUND" --corpus-tag code --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)" --domain code
 done
 
-# 6. IMAGE content-type: index the image snapshot under each rag config and score
-#    image gold queries. The docs-eval corpus contains summaries keyed to real
-#    image paths; the snapshot keeps the actual image files available to inspect.
+# 6. IMAGE-BACKED content-type: index project context plus image summaries under
+#    each rag config and score real development questions. Grade-2 primaries are
+#    code/docs/session files; grade-1 support paths are real image files.
 if [ -d "$H/corpora/image" ]; then
   for tag in b r; do
     cfg=$SK/configs/$([ $tag = b ] && echo baseline-b || echo rag-r).json
     python3 $SK/scripts/docs-eval.py --corpus "$H/corpora/image" --corpus-kind image \
         --config "$cfg" --out "$H/cell-image$tag" --corpus-tag image --domain image
     python3 $SK/scripts/check-retrieval.py --run "$H/cell-image$tag/run.jsonl" \
-        --corpus "$H/corpora/image" --corpus-kind image --qrels-mode sentinel --tsv-out "$H/metrics.tsv" \
+        --corpus "$H/corpora/image" --corpus-kind image --qrels-mode pinned --tsv-out "$H/metrics.tsv" \
         --round "$ROUND" --corpus-tag image --rag-tag "$tag" --rag-config-id "$(basename $cfg .json)" --domain image
   done
 fi
