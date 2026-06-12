@@ -9,7 +9,7 @@ description: Load when STANDING UP or TUNING a local retrieval (RAG) system over
 
 # Setting up RAG — local-first retrieval over a doc set
 
-**Stand up and tune** effective retrieval over a given corpus (markdown docs,
+**Stand up and tune** effective retrieval over a given corpus (prose/text docs,
 transcripts, or source code) so a downstream agent can answer from it. The
 pipeline is **Qdrant + FastEmbed**, CPU-only, no cloud key: chunk → embed
 (dense + sparse) → index → hybrid retrieve (RRF) → rerank → top-k. Defaults live
@@ -42,7 +42,7 @@ daemon; both use the same code path.)
 ## 1. Index the corpus
 
 ```sh
-python3 <skill-dir>/scripts/index.py --corpus <dir> --kind md   # prose/markdown
+python3 <skill-dir>/scripts/index.py --corpus <dir> --kind md   # prose/text docs
 python3 <skill-dir>/scripts/index.py --corpus <dir> --kind code # source code
 ```
 
@@ -52,7 +52,13 @@ changed and added docs** — each doc's old points are dropped before re-insert,
 no duplicates or orphans accumulate. Pass `--recreate` after a chunking/embedding
 change or when docs were **removed**; `--local` forces embedded mode. Use a
 distinct `--collection` per corpus or content type. Chunking adapts to `--kind`
-(heading-aware for prose, block-packed for code) — see [CHUNKING.md](CHUNKING.md).
+(heading-aware for prose/text, block-packed for code) — see [CHUNKING.md](CHUNKING.md).
+
+`--kind md` is the historical name for the prose/text corpus. It indexes common
+document and transcript formats such as `.md`, `.mdx`, `.txt`, `.rst`, `.adoc`,
+`.org`, `.tex`, `.vtt`, `.srt`, and extensionless project docs like `README` or
+`LICENSE`. Fixed-name build/config files with text-looking names, especially
+`CMakeLists.txt`, stay in `--kind code` with `Makefile` and `Dockerfile`.
 
 The loader prunes nested VCS roots below the selected corpus root. A Jujutsu
 workspace created inside a repo (`jj workspace add <name>`) or a Git worktree

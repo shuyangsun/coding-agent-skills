@@ -44,6 +44,17 @@ def _need_deps():
 
 
 # --- corpus loading ---------------------------------------------------------
+# Document/transcript formats for `--kind md`. The kind name is historical:
+# this path is the prose/text corpus, not only Markdown. Fixed-name build files
+# such as `CMakeLists.txt` are excluded below and stay in `--kind code`.
+TEXT_EXTS = (".md", ".markdown", ".mdown", ".mkd", ".mkdn", ".mdx",
+             ".txt", ".text", ".rst", ".adoc", ".asciidoc", ".org",
+             ".tex", ".vtt", ".srt")
+TEXT_FILENAMES = frozenset({
+    "AUTHORS", "CHANGELOG", "CODE_OF_CONDUCT", "CONTRIBUTING", "COPYING",
+    "INSTALL", "LICENSE", "NOTICE", "README", "SECURITY", "SUPPORT",
+})
+
 # Language-aware code set. The C/C++/CUDA/CMake/shell/config extensions (and the
 # extensionless build files below) were added 2026-06-09: the original JS/TS/Python
 # list silently skipped every `.cc`/`.h`/`.cuh`/`CMakeLists.txt`, so on a C++/CUDA
@@ -61,6 +72,10 @@ SKIP_DIRS = {"node_modules", "dist", "build", ".output", ".vite", ".nitro",
              ".git", ".jj", ".turbo", "coverage", ".cache", "__pycache__", ".venv"}
 SKIP_FILES = {"bun.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"}
 VCS_BOUNDARY_MARKERS = (".git", ".jj")
+
+
+def _has_ext(name: str, exts: tuple[str, ...]) -> bool:
+    return name.lower().endswith(exts)
 
 
 def _is_vcs_root(path: Path) -> bool:
@@ -99,10 +114,13 @@ def _iter_corpus_files(base: Path, kind: str):
     """
     if kind == "md":
         def wanted(name: str) -> bool:
-            return name.endswith(".md")
+            return (
+                name not in CODE_FILENAMES
+                and (_has_ext(name, TEXT_EXTS) or name in TEXT_FILENAMES)
+            )
     elif kind == "code":
         def wanted(name: str) -> bool:
-            return name.endswith(CODE_EXTS) or name in CODE_FILENAMES
+            return _has_ext(name, CODE_EXTS) or name in CODE_FILENAMES
     else:
         sys.exit(f"rag: unknown corpus kind {kind!r} (use md|code)")
 
@@ -128,7 +146,7 @@ def _iter_corpus_files(base: Path, kind: str):
 def load_corpus(root: str, kind: str = "md") -> dict[str, str]:
     """Map corpus-root-relative POSIX path -> document text.
 
-    kind="md"   : every *.md under root (prose: docs, notes, transcripts).
+    kind="md"   : common prose/text docs under root (Markdown, .txt, .vtt, etc.).
     kind="code" : every CODE_EXTS file, skipping dependency/build dirs + lockfiles.
     """
     base = Path(root).expanduser().resolve()

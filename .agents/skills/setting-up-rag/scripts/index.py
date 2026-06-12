@@ -9,6 +9,9 @@ Usage:
   index.py --corpus docs/ [--kind md|code] [--collection docs]
            [--config rag-config.json] [--recreate]
 
+  --kind md indexes prose/text docs (Markdown, .txt, .vtt, .rst, etc.).
+  --kind code indexes source/build/config files (including CMakeLists.txt).
+
 Reads QDRANT_URL (live server) or falls back to embedded on-disk mode
 ($QDRANT_PATH / $RAG_HOME). See check-local-rag.sh / setup-local-rag.sh.
 """

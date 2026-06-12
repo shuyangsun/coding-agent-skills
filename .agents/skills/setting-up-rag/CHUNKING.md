@@ -7,7 +7,7 @@ it answerable. The implementation is `chunk_*` in
 [`scripts/rag_lib.py`](scripts/rag_lib.py); the knobs are the `chunker` block of
 [`scripts/rag-config.json`](scripts/rag-config.json) (all sizes in **words**).
 
-## Prose / markdown (`--kind md`)
+## Prose / text (`--kind md`)
 
 **Structure-aware with a size floor.** Split on Markdown headings so each chunk is
 a coherent section, then:
@@ -25,6 +25,12 @@ a coherent section, then:
 Why these numbers: ~350 words (~450–500 tokens) is large enough to hold a
 self-contained answer and small enough that one topic dominates the embedding;
 ~10% overlap is the usual boundary-safety margin without much duplication.
+
+The `md` kind name is historical. The loader accepts Markdown plus common
+document/transcript formats such as `.txt`, `.rst`, `.adoc`, `.org`, `.vtt`, and
+`.srt`; formats without Markdown headings simply flow through the same size-floor
+and windowing logic. Build/config files with text-looking names, such as
+`CMakeLists.txt`, are classified as code and use `--kind code`.
 
 ## Code (`--kind code`)
 
