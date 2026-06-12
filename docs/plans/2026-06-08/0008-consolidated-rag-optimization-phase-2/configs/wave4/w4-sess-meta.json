@@ -32,5 +32,5 @@
     "prompt_version": "sess-v1"
   },
   "arm": "w4-sess-meta",
-  "_doc": "Wave-4 step 5: deterministic (LLM-free) session capsule — `session <idx> <vendor> <date> — <name>; files: ...` parsed from the transcript path + mentioned-file list — prepended to every chunk of a coding-sessions / llm-sessions-history transcript, on top of the Wave-2 header. Portable-eligible (no LLM). Targets the 33 session-prompting questions (15 of whose primaries are transcripts, mostly website). Re-indexes."
+  "_doc": "Wave-4 step 5: deterministic (LLM-free) session capsule — `session <idx> <vendor> <date> — <name>; files: ...` parsed from the transcript path + mentioned-file list — prepended to every chunk of a transcripts / llm-sessions-history transcript, on top of the Wave-2 header. Portable-eligible (no LLM). Targets the 33 session-prompting questions (15 of whose primaries are transcripts, mostly website). Re-indexes."
 }

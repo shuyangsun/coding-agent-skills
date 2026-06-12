@@ -35,10 +35,10 @@ recall is fixed, especially for cross-file code and session-history queries.
 
 ## What the Phase 1 eval set demands
 
-| Cohort | Queries | Corpus shape | Dominant failure mode (from prior benchmarks + gold design) |
-| --- | ---: | --- | --- |
-| `code` | 137 | C++23/CUDA/TS source, configs, tests | NL query ↔ symbol/path mismatch; wrong file ranks (templates, adjacent modules) |
-| `nl` | 70 | design docs, `memory/`, session transcripts | long multi-hop prose; pronoun-heavy chunks; session file vs mentioned-file confusion |
+| Cohort | Queries | Corpus shape                                | Dominant failure mode (from prior benchmarks + gold design)                          |
+| ------ | ------: | ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `code` |     137 | C++23/CUDA/TS source, configs, tests        | NL query ↔ symbol/path mismatch; wrong file ranks (templates, adjacent modules)      |
+| `nl`   |      70 | design docs, `memory/`, session transcripts | long multi-hop prose; pronoun-heavy chunks; session file vs mentioned-file confusion |
 
 Hard tier (55 queries) requires **multi-sentinel, multi-file synthesis** — rewards reranking,
 parent retrieval, and graph expansion more than raw recall@1.
@@ -50,18 +50,18 @@ Per-repo split matters: Alpha Zero engine repos dominate `code`; `coding-agent-s
 
 ### Tier A — implement first (no or low LLM cost)
 
-| Technique | What it fixes | Fit for our corpora | Cost / deps | Prior art in repo |
-| --- | --- | --- | --- | --- |
-| **Hybrid BM25 + dense + RRF + cross-encoder** | baseline recall + rank quality | already default | CPU, FastEmbed | 0006 baseline; keep as floor |
-| **SPLADE sparse** (`prithivida/Splade_PP_en_v1`) | identifier/symbol recall | code + API names | CPU, re-index | noted in `rag-config.json` `_alt_sparse` |
-| **bge-base / bge-large dense** | semantic paraphrase | nl design docs, session prose | CPU/GPU re-index | `_alt_dense` in config |
-| **DBSF / weighted RRF** | one arm dominates | when SPLADE or dense wins on a repo | config only | RETRIEVAL.md |
-| **prefetch / top_n / top_k sweep** | recall vs latency | all | config only | TUNING.md method |
-| **Heading-aware prose chunking + `min_words` merge** | tiny-section explosion | skills docs, plans | already in skill | CHUNKING.md |
-| **Code block chunking with symbol metadata** | path, language, enclosing symbol in payload | all code repos | extend `index.py` | partial today |
-| **AST-aware chunking (cAST / astchunk)** | split mid-function failures | C++/TS repos | tree-sitter grammars | not yet in skill |
-| **Parent / small-to-big retrieval** | child hits, parent context for answer | long files, transcripts | index metadata | not yet |
-| **Local GraphRAG overlay (0009 prototype)** | cross-file recall without LLM index | alpha-zero code | pure local graph | 0009: best recall profile |
+| Technique                                            | What it fixes                               | Fit for our corpora                 | Cost / deps          | Prior art in repo                        |
+| ---------------------------------------------------- | ------------------------------------------- | ----------------------------------- | -------------------- | ---------------------------------------- |
+| **Hybrid BM25 + dense + RRF + cross-encoder**        | baseline recall + rank quality              | already default                     | CPU, FastEmbed       | 0006 baseline; keep as floor             |
+| **SPLADE sparse** (`prithivida/Splade_PP_en_v1`)     | identifier/symbol recall                    | code + API names                    | CPU, re-index        | noted in `rag-config.json` `_alt_sparse` |
+| **bge-base / bge-large dense**                       | semantic paraphrase                         | nl design docs, session prose       | CPU/GPU re-index     | `_alt_dense` in config                   |
+| **DBSF / weighted RRF**                              | one arm dominates                           | when SPLADE or dense wins on a repo | config only          | RETRIEVAL.md                             |
+| **prefetch / top_n / top_k sweep**                   | recall vs latency                           | all                                 | config only          | TUNING.md method                         |
+| **Heading-aware prose chunking + `min_words` merge** | tiny-section explosion                      | skills docs, plans                  | already in skill     | CHUNKING.md                              |
+| **Code block chunking with symbol metadata**         | path, language, enclosing symbol in payload | all code repos                      | extend `index.py`    | partial today                            |
+| **AST-aware chunking (cAST / astchunk)**             | split mid-function failures                 | C++/TS repos                        | tree-sitter grammars | not yet in skill                         |
+| **Parent / small-to-big retrieval**                  | child hits, parent context for answer       | long files, transcripts             | index metadata       | not yet                                  |
+| **Local GraphRAG overlay (0009 prototype)**          | cross-file recall without LLM index         | alpha-zero code                     | pure local graph     | 0009: best recall profile                |
 
 **Evidence:** Practical Code RAG (2025) finds BM25 + word/line splitting wins for code→code
 under latency budgets; cAST (EMNLP 2025) adds +1.8–4.3 Recall@5 on RepoEval when structure
@@ -71,11 +71,11 @@ stalls.
 
 ### Tier B — index-time LLM (one-time per corpus; your GPUs help here)
 
-| Technique | What it fixes | Fit | Cost | Notes |
-| --- | --- | --- | --- | --- |
-| **Anthropic contextual retrieval** | decontextualized chunks ("this option") | session transcripts, dense design docs | ~1 cheap LLM call/chunk at index | 35–67% failure-rate reduction reported with rerank; `contextual_retrieval: false` today |
-| **Late chunking** (Jina v3 / long-context embedder) | boundary context without LLM text | long transcripts | GPU embed pass; swap embedder | cheaper than contextual at scale; needs long-context model |
-| **Context capsules from doc structure** (no LLM) | parent module/path in chunk header | all | free if authored well | pairs with `updating-docs` rules |
+| Technique                                           | What it fixes                           | Fit                                    | Cost                             | Notes                                                                                   |
+| --------------------------------------------------- | --------------------------------------- | -------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------- |
+| **Anthropic contextual retrieval**                  | decontextualized chunks ("this option") | session transcripts, dense design docs | ~1 cheap LLM call/chunk at index | 35–67% failure-rate reduction reported with rerank; `contextual_retrieval: false` today |
+| **Late chunking** (Jina v3 / long-context embedder) | boundary context without LLM text       | long transcripts                       | GPU embed pass; swap embedder    | cheaper than contextual at scale; needs long-context model                              |
+| **Context capsules from doc structure** (no LLM)    | parent module/path in chunk header      | all                                    | free if authored well            | pairs with `updating-docs` rules                                                        |
 
 **Recommendation:** use **local LLM for contextual retrieval on `nl` corpora first**
 (transcripts + `memory/`), not on code (symbols already lexical). Batch index jobs on
@@ -83,22 +83,22 @@ your workstation; cache contextualized text separately from raw chunks for answe
 
 ### Tier C — query-time LLM (per query; gate hard)
 
-| Technique | What it fixes | Risk | Gate |
-| --- | --- | --- | --- |
-| **Multi-query expansion** | vocabulary mismatch | hurts exact identifier queries | dev split only; disable for `domain=code` if regresses |
-| **HyDE** (hypothetical doc embedding) | vague questions | adds off-topic dense matches | nl cohort only |
-| **Query decomposition** | multi-hop | latency × N | hard-tier subset |
-| **LLM rerank (BESTFIT / CodeRAG)** | code task-language queries | latency | Qwen3-8B on GPU beats listwise for code |
-| **CRAG strip filter** | noisy top-k context | may drop true positives | advisory until measured |
+| Technique                             | What it fixes              | Risk                           | Gate                                                   |
+| ------------------------------------- | -------------------------- | ------------------------------ | ------------------------------------------------------ |
+| **Multi-query expansion**             | vocabulary mismatch        | hurts exact identifier queries | dev split only; disable for `domain=code` if regresses |
+| **HyDE** (hypothetical doc embedding) | vague questions            | adds off-topic dense matches   | nl cohort only                                         |
+| **Query decomposition**               | multi-hop                  | latency × N                    | hard-tier subset                                       |
+| **LLM rerank (BESTFIT / CodeRAG)**    | code task-language queries | latency                        | Qwen3-8B on GPU beats listwise for code                |
+| **CRAG strip filter**                 | noisy top-k context        | may drop true positives        | advisory until measured                                |
 
 ### Tier D — defer unless Tier A–C plateau
 
-| Technique | Why defer |
-| --- | --- |
+| Technique                             | Why defer                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
 | **Full GraphRAG community summaries** | strong for global "what changed" questions; weak on pinpoint symbol lookup; expensive index |
-| **graphify as primary backend** | provenance bugs on transcripts (0009); LLM index cost |
-| **ColBERT / late-interaction index** | infra complexity; try stronger cross-encoder rerank first |
-| **Cloud rerank/embed APIs** | conflicts with local-first bar unless parity milestone |
+| **graphify as primary backend**       | provenance bugs on transcripts (0009); LLM index cost                                       |
+| **ColBERT / late-interaction index**  | infra complexity; try stronger cross-encoder rerank first                                   |
+| **Cloud rerank/embed APIs**           | conflicts with local-first bar unless parity milestone                                      |
 
 ## Answer-generation quality (secondary metrics)
 
@@ -116,13 +116,13 @@ deterministic (sentinel containment).
 
 ## Repo-specific hypotheses (for Phase 3 experiment ordering)
 
-| Repo | First knobs to try | Why |
-| --- | --- | --- |
-| `coding-agent-skills` | exclude eval self-reference; contextual retrieval on `docs/coding-sessions/`; parent retrieval for long transcripts | self-ref hazard documented in Phase 1 plan |
-| `alpha-zero` | SPLADE + symbol/path metadata; local graph overlay; larger code chunks or whole-file for small headers | 0009: 0% code recall@20 on Qdrant |
-| `alpha-zero-api` | contract/header-focused chunking; bm25 boost on `include/` paths | header-only API surface |
-| `az-game-*` | `memory/` contextual capsules; code chunks aligned to game interface files | split nl/code per methodology |
-| `website` | same as skills repo for transcripts; Worker/React code metadata | Cloudflare Worker identifiers |
+| Repo                  | First knobs to try                                                                                              | Why                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `coding-agent-skills` | exclude eval self-reference; contextual retrieval on `docs/transcripts/`; parent retrieval for long transcripts | self-ref hazard documented in Phase 1 plan |
+| `alpha-zero`          | SPLADE + symbol/path metadata; local graph overlay; larger code chunks or whole-file for small headers          | 0009: 0% code recall@20 on Qdrant          |
+| `alpha-zero-api`      | contract/header-focused chunking; bm25 boost on `include/` paths                                                | header-only API surface                    |
+| `az-game-*`           | `memory/` contextual capsules; code chunks aligned to game interface files                                      | split nl/code per methodology              |
+| `website`             | same as skills repo for transcripts; Worker/React code metadata                                                 | Cloudflare Worker identifiers              |
 
 ## What we are NOT repeating
 
@@ -137,13 +137,13 @@ deterministic (sentinel containment).
 
 **Yes, but only for specific arms — not for the baseline loop.**
 
-| Use case | Need local LLM? | Suggested model (your 2× RTX Pro 6000) | Alternative without LLM |
-| --- | --- | --- | --- |
-| Phase 3 baseline (hybrid + CPU rerank) | **No** | — | current stack |
-| Contextual retrieval (index) | **Yes** (or cloud $) | Gemma 3 4B/12B IT, Qwen3-8B, or Llama 3.1 8B via Ollama/vLLM | late chunking + better docs |
-| Query expansion / HyDE | optional | same, query-time | skip for code cohort |
-| LLM rerank for code | optional | Qwen3-8B (CodeRAG paper) | ms-marco cross-encoder on GPU |
-| Answer generation in eval | **No** for retrieval gate | harness uses sentinel check, not full generation | — |
+| Use case                               | Need local LLM?           | Suggested model (your 2× RTX Pro 6000)                       | Alternative without LLM       |
+| -------------------------------------- | ------------------------- | ------------------------------------------------------------ | ----------------------------- |
+| Phase 3 baseline (hybrid + CPU rerank) | **No**                    | —                                                            | current stack                 |
+| Contextual retrieval (index)           | **Yes** (or cloud $)      | Gemma 3 4B/12B IT, Qwen3-8B, or Llama 3.1 8B via Ollama/vLLM | late chunking + better docs   |
+| Query expansion / HyDE                 | optional                  | same, query-time                                             | skip for code cohort          |
+| LLM rerank for code                    | optional                  | Qwen3-8B (CodeRAG paper)                                     | ms-marco cross-encoder on GPU |
+| Answer generation in eval              | **No** for retrieval gate | harness uses sentinel check, not full generation             | —                             |
 
 **Cost control:** contextualize **`nl` corpora only** (~70-query primary files skew transcript/doc).
 Cache `(chunk_id → context_prefix)` on disk; re-use across benchmark rounds. Estimated

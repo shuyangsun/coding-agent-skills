@@ -14,7 +14,7 @@
 ## What changed
 
 A purely deterministic (LLM-free) **session capsule** is prepended to every chunk of a session
-transcript — files matching `…/coding-sessions/<date>/<NNNN>-<vendor>-<name>.md` or
+transcript — files matching `…/transcripts/<date>/<NNNN>-<vendor>-<name>.md` or
 `…/llm-sessions-history/<date>/…`. It is parsed from the path + the whole document:
 
 ```text

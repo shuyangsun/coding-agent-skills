@@ -137,7 +137,7 @@ REPOS: dict[str, Repo] = {
         name="coding-agent-skills",
         root=_root("coding-agent-skills"),
         code_corpus_desc="inception/, .agents/skills/*/scripts/, scripts/, root config",
-        nl_corpus_desc="docs/coding-sessions/, docs/{benchmarks,issues,plans,prompts,research}, .agents/skills/**/*.md",
+        nl_corpus_desc="docs/transcripts/, docs/{benchmarks,issues,plans,prompts,research}, .agents/skills/**/*.md",
         exclude_globs=(
             # the 207-query gold set quotes every answer/sentinel — never index it
             "docs/plans/2026-06-08/0003-rag-eval-set-phase-1.md",

@@ -1,9 +1,9 @@
 # RAG eval set — `coding-agent-skills`
 
 - **Repo root:** `/Users/shuyang/developer/coding-agent-skills`
-- **Questions:** 45  ·  domain {'code': 25, 'nl': 20}  ·  difficulty {'easy': 5, 'hard': 12, 'medium': 28}  ·  source {'claude': 31, 'codex': 14}
-- **Code corpus (`domain=code`):** inception/ (TanStack Start app), .agents/skills/*/scripts/ (Python+shell harness), scripts/
-- **Prose corpus (`domain=nl`):** docs/coding-sessions/ (exported transcripts), docs/{benchmarks,issues,plans,prompts,research}
+- **Questions:** 45 · domain {'code': 25, 'nl': 20} · difficulty {'easy': 5, 'hard': 12, 'medium': 28} · source {'claude': 31, 'codex': 14}
+- **Code corpus (`domain=code`):** inception/ (TanStack Start app), .agents/skills/\*/scripts/ (Python+shell harness), scripts/
+- **Prose corpus (`domain=nl`):** docs/transcripts/ (exported transcripts), docs/{benchmarks,issues,plans,prompts,research}
 - **Note:** Has both source/harness code and exported session transcripts, so the set splits codebase vs prompting/session-history.
 
 Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never containing its own sentinel), the grounded **A**, the exact **sentinels** that occur verbatim in the **primary** file(s), and the `domain`/`difficulty` slice. Sources/paths are relative to the repo root above. Every sentinel below was re-verified against the primary file's raw bytes at build time.
@@ -44,7 +44,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **A:** snowflake.py lays out the id with NODE_BITS = 10 and SEQ_BITS = 12, and pins the epoch via EPOCH_MS to datetime(2026, 6, 8, tzinfo=timezone.utc), so 10 bits identify the node and 12 bits disambiguate ids minted in the same millisecond.
 - **sentinels:** `NODE_BITS = 10`, `SEQ_BITS = 12`, `datetime(2026, 6, 8, tzinfo=timezone.utc)`
 - **primary:** `.agents/skills/setting-up-rag/scripts/snowflake.py`
-- **evidence:** .agents/skills/setting-up-rag/scripts/snowflake.py:28: NODE_BITS = 10 \| :29: SEQ_BITS = 12 \| :26: EPOCH_MS = int(datetime(2026, 6, 8, tzinfo=timezone.utc).timestamp() * 1000)
+- **evidence:** .agents/skills/setting-up-rag/scripts/snowflake.py:28: NODE_BITS = 10 \| :29: SEQ_BITS = 12 \| :26: EPOCH_MS = int(datetime(2026, 6, 8, tzinfo=timezone.utc).timestamp() \* 1000)
 
 ### cas-index-reindex-delete-by-docid
 
@@ -197,7 +197,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **A:** The delete-before-insert only covers docs that still exist in the new run; a document that has been fully removed from the corpus leaves orphaned points behind, so the operator must drop and rebuild the collection by passing the recreate flag.
 - **sentinels:** `--recreate`, `Fully *removed* docs still need a`
 - **primary:** `.agents/skills/setting-up-rag/scripts/index.py`
-- **evidence:** setting-up-rag/scripts/index.py:84: replaces rather than duplicates. (Fully *removed* docs still need a \| :10: [--config rag-config.json] [--recreate] \| :41: --recreate ... drop the collection first
+- **evidence:** setting-up-rag/scripts/index.py:84: replaces rather than duplicates. (Fully _removed_ docs still need a \| :10: [--config rag-config.json] [--recreate] \| :41: --recreate ... drop the collection first
 
 ### cas-cx-rag-corpus-loader-vcs-boundary-pruning
 
@@ -206,7 +206,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **A:** The loader treats .git and .jj as version-control boundary markers (a helper checks each directory for them) and, during the os.walk, prunes any directory strictly below the corpus root that is such a root; the corpus root itself is exempt, so directly indexing a worktree/workspace still works. It also skips dependency/build directories.
 - **sentinels:** `VCS_BOUNDARY_MARKERS`, `_is_vcs_root`, `SKIP_DIRS`
 - **primary:** `.agents/skills/setting-up-rag/scripts/rag_lib.py`
-- **evidence:** setting-up-rag/scripts/rag_lib.py:51: VCS_BOUNDARY_MARKERS = (".git", ".jj") \| :54: def _is_vcs_root(path: Path) -> bool: \| :48: SKIP_DIRS = {"node_modules", ...} \| :76: if current != base and _is_vcs_root(current): dirnames[:] = []
+- **evidence:** setting-up-rag/scripts/rag_lib.py:51: VCS_BOUNDARY_MARKERS = (".git", ".jj") \| :54: def \_is_vcs_root(path: Path) -> bool: \| :48: SKIP_DIRS = {"node_modules", ...} \| :76: if current != base and \_is_vcs_root(current): dirnames[:] = []
 
 ### cas-cx-markdown-chunk-minwords-floor-25x
 
@@ -224,7 +224,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **A:** The gold builder removes leakage-prone docs from each corpus snapshot via a glob list: the harness's own design plan and the sessions that produced it, the benchmark reports that quote gold sentinels, and crucially every per-directory and top-level OVERVIEW.md (matched by both a bare and a nested glob), since those summaries restate answers and would inflate sentinel-mode qrels.
 - **sentinels:** `EXCLUDE_GLOBS`, `*/OVERVIEW.md`
 - **primary:** `.agents/skills/improving-context-retrieval-skills/scripts/gold.py`
-- **evidence:** gold.py:75: EXCLUDE_GLOBS = [ \| :89: "OVERVIEW.md", \| :90: "*/OVERVIEW.md", \| :62-69: excluded: this harness's own plan + the session + the benchmark reports ... OVERVIEW.md globs enforce the firewall
+- **evidence:** gold.py:75: EXCLUDE_GLOBS = [ \| :89: "OVERVIEW.md", \| :90: "\*/OVERVIEW.md", \| :62-69: excluded: this harness's own plan + the session + the benchmark reports ... OVERVIEW.md globs enforce the firewall
 
 ### cas-cx-checkretrieval-domain-corpuskind-guard
 
@@ -241,10 +241,10 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 
 - **slice:** session-prompting · **difficulty:** medium · **source:** claude
 - **Q:** In the benchmark comparing graphify against the local Qdrant and GraphRAG paths, what was the blocking provenance defect that made graphify unable to attribute an extracted fact back to the transcript that actually recorded it, and which graph node field exhibited that defect?
-- **A:** Graphify's coding-session provenance was the blocking issue: in the final inception history graph, the nodes' `source_file` values pointed at files merely mentioned inside the transcripts (such as `.agents/skills/...`) rather than the transcript file that actually contained the evidence, so all three inception history queries missed their primary session file.
+- **A:** Graphify's session-transcript provenance was the blocking issue: in the final inception history graph, the nodes' `source_file` values pointed at files merely mentioned inside the transcripts (such as `.agents/skills/...`) rather than the transcript file that actually contained the evidence, so all three inception history queries missed their primary session file.
 - **sentinels:** `source_file`, `which session recorded this?`
 - **primary:** `docs/benchmarks/2026-06-08/0009-graphify-graphrag-rag.md`
-- **evidence:** docs/benchmarks/2026-06-08/0009-graphify-graphrag-rag.md:105: Graphify's coding-session provenance is the blocking issue. The final inception history graph had nodes whose `source_file` values were files mentioned by transcripts, such as `.agents/skills/...`, instead of the transcript file that contained the evidence. That makes graphify poor at answering "which session recorded this?"
+- **evidence:** docs/benchmarks/2026-06-08/0009-graphify-graphrag-rag.md:105: Graphify's session-transcript provenance is the blocking issue. The final inception history graph had nodes whose `source_file` values were files mentioned by transcripts, such as `.agents/skills/...`, instead of the transcript file that contained the evidence. That makes graphify poor at answering "which session recorded this?"
 
 ### cas-graphify-version-and-commit-pin
 
@@ -279,8 +279,8 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **Q:** When the scaffold app for the docs/RAG harness was created, what reason did the user give for its name, and how did the agent get a TypeScript 7 native compiler binary into the project?
 - **A:** The user asked for the project to be named 'inception' to represent the recursive abstraction and self-improving philosophy of the skill repository, and the agent obtained the TypeScript 7 native `tsgo` binary by swapping the generated `typescript` dependency for `@typescript/native-preview`.
 - **sentinels:** `recursive abstraction and self-improving philosophy`, `@typescript/native-preview`
-- **primary:** `docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md`
-- **evidence:** docs/coding-sessions/2026-06-07/0028-...md:15: called "inception", representing the recursive abstraction and self-improving philosophy of this skill repository. ; :35: The generated `typescript ^6.0.2` ... I swapped it for `@typescript/native-preview` ... added a `typecheck` script running `tsgo --noEmit`.
+- **primary:** `docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md`
+- **evidence:** docs/transcripts/2026-06-07/0028-...md:15: called "inception", representing the recursive abstraction and self-improving philosophy of this skill repository. ; :35: The generated `typescript ^6.0.2` ... I swapped it for `@typescript/native-preview` ... added a `typecheck` script running `tsgo --noEmit`.
 
 ### cas-coding-style-memo-ban-and-oxlint-extends
 
@@ -288,8 +288,8 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **Q:** During the coding-style skill session, what did the adversarial research conclude about a literal blanket prohibition on memoization, and why couldn't the reusable lint fragment be applied only to the inception directory via a scoped block?
 - **A:** The research's key verified result was that a literal blanket ban on memoization contradicts react.dev's own escape-hatch guidance, so `useMemo`/`useCallback`/`memo` stay legitimate in three documented cases. The fragment couldn't be scoped because oxlint's `extends` is top-level only — the `OxlintOverride` schema has no `extends` key — so it was consumed via a top-level `extends` instead of inside an overrides entry.
 - **sentinels:** `literal blanket ban on memoization contradicts react.dev`, `OxlintOverride`
-- **primary:** `docs/coding-sessions/2026-06-08/0037-claude-coding-style-skill.md`
-- **evidence:** docs/coding-sessions/2026-06-08/0037-...md:33: a literal blanket ban on memoization contradicts react.dev's own escape-hatch guidance ; :58: the `OxlintOverride` schema has no `extends` key
+- **primary:** `docs/transcripts/2026-06-08/0037-claude-coding-style-skill.md`
+- **evidence:** docs/transcripts/2026-06-08/0037-...md:33: a literal blanket ban on memoization contradicts react.dev's own escape-hatch guidance ; :58: the `OxlintOverride` schema has no `extends` key
 
 ### cas-cursor-composer-published-foreign-work
 
@@ -306,8 +306,8 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **Q:** When the agent was asked to kick-start the docs skill but had to find a reference docs skill the user recalled from another repo, where did it ultimately locate that reference skill, and what was the skill called?
 - **A:** After grepping across `~/.claude/projects/` for the user-referenced docs skill, the agent located a `writing-docs` skill on disk at `website/.agents/skills/writing-docs/SKILL.md` in the sibling website repo and used its method to author the OVERVIEW.md files.
 - **sentinels:** `writing-docs`, `website/.agents/skills/writing-docs/SKILL.md`
-- **primary:** `docs/coding-sessions/2026-06-07/0029-claude-docs-convention-migration.md`
-- **evidence:** docs/coding-sessions/2026-06-07/0029-...md:32: `grep` across `~/.claude/projects/` surfaced a `writing-docs` skill; extracted full paths and located it on disk at `website/.agents/skills/writing-docs/SKILL.md`.
+- **primary:** `docs/transcripts/2026-06-07/0029-claude-docs-convention-migration.md`
+- **evidence:** docs/transcripts/2026-06-07/0029-...md:32: `grep` across `~/.claude/projects/` surfaced a `writing-docs` skill; extracted full paths and located it on disk at `website/.agents/skills/writing-docs/SKILL.md`.
 
 ### cas-anthropic-contextual-retrieval-failure-stats
 
@@ -367,7 +367,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 
 - **slice:** session-prompting · **difficulty:** medium · **source:** codex
 - **Q:** The June 7 docs/RAG plan surveyed the repo and found that only one doc type used dated subdirectories. What canonical directory-and-filename layout did it propose to standardize all doc types on, and which new doc type did it add?
-- **A:** The plan generalized the coding-sessions convention to docs/<type>/YYYY-MM-DD/NNNN-slug.md for every type, with a globally-unique zero-padded index from a generalized next-index.sh, required front-matter, and an OVERVIEW.md per subdir plus a top-level one. It kept the existing types and added a research type.
+- **A:** The plan generalized the transcripts convention to `docs/<type>/YYYY-MM-DD/NNNN-slug.md` for every type, with a globally-unique zero-padded index from a generalized next-index.sh, required front-matter, and an OVERVIEW.md per subdir plus a top-level one. It kept the existing types and added a research type.
 - **sentinels:** `docs/<type>/YYYY-MM-DD/NNNN-slug.md`, `next-index.sh`
 - **primary:** `docs/plans/2026-06-07/0002-improving-docs-and-rag-skills.md`
 - **evidence:** plans/0002-improving-docs-and-rag-skills.md:457: Canonical convention: `docs/<type>/YYYY-MM-DD/NNNN-slug.md`, globally-unique zero-padded index from a generalized `next-index.sh`, required front-matter, an OVERVIEW.md per subdir \| :460: add `research`
@@ -395,7 +395,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **slice:** session-prompting · **difficulty:** medium · **source:** codex
 - **Q:** In the contextual-retrieval benchmark behind the updating-docs changes, adding explicit source maps cut how many tokens an agent needed to reach an answer for code corpora under the RAG config. What were the before/after token counts for the alpha-zero code and inception code cases?
 - **A:** With the RAG config enabled, source maps cut chunk tokens-to-answer on alpha-zero code from 199 down to 99 while keeping primary_hit@20 at 1.000, and on inception code from 396 down to 75. For history/prose, source maps lifted answer_hit@5 to 1.000 on both projects.
-- **sentinels:** `tokens-to-answer`, `from `199` to `99``, `from `396` to `75``
+- **sentinels:** `tokens-to-answer`, `from 199 to 99`, `from 396 to 75`
 - **primary:** `docs/benchmarks/2026-06-08/0007-updating-docs-contextual-retrieval.md`
 - **evidence:** 0007-updating-docs-contextual-retrieval.md:19: source map cut chunk tokens-to-answer from `199` to `99` while keeping primary_hit@20 = 1.000 \| :21: tokens-to-answer from `396` to `75`
 
@@ -404,7 +404,7 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **slice:** session-prompting · **difficulty:** medium · **source:** codex
 - **Q:** In the three-way retrieval benchmark, which contender achieved the strongest recall across both domains and projects with no LLM indexing tokens, and what was the benchmark's practical decision about adopting graphify as the backend?
 - **A:** The local GraphRAG prototype had the strongest recall, reaching 1.000 recall@20 on both domains across both projects with no LLM indexing tokens, but it was not yet a drop-in replacement. The practical decision was not to replace setting-up-rag with graphify; the suggested path was code-aware retrieval for Qdrant plus an optional graph/source-map overlay.
-- **sentinels:** `best recall profile`, `not to replace `setting-up-rag` with graphify`
+- **sentinels:** `best recall profile`, `not to replace setting-up-rag with graphify`
 - **primary:** `docs/benchmarks/2026-06-08/0009-graphify-graphrag-rag.md`
 - **evidence:** 0009-graphify-graphrag-rag.md:15: The local GraphRAG prototype had the best recall profile. It reached `1.000` recall@20 on both domains across both projects with no LLM indexing tokens \| :19: The practical decision is not to replace `setting-up-rag` with graphify.
 
@@ -414,5 +414,5 @@ Each entry is a gold fact for retrieval eval: a paraphrased **Q** (never contain
 - **Q:** In the session that added VCS-boundary pruning to the RAG loaders, what new verification script was introduced, and what hygiene-metric values did it report to prove nested VCS roots were excluded while gold validation still passed?
 - **A:** The session added check-vcs-boundary.py, which fixtures nested jj workspaces, Git worktree .git files, and nested Git repos and verifies they are excluded while directly selected VCS roots still index. It reported vcs_boundary_ok=1 and vcs_boundary_nested_docs_indexed=0, and gold.py validate passed with 9 facts across 2 domains.
 - **sentinels:** `check-vcs-boundary.py`, `vcs_boundary_nested_docs_indexed=0`, `9 facts across 2 domains`
-- **primary:** `docs/coding-sessions/2026-06-08/0039-codex-exclude-vcs-workspaces-rag.md`
+- **primary:** `docs/transcripts/2026-06-08/0039-codex-exclude-vcs-workspaces-rag.md`
 - **evidence:** 0039-codex-exclude-vcs-workspaces-rag.md:69: Added `check-vcs-boundary.py` to fixture nested jj workspaces, Git worktree `.git` files, and nested Git repos \| :82: it reported `vcs_boundary_ok=1`, `vcs_boundary_nested_docs_indexed=0` \| :84: gold set validated with 9 facts across 2 domains

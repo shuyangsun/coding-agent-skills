@@ -142,8 +142,7 @@ chunk's identity, and it must apply to **code**, not just prose.
   dense and `raw_text` untouched). A real **code** win (held-out nDCG +0.030, sentinel +0.082) at
   ≈ contextual-retrieval quality, but it regresses some prose slices, so contextual retrieval is the
   cleaner default. Apply to **all** chunks — prose-only **regressed code**.
-- **Session metadata capsule** (portable, deterministic, **no LLM** — `0017`): for session/coding
-  **transcripts** (`…/coding-sessions/…`, `…/llm-sessions-history/…`), prepend `session <id>
+- **Session metadata capsule** (portable, deterministic, **no LLM** — `0017`): for session **transcripts** (`…/transcripts/…`, `…/llm-sessions-history/…`), prepend `session <id>
 <vendor> <date> — <name>; files: <files it touched>` to each chunk. The live signal is the
   **mentioned-file list** (the path already gives date/index/vendor). Optional, corpus-conditional —
   it drove transcript retrieval to near-perfect on a transcript-heavy repo; flat elsewhere. Enable +

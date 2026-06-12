@@ -27,7 +27,7 @@ Non-circularity firewall (plan §6):
     fact as an example.
 
 Content-type axis (domains): facts carry a `domain` — "nl" (natural-language docs
-under docs/, including exported coding-session transcripts), "code" (the
+under docs/, including exported session transcripts), "code" (the
 inception/ app), or "image" (image-backed project context: source/docs/session
 transcripts plus curated summary records keyed to real image paths). Each domain
 is validated and scored against its OWN corpus, so code vs natural-language vs
@@ -83,8 +83,8 @@ EXCLUDE_GLOBS = [
     "plans/0002-improving-docs-and-rag-skills.md",
     "plans/*improving-docs-and-rag*.md",
     "plans/*improving-context-retrieval*.md",
-    "coding-sessions/*/*improving-docs-and-rag*.md",
-    "coding-sessions/*/*improving-context-retrieval*.md",
+    "transcripts/*/*improving-docs-and-rag*.md",
+    "transcripts/*/*improving-context-retrieval*.md",
     # benchmark reports that quote gold sentinels (historical + current per-skill names)
     "benchmarks/*docs-skill*.md",
     "benchmarks/*rag-skill*.md",
@@ -334,11 +334,11 @@ class Fact:
                  for actual image paths so project-context answers carry visual
                  provenance without making "describe this image" the task.
     qtype:       fact family (benchmark|issue|skill-behavior|cross-link|history|
-                 code|coding-session|image).
+                 code|session-transcript|image).
     difficulty:  easy|medium|hard (hard => multi-sentinel across doc types).
     domain:      content type, which corpus the fact is scored against:
                  "nl"   = natural-language docs (markdown under docs/, incl. the
-                          exported coding-session transcripts), or
+                          exported session transcripts), or
                  "code" = the inception/ codebase (source + config files).
                  "image" = image-backed project context: source/docs/session
                           transcripts plus curated summaries keyed to real image
@@ -388,7 +388,7 @@ FACTS: list[Fact] = [
         query="How is the workspace-naming convention scored durably even though "
         "branch names disappear when a branch is deleted?",
         sentinels=("reference-transaction",),
-        primary=("coding-sessions/2026-06-06/0012-claude-vcs-skill-name-metric.md",),
+        primary=("transcripts/2026-06-06/0012-claude-vcs-skill-name-metric.md",),
         qtype="skill-behavior",
         difficulty="medium",
     ),
@@ -410,17 +410,17 @@ FACTS: list[Fact] = [
         qtype="issue",
         difficulty="medium",
     ),
-    # --- Natural-language: exported coding-session transcript (domain="nl") ----
+    # --- Natural-language: exported session transcript (domain="nl") ----
     # Retrieval over an exported session transcript (long, dialog-shaped prose) —
     # a distinct content type from the issue/benchmark docs above.
     Fact(
         id="session-inception-toolchain",
-        query="Which exported coding session stood up the demo web app so it "
+        query="Which exported session transcript recorded setting up the demo web app so it "
         "type-checks with the experimental native-Go build of the TypeScript "
         "compiler instead of plain tsc?",
         sentinels=("native-preview",),
-        primary=("coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
-        qtype="coding-session",
+        primary=("transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
+        qtype="session-transcript",
         difficulty="medium",
         domain="nl",
     ),

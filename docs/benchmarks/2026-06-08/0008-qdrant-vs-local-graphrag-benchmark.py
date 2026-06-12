@@ -100,7 +100,7 @@ QUERIES: tuple[Query, ...] = (
         project="inception",
         domain="history",
         question="Which compiler did the inception session wire for TypeScript checks?",
-        relevant_docs=("docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
+        relevant_docs=("docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
         sentinels=("native-preview", "tsgo"),
     ),
     Query(
@@ -108,7 +108,7 @@ QUERIES: tuple[Query, ...] = (
         project="inception",
         domain="history",
         question="Which exported session created the clean-state TanStack Start app used as the retrieval harness target?",
-        relevant_docs=("docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
+        relevant_docs=("docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
         sentinels=("clean-state", "TanStack Start"),
     ),
     Query(
@@ -117,8 +117,8 @@ QUERIES: tuple[Query, ...] = (
         domain="history",
         question="Which session records the React Compiler being wired through Vite's Rolldown Babel plugin?",
         relevant_docs=(
-            "docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",
-            "docs/coding-sessions/2026-06-08/0037-claude-coding-style-skill.md",
+            "docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",
+            "docs/transcripts/2026-06-08/0037-claude-coding-style-skill.md",
         ),
         sentinels=("@rolldown/plugin-babel", "reactCompilerPreset"),
         difficulty="hard",
@@ -287,7 +287,7 @@ def include_code(path: Path) -> bool:
 def load_docs(project: str, domain: str, repo_root: Path, alpha_root: Path) -> tuple[Path, dict[str, str]]:
     if project == "inception" and domain == "history":
         base = repo_root
-        paths = sorted((repo_root / "docs" / "coding-sessions").glob("*/*.md"))
+        paths = sorted((repo_root / "docs" / "transcripts").glob("*/*.md"))
         selected = [p for p in paths if include_inception_history(p)]
     elif project == "inception" and domain == "code":
         base = repo_root / "inception"

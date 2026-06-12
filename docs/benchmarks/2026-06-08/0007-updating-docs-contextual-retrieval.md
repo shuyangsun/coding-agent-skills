@@ -40,7 +40,7 @@ ship the workflow runners that would generate real consumer transcripts, so toke
 usage here is a deterministic proxy: `ctx_tokens_top5_chunks`,
 `ctx_tokens_to_answer_chunk`, and `read_tokens_to_primary_doc`.
 
-Alpha-zero has no exported `coding-sessions/` tree, so its `memory/` project docs
+Alpha-zero has no exported `transcripts/` tree, so its `memory/` project docs
 were used as the long-form project-history analogue. No alpha-zero files were
 modified during this run.
 

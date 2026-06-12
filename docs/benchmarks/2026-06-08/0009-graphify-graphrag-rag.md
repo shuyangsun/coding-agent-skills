@@ -14,7 +14,7 @@ The current local Qdrant RAG remains the best proven default for history retriev
 
 The local GraphRAG prototype had the best recall profile. It reached `1.000` recall@20 on both domains across both projects with no LLM indexing tokens. It is promising as a source-map or graph-overlay layer, but it is not yet a drop-in replacement because alpha-zero code ranking was weak and the top-5 context was larger than graphify's.
 
-Graphify produced compact query contexts and strong results on the small `inception` code corpus, but it was unreliable for coding-session history. In the final fresh run, graphify's inception history graph pointed many nodes at files mentioned inside transcripts instead of the transcript files containing the evidence, so all three inception history queries missed their primary session file despite a nontrivial LLM extraction cost.
+Graphify produced compact query contexts and strong results on the small `inception` code corpus, but it was unreliable for session-transcript history. In the final fresh run, graphify's inception history graph pointed many nodes at files mentioned inside transcripts instead of the transcript files containing the evidence, so all three inception history queries missed their primary session file despite a nontrivial LLM extraction cost.
 
 The practical decision is not to replace `setting-up-rag` with graphify. The next likely improvement path is code-aware retrieval for Qdrant plus an optional graph/source-map overlay. Graphify is worth watching or mining for ideas, but it needs provenance fixes and better code query seeding before it can be trusted for this repo's context-retrieval skills.
 
@@ -26,7 +26,7 @@ Corpora:
 
 | Project      | Domain  | Input corpus                                                                                                                            |
 | ------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `inception`  | history | 47 markdown files under `docs/coding-sessions/**/*.md`                                                                                  |
+| `inception`  | history | 47 markdown files under `docs/transcripts/**/*.md`                                                                                      |
 | `inception`  | code    | 10 source/config files under `inception/`                                                                                               |
 | `alpha-zero` | history | 44 project-history files from `memory/**/*.md` plus `alpha-zero-game/docs/dev_dependencies.md`                                          |
 | `alpha-zero` | code    | 181 curated source/config files, excluding hidden agent/editor dirs, build outputs, generated files, dependencies, and third-party code |
@@ -102,7 +102,7 @@ The local GraphRAG prototype is the most promising incremental layer from this r
 
 Graphify's compression story is real but conditional. Once a graph exists, graphify context was compact: `259.3` top-5 tokens for history and `555.2` for code on average. The cost moves to indexing for non-code inputs: the two history corpora consumed `194281` input tokens and `13031` output tokens during extraction.
 
-Graphify's coding-session provenance is the blocking issue. The final inception history graph had nodes whose `source_file` values were files mentioned by transcripts, such as `.agents/skills/...`, instead of the transcript file that contained the evidence. That makes graphify poor at answering "which session recorded this?" unless the extraction prompt or graph schema preserves both "evidence file" and "mentioned file".
+Graphify's session-transcript provenance is the blocking issue. The final inception history graph had nodes whose `source_file` values were files mentioned by transcripts, such as `.agents/skills/...`, instead of the transcript file that contained the evidence. That makes graphify poor at answering "which session recorded this?" unless the extraction prompt or graph schema preserves both "evidence file" and "mentioned file".
 
 Graphify's code extraction was useful on the small TypeScript project but weak on the larger mixed C++/Python project. Code-only graphify cost no LLM tokens, but `alpha-zero` code retrieval had `0.333` recall@20 and no answer sentinel hits in the top five. Graph topology alone did not solve code-context retrieval without better query expansion, symbol/path seeding, or a vector sidecar.
 
@@ -125,4 +125,4 @@ Graphify LLM extraction is nondeterministic. The final fresh run is reported her
 
 Latency is machine- and configuration-dependent. Qdrant retrieval includes local embedding and reranking work; graphify query time here is graph JSON traversal after extraction; local GraphRAG is an in-memory prototype.
 
-`alpha-zero` does not have the same exported coding-session history shape as this repo, so its `memory/**/*.md` files were used as the project-history analogue.
+`alpha-zero` does not have the same exported session-transcript history shape as this repo, so its `memory/**/*.md` files were used as the project-history analogue.

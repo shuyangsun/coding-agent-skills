@@ -37,14 +37,14 @@ Retrieval behaves differently over prose and over code, so each question is tagg
 their sets are **split** between codebase questions and prompting/session-history questions
 (per the methodology); the four Alpha Zero repos mix engine-code and design-doc questions.
 
-| Repo | Kind | `domain=code` corpus | `domain=nl` corpus |
-| --- | --- | --- | --- |
-| [`coding-agent-skills`](0003-rag-eval-set-phase-1/coding-agent-skills.md) | TS app + Python/shell harness **+ transcripts** (split) | `inception/`, `.agents/skills/*/scripts/`, `scripts/` | `docs/coding-sessions/`, `docs/{benchmarks,issues,plans,prompts,research}` |
-| [`alpha-zero`](0003-rag-eval-set-phase-1/alpha-zero.md) | C++23 + CUDA engine + TS/TSX GUI | `src/ include/` (MCTS/inference/training), `gui/`, `tests/` | `docs/` (transformer/inference/perf design docs) |
-| [`alpha-zero-api`](0003-rag-eval-set-phase-1/alpha-zero-api.md) | header-only C++ game contract | `src/ include/`, `test/` | `doc/report.md`, `doc/migration-guides/` |
-| [`az-game-tic-tac-toe`](0003-rag-eval-set-phase-1/az-game-tic-tac-toe.md) | C++ game impl of the contract | `src/ include/ tests/` | `memory/` (constitution, rules, mcts/augmentation/history) |
-| [`az-game-xiang-qi`](0003-rag-eval-set-phase-1/az-game-xiang-qi.md) | C++ game + TS/TSX GUI | `src/ include/ tests/`, `gui/` | `memory/` (game_design/rules + details/, gui_design, …) |
-| [`website`](0003-rag-eval-set-phase-1/website.md) | Cloudflare-Worker React app **+ transcripts** (split) | `shuyang-website/src/` + config, `tools/`, `scripts/` | `llm-sessions-history/`, `prompts/`, `docs/{design,plan,research}` |
+| Repo                                                                      | Kind                                                    | `domain=code` corpus                                        | `domain=nl` corpus                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [`coding-agent-skills`](0003-rag-eval-set-phase-1/coding-agent-skills.md) | TS app + Python/shell harness **+ transcripts** (split) | `inception/`, `.agents/skills/*/scripts/`, `scripts/`       | `docs/transcripts/`, `docs/{benchmarks,issues,plans,prompts,research}` |
+| [`alpha-zero`](0003-rag-eval-set-phase-1/alpha-zero.md)                   | C++23 + CUDA engine + TS/TSX GUI                        | `src/ include/` (MCTS/inference/training), `gui/`, `tests/` | `docs/` (transformer/inference/perf design docs)                       |
+| [`alpha-zero-api`](0003-rag-eval-set-phase-1/alpha-zero-api.md)           | header-only C++ game contract                           | `src/ include/`, `test/`                                    | `doc/report.md`, `doc/migration-guides/`                               |
+| [`az-game-tic-tac-toe`](0003-rag-eval-set-phase-1/az-game-tic-tac-toe.md) | C++ game impl of the contract                           | `src/ include/ tests/`                                      | `memory/` (constitution, rules, mcts/augmentation/history)             |
+| [`az-game-xiang-qi`](0003-rag-eval-set-phase-1/az-game-xiang-qi.md)       | C++ game + TS/TSX GUI                                   | `src/ include/ tests/`, `gui/`                              | `memory/` (game_design/rules + details/, gui_design, …)                |
+| [`website`](0003-rag-eval-set-phase-1/website.md)                         | Cloudflare-Worker React app **+ transcripts** (split)   | `shuyang-website/src/` + config, `tools/`, `scripts/`       | `llm-sessions-history/`, `prompts/`, `docs/{design,plan,research}`     |
 
 > Paths in each question's `primary` field are **relative to that repo's root** (the absolute
 > root is stated at the top of every per-repo file and in `eval-set.json`).
@@ -54,18 +54,18 @@ their sets are **split** between codebase questions and prompting/session-histor
 Each entry carries the fields below — the same shape as a `gold.py` `Fact`, so the set maps
 into the harness with minimal transformation:
 
-| field | meaning |
-| --- | --- |
-| `id` | unique kebab id (repo-prefixed; `-cx-` marks a fact sourced from the Codex pass) |
-| `domain` | `code` (source/config files) or `nl` (markdown docs / README / transcripts) |
-| `category` | `codebase`, `design-doc`, or `session-prompting` (the eval slice) |
-| `question` | paraphrased natural-language query — **never contains its own sentinel** |
-| `answer` | the grounded 1–4 sentence answer (naturally contains the sentinel) |
-| `sentinels` | 1–4 exact strings that occur **verbatim** in a primary file (the factuality anchor) |
-| `primary` | 1–3 repo-root-relative paths to the file(s) that state the answer |
-| `difficulty` | `easy` / `medium` / `hard` (hard ⇒ multi-sentinel, multi-file synthesis) |
-| `evidence` | the `path:line: text` proof that each sentinel really occurs in the primary |
-| `source` | `claude` or `codex` (which collection pass authored it) |
+| field        | meaning                                                                             |
+| ------------ | ----------------------------------------------------------------------------------- |
+| `id`         | unique kebab id (repo-prefixed; `-cx-` marks a fact sourced from the Codex pass)    |
+| `domain`     | `code` (source/config files) or `nl` (markdown docs / README / transcripts)         |
+| `category`   | `codebase`, `design-doc`, or `session-prompting` (the eval slice)                   |
+| `question`   | paraphrased natural-language query — **never contains its own sentinel**            |
+| `answer`     | the grounded 1–4 sentence answer (naturally contains the sentinel)                  |
+| `sentinels`  | 1–4 exact strings that occur **verbatim** in a primary file (the factuality anchor) |
+| `primary`    | 1–3 repo-root-relative paths to the file(s) that state the answer                   |
+| `difficulty` | `easy` / `medium` / `hard` (hard ⇒ multi-sentinel, multi-file synthesis)            |
+| `evidence`   | the `path:line: text` proof that each sentinel really occurs in the primary         |
+| `source`     | `claude` or `codex` (which collection pass authored it)                             |
 
 **The two firewall rules** (enforced deterministically at build time, not by an LLM):
 
@@ -78,15 +78,15 @@ into the harness with minimal transformation:
 
 ## The set by the numbers
 
-| Repo | Total | claude | codex | `code` | `nl` | easy | medium | hard |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `coding-agent-skills` | 45 | 31 | 14 | 25 | 20 | 5 | 28 | 12 |
-| `alpha-zero` | 32 | 20 | 12 | 20 | 12 | 3 | 17 | 12 |
-| `alpha-zero-api` | 30 | 20 | 10 | 23 | 7 | 5 | 20 | 5 |
-| `az-game-tic-tac-toe` | 24 | 14 | 10 | 19 | 5 | 2 | 17 | 5 |
-| `az-game-xiang-qi` | 33 | 21 | 12 | 27 | 6 | 4 | 17 | 12 |
-| `website` | 43 | 28 | 15 | 23 | 20 | 7 | 27 | 9 |
-| **Total** | **207** | **134** | **73** | **137** | **70** | **26** | **126** | **55** |
+| Repo                  |   Total |  claude |  codex |  `code` |   `nl` |   easy |  medium |   hard |
+| --------------------- | ------: | ------: | -----: | ------: | -----: | -----: | ------: | -----: |
+| `coding-agent-skills` |      45 |      31 |     14 |      25 |     20 |      5 |      28 |     12 |
+| `alpha-zero`          |      32 |      20 |     12 |      20 |     12 |      3 |      17 |     12 |
+| `alpha-zero-api`      |      30 |      20 |     10 |      23 |      7 |      5 |      20 |      5 |
+| `az-game-tic-tac-toe` |      24 |      14 |     10 |      19 |      5 |      2 |      17 |      5 |
+| `az-game-xiang-qi`    |      33 |      21 |     12 |      27 |      6 |      4 |      17 |     12 |
+| `website`             |      43 |      28 |     15 |      23 |     20 |      7 |      27 |      9 |
+| **Total**             | **207** | **134** | **73** | **137** | **70** | **26** | **126** | **55** |
 
 ## How it was collected and verified
 
@@ -128,7 +128,7 @@ harness's Phase-0 eval (BM25 + in-memory vectors) per `(corpus × rag-config)` c
 
 Two agents independently executed Phase 1. Codex's pass landed first on `main` (the prior
 `0003-rag-eval-set-phase-1/README.md`, now superseded by this file, and coding-session
-[`0042`](../../coding-sessions/2026-06-08/0042-codex-rag-eval-set-phase-1.md)) as 84 prose
+[`0042`](../../transcripts/2026-06-08/0042-codex-rag-eval-set-phase-1.md)) as 84 prose
 candidates. This consolidated revision replaces that prose with the structured, machine-readable
 set and **folds Codex's 73 distinct facts into the per-repo files** (marked `source: codex`),
 per the decision to merge into one set. Codex's original prose remains in git history.

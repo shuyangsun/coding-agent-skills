@@ -136,7 +136,7 @@ Do the work once in the doc, not once per chunk:
 
 - **Use a compact context capsule.** A good top block is usually `Date`, `Status`,
   `Area`, `Sources`, then `## Summary`. `Sources` should list primary files,
-  commands, issue IDs, benchmark data, or session transcript paths. Keep it short:
+  commands, issue IDs, benchmark data, or `docs/transcripts/` session transcript paths. Keep it short:
   a retriever needs anchors, not a second abstract.
 - **Preserve relationship edges.** Say what the doc implements, supersedes,
   depends on, tests, or explains, and link those docs/code paths. Graph-style

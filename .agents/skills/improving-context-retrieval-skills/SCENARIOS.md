@@ -43,7 +43,7 @@ the docs corpus. Image facts pin grade-2 primaries relative to the image corpus 
 when those code/docs/session files answer the development question, and pin
 supporting image paths as grade-1 corroborating evidence. Image questions must be
 questions a project developer would actually ask; do not add "Describe
-`asset.webp`" caption-recall questions. Coding-session **transcripts** are the
+`asset.webp`" caption-recall questions. Session **transcripts** are the
 emphasized `nl` content type — long, dialog-shaped prose, a distinct retrieval
 challenge from the terse issue/benchmark docs. The scoreboard reports `nl`, `code`,
 and `image` with separate metrics so the difference is visible rather than averaged
@@ -58,10 +58,10 @@ Grounded in this repo's own machine-checkable facts, verified at build time
 | -------------------------------- | ------ | ----------------------------------------------- | -------------------------------------------------- | ---------- |
 | benchmark conflict time          | nl     | `380s`, `85s`                                   | `benchmarks/2026-06-06/0000-...`                   | medium     |
 | orphan empty head                | nl     | `urruyqxt`                                      | `issues/2026-06-07/0007-...`                       | hard       |
-| name-metric durability           | nl     | `reference-transaction`                         | `coding-sessions/2026-06-06/0012-...`              | medium     |
+| name-metric durability           | nl     | `reference-transaction`                         | `transcripts/2026-06-06/0012-...`                  | medium     |
 | Composer 2.5 benchmark           | nl     | `Composer 2.5`                                  | `benchmarks/2026-06-07/0002-...`                   | medium     |
 | integrate degenerate merge       | nl     | `degenerate`                                    | `issues/2026-06-07/0003-...`                       | medium     |
-| inception toolchain (transcript) | nl     | `native-preview`                                | `coding-sessions/2026-06-07/0028-...`              | medium     |
+| inception toolchain (transcript) | nl     | `native-preview`                                | `transcripts/2026-06-07/0028-...`                  | medium     |
 | router preload                   | code   | `defaultPreload`                                | `src/router.tsx`                                   | medium     |
 | React Compiler wiring            | code   | `@rolldown/plugin-babel`, `reactCompilerPreset` | `vite.config.ts`                                   | hard       |
 | typecheck compiler               | code   | `tsgo --noEmit`                                 | `package.json`                                     | medium     |

@@ -213,13 +213,13 @@ def contextual_text(repo: str, path: str, c: Chunk, kind: str, header: bool,
 
 
 # --- Wave-4 step 5: deterministic session metadata capsule (LLM-free) --------
-# Transcripts (docs/coding-sessions/<date>/<NNNN>-<vendor>-<name>.md and
+# Transcripts (docs/transcripts/<date>/<NNNN>-<vendor>-<name>.md and
 # llm-sessions-history/<date>/...) bury the session's identity + the files it touched
 # inside a long User/Assistant turn stream; a chunk mid-transcript loses that anchor.
 # This capsule (session tag + the mentioned-file list parsed from the WHOLE doc) is
 # prepended to every chunk of the session. Purely deterministic -> portable-eligible.
 _SESSION_RE = re.compile(
-    r"(?:^|/)(?:coding-sessions|llm-sessions-history)/(\d{4}-\d{2}-\d{2})/"
+    r"(?:^|/)(?:transcripts|llm-sessions-history)/(\d{4}-\d{2}-\d{2})/"
     r"(\d{2,4})-([a-z]+)-(.+)\.md$")
 _PATHTOKEN = re.compile(r"(?:[\w.\-]+/){1,}[\w.\-]+\.[A-Za-z]{1,5}\b")
 _FILETOKEN = re.compile(

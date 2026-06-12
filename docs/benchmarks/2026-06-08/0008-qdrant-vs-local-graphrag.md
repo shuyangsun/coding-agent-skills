@@ -57,7 +57,7 @@ The run used 12 fixed gold queries, three per slice:
 | `alpha-zero/history` | alpha-zero `memory/`, `doc/`, `docs/`, and README prose                         |   58 |    195 |       59,780 |
 | `alpha-zero/code`    | alpha-zero source/config files, excluding docs, nested skills, and agent config |  247 |    870 |      207,755 |
 
-Alpha-zero has no exported `coding-sessions/` tree, so the benchmark uses its
+Alpha-zero has no exported `transcripts/` tree, so the benchmark uses its
 project-history docs (`memory/`, `doc/`, `docs/`) as the history/prose analogue.
 
 ## Results

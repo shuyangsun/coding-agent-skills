@@ -81,7 +81,7 @@ risks · 14 open questions · 15 build sequence.
 
 ## 1. The three skills and the coupling
 
-```
+```text
 vcs  ←improves─ improving-vcs-skill                       (exists today)
 docs ┐
      ├←improves─ improving-docs-and-rag-skills            (this plan)
@@ -448,16 +448,16 @@ the `docs` skill's job — and the `rag` skill **consumes** it (front-matter →
 payload metadata filters; clean headings → chunk boundaries; numbered slugs →
 stable doc IDs). The two skills meet here.
 
-**Current state (surveyed).** Only `coding-sessions/` uses dated subdirs
+**Current state (surveyed).** Only `transcripts/` uses dated subdirs
 (`YYYY-MM-DD/NNNN-<vendor>-slug.md`). `issues/` & `prompts/` are flat with the date
 in the filename; `benchmarks/` & `plans/` are flat `NNNN-slug`. **No `OVERVIEW.md`
 exists anywhere under `docs/`**; the taxonomy is undocumented; `next-index.sh` is
-hardcoded to `coding-sessions`.
+hardcoded to `transcripts`.
 
-**Canonical convention** (coding-sessions): `docs/<type>/YYYY-MM-DD/NNNN-slug.md`,
+**Canonical convention** (transcripts): `docs/<type>/YYYY-MM-DD/NNNN-slug.md`,
 globally-unique zero-padded index from a **generalized** `next-index.sh`, required
 front-matter, an `OVERVIEW.md` per subdir, and a top-level `docs/OVERVIEW.md`.
-Types: keep `coding-sessions/benchmarks/issues/prompts/plans`; add `research`;
+Types: keep `transcripts/benchmarks/issues/prompts/plans`; add `research`;
 consider `decisions/` (ADRs), `designs/`, `guides/`, `reference/`.
 
 **Each gate is a falsifiable hypothesis.** Re-run the gold set every round and

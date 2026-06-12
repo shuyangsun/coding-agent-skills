@@ -132,7 +132,7 @@ QUERIES = [
             "Which coding session set up the inception app to type-check with "
             "TypeScript 7's native Go compiler instead of plain tsc?"
         ),
-        primary=("docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
+        primary=("docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
         sentinels=("native-preview", "tsgo --noEmit"),
     ),
     Query(
@@ -143,7 +143,7 @@ QUERIES = [
             "What TanStack CLI flags kept the inception scaffold clean, avoided "
             "template examples/toolchain/git setup, and enabled the compiler add-on?"
         ),
-        primary=("docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
+        primary=("docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
         sentinels=("--no-examples", "--no-toolchain", "--add-ons compiler"),
     ),
     Query(
@@ -154,7 +154,7 @@ QUERIES = [
             "Which Vite 8 React Compiler wiring did the inception setup record, "
             "including the rolldown Babel plugin and preset?"
         ),
-        primary=("docs/coding-sessions/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
+        primary=("docs/transcripts/2026-06-07/0028-claude-inception-tanstack-tooling.md",),
         sentinels=("@rolldown/plugin-babel", "reactCompilerPreset"),
     ),
     Query(
@@ -324,7 +324,7 @@ def has_skipped_part(path: Path) -> bool:
 
 
 def collect_inception_history(repo: Path) -> list[tuple[Path, str]]:
-    root = repo / "docs" / "coding-sessions"
+    root = repo / "docs" / "transcripts"
     files = []
     for path in sorted(root.rglob("*.md")):
         rel = path.relative_to(repo).as_posix()

@@ -123,7 +123,7 @@ evidence**, so the harness measures them **separately** and reports all three. E
 gold fact carries a `domain`:
 
 - **`nl`** — natural-language markdown under `docs/`, including the exported
-  **coding-session transcripts** (long, dialog-shaped prose). This is the corpus
+  **session transcripts** (long, dialog-shaped prose). This is the corpus
   the N/D/Z factorial above runs on.
 - **`code`** — the repo's own [`inception/`](../../../inception) TanStack Start app
   (source + config), indexed in place ("inception only for now").

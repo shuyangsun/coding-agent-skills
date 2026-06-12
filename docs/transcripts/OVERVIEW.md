@@ -1,4 +1,4 @@
-# coding-sessions/
+# transcripts/
 
 Exported, redacted transcripts of the coding-agent sessions that built and tested
 this repo's skills. Each is a faithful record of one session — kept verbatim, so
@@ -10,15 +10,15 @@ This is the canonical layout the other `docs/` types now mirror.
 ## Convention
 
 ```text
-docs/coding-sessions/YYYY-MM-DD/NNNN-<ide>-slug.md
+docs/transcripts/YYYY-MM-DD/NNNN-<ide>-slug.md
 ```
 
 - **`YYYY-MM-DD/`** — session date.
 - **`NNNN`** — zero-padded index, unique and monotonic across the whole tree
-  (continues across date folders; allocated by `export-coding-session`'s
+  (continues across date folders; allocated by `export-transcript`'s
   `next-index.sh`).
 - **`<ide>`** — vendor: `claude`, `cursor`, `codex`, `gemini`.
-- Exports are produced by the `export-coding-session` skill; never authored by hand.
+- Exports are produced by the `export-transcript` skill; never authored by hand.
 
 ## Sessions
 

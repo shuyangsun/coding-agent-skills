@@ -47,7 +47,7 @@ not absorb another agent's in-progress changes:
    `b30c66a2` that bundled **two unrelated things**:
    - the Claude session's three uncommitted `vcs` edits, **plus**
    - the Cursor session's own change — a 118-line reorder of an unrelated
-     transcript, `docs/coding-sessions/2026-06-07/0017-codex-vcs-script-first-jj-workspaces.md`.
+     transcript, `docs/transcripts/2026-06-07/0017-codex-vcs-script-first-jj-workspaces.md`.
 3. It wrote a message describing the `vcs` work it did not author:
 
    ```text
@@ -200,7 +200,7 @@ which is why the issue is reopened rather than closed.
 The Claude session, with the user's explicit approval to rewrite public history,
 used `jj split --ignore-immutable` to break `b30c66a2` into two clean commits —
 `fix(vcs): …` (the `vcs` work, re-authored with the correct Claude trailer) and
-`docs(coding-sessions): …` (the 0017 reorder, kept attributed to Cursor) — then
+`docs(transcripts): …` (the 0017 reorder, kept attributed to Cursor) — then
 force-pushed (jj lease-protected). The bundled commit no longer exists on
 `origin/main`. This recovery only worked because the swept-in code was, in
 hindsight, correct; the underlying interference must not recur.

@@ -12,7 +12,7 @@ services; the tier axes arrive with Phase-1's real providers.
 - **Factorial cell** — `Nb`, `Nr`, `Db`, `Dr` (corpus N|D × rag b|r). All four,
   always — the interaction needs all four. Mapped to the named conditions:
   `Db` = docs-only, `Nr` = RAG-only, `Dr` = docs+RAG (`Nb` = neither-skill control).
-- **Content type (domain)** — `nl` (natural-language docs incl. coding-session
+- **Content type (domain)** — `nl` (natural-language docs incl. session
   transcripts), `code` (the `inception/` app), and optional `image` (image-backed
   project context from the project passed with `--image-corpus`: code/docs/session
   history plus image summaries keyed to real image paths). Each runs against its
