@@ -5,23 +5,21 @@
 # ask you to trust the folder; until then these settings are ignored.
 # Docs: https://developers.openai.com/codex/config-advanced
 #
-# Posture (mirrors .claude/settings.json): read the repo and edit/run commands inside
-# the workspace without prompts; require approval to touch anything outside it or the
-# network. Command-level allow/deny lives in .codex/rules/default.rules.
+# Posture: this repo relies on command rules and VCS hooks for Codex guardrails.
+# The Linux bubblewrap sandbox is intentionally not selected here because this repo
+# is often launched inside agent/container environments where user namespaces are
+# unavailable, which makes Codex print a startup warning and fail harmless commands.
+# If your host supports bubblewrap and you want the OS sandbox, launch Codex with
+# `--sandbox workspace-write --ask-for-approval on-request`.
 
-# Ask for approval only when an action needs it (edits outside the workspace,
-# network access, or a rule marked "prompt"). Values: untrusted | on-request | never.
+# Keep interactive approval available for rule-triggered prompts or explicit
+# model-requested escalation. Values: untrusted | on-request | never.
 approval_policy = "on-request"
 
-# Read repo + edit/run within the workspace; approval required to escape it.
+# Do not use `workspace-write` by default in this repo; on Linux that requires
+# bubblewrap/user-namespace support from the host.
 # Values: read-only | workspace-write | danger-full-access.
-sandbox_mode = "workspace-write"
-
-[sandbox_workspace_write]
-# Block outbound network from sandboxed commands (this is also the default).
-network_access = false
-# No writable paths beyond the workspace itself.
-writable_roots = []
+sandbox_mode = "danger-full-access"
 
 [[hooks.SessionStart]]
 matcher = "^startup$"

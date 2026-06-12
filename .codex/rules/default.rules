@@ -1,8 +1,9 @@
 # OpenAI Codex CLI — execpolicy rules for this repo (Starlark).
 #
 # Loaded from .codex/rules/*.rules when the project is trusted. These gate command
-# EXECUTION (not file reads — Codex has no per-file read denylist; keep secrets out of
-# the tree and rely on network_access=false so reads can't be exfiltrated).
+# EXECUTION, not file reads or general network access. This repo intentionally does
+# not select Codex's Linux sandbox by default, so keep secrets out of the tree and
+# treat these rules as command guardrails rather than an OS boundary.
 #
 # decision: "allow" (run, no prompt) | "prompt" (ask each time) | "forbidden" (block).
 # When rules overlap the most restrictive wins: forbidden > prompt > allow.

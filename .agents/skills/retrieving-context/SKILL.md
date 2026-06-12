@@ -1,8 +1,9 @@
 ---
 name: retrieving-context
-description: Load when you need to FIND or RETRIEVE context (docs, prior decisions,
-  code) to answer a question or do a task — and BEFORE you grind ripgrep blindly or
-  write a new doc. Routes to the best retrieval available, best-first: cloud RAG →
+description: >-
+  Load when you need to FIND or RETRIEVE context (docs, prior decisions, code) to
+  answer a question or do a task — and BEFORE you grind ripgrep blindly or write
+  a new doc. Routes to the best retrieval available, best-first: cloud RAG →
   local RAG → navigating the doc structure by hand. Nudges you up a tier when the
   corpus is large or you'll query it repeatedly. Repo-agnostic.
 ---
