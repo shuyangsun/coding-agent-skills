@@ -49,8 +49,12 @@ a _lift_: "is RAG worth it at all" and "is this config better than the dumb one"
 3. Keep it only if the headline metric holds-or-rises with the improvement clear of
    noise, latency/index cost stays acceptable, and it doesn't regress another
    slice (code vs prose, easy vs hard). Else revert.
-4. Watch **both content types separately** if you index prose and code — they
-   behave differently and averaging hides regressions.
+4. Watch content types separately if you index prose, code, or image-backed
+   project context. Image-backed questions should grade code/docs/session
+   primaries separately from supporting image paths; averaging hides regressions.
+   Because images are usually lower priority than source and prose, keep an
+   image-specific tuning change only when the code and natural-language slices
+   hold or rise too.
 
 ## 4. Reference implementation
 

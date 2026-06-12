@@ -42,6 +42,11 @@ dominate its chunk.
 - **Answers truncated / context split across chunks?** Raise `size` and/or
   `overlap`.
 - **Index too large / near-duplicate hits?** Raise `min_words`, lower `overlap`.
+- **Image-backed project corpus ranking too many near-miss transcripts?** First
+  confirm image summaries are indexed beside code/docs/session files, then sweep
+  `min_words` before changing models. The context-retrieval harness caught a
+  real image-query gain from honoring the min-merge floor without regressing
+  code or natural-language slices.
 
 Chunking interacts with retrieval and reranking, so never eyeball it — change one
 knob, re-index, and re-score on the held-out gold set ([TUNING.md](TUNING.md)).

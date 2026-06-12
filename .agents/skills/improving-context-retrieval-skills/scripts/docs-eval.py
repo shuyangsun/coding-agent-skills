@@ -26,7 +26,8 @@ host- and placeholder-relative; the *deltas* between cells are what travel.
 rag-config.json (the knobs the `setting-up-rag` skill owns):
   {
     "rag_config_id": "baseline-b",
-    "chunker":   {"strategy": "fixed|heading|recursive", "size": 512, "overlap": 64},
+    "chunker":   {"strategy": "fixed|heading|recursive", "size": 512, "overlap": 64,
+                  "min_words": 80},
     "embedding": {"model": "hash", "dim": 256, "idf_weight": true},
     "hybrid":    {"sparse": true, "dense": true, "fusion": "rrf|weighted",
                   "rrf_k": 60, "dense_weight": 0.5},
@@ -84,8 +85,12 @@ def chunk_fixed(text: str, size: int, overlap: int) -> list[str]:
     return [" ".join(words[i : i + size]) for i in range(0, len(words), step) if words[i : i + size]]
 
 
-def chunk_heading(text: str, size: int, overlap: int) -> list[str]:
-    """Split on Markdown headings; over-long sections fall back to fixed windows."""
+def chunk_heading(text: str, size: int, overlap: int, min_words: int = 80) -> list[str]:
+    """Split on Markdown headings, then merge tiny adjacent sections.
+
+    This mirrors setting-up-rag's production chunker: heading boundaries stay
+    meaningful, but transcript-style docs do not explode into one-line chunks.
+    """
     sections: list[str] = []
     cur: list[str] = []
     for line in text.splitlines():
@@ -96,8 +101,24 @@ def chunk_heading(text: str, size: int, overlap: int) -> list[str]:
             cur.append(line)
     if cur:
         sections.append("\n".join(cur))
-    chunks: list[str] = []
+
+    merged: list[str] = []
+    buf = ""
     for sec in sections:
+        if not sec.strip():
+            continue
+        buf = f"{buf}\n\n{sec}".strip() if buf else sec
+        if len(_words(buf)) >= min_words:
+            merged.append(buf)
+            buf = ""
+    if buf:
+        if merged:
+            merged[-1] = f"{merged[-1]}\n\n{buf}"
+        else:
+            merged.append(buf)
+
+    chunks: list[str] = []
+    for sec in merged:
         if len(_words(sec)) > size:
             chunks.extend(chunk_fixed(sec, size, overlap))
         elif sec.strip():
@@ -149,9 +170,15 @@ class Index:
         strat = ch.get("strategy", "fixed")
         size = int(ch.get("size", 512))
         overlap = int(ch.get("overlap", 64))
+        min_words = int(ch.get("min_words", 80))
         chunker = CHUNKERS.get(strat, chunk_fixed)
         for doc_id, text in docs.items():
-            for c in chunker(text, size, overlap):
+            chunks = (
+                chunk_heading(text, size, overlap, min_words)
+                if strat == "heading"
+                else chunker(text, size, overlap)
+            )
+            for c in chunks:
                 toks = gold.tokens(c)
                 if not toks:
                     continue

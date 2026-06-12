@@ -88,6 +88,23 @@ cross-encoder reranks the top candidates. The how-and-why is in
    search; drop it when latency is critical. → [RETRIEVAL.md](RETRIEVAL.md)
 4. **Right-size top-k and prefetch** to the consumer's context budget.
 
+### Image-backed project context
+
+For questions about a project that uses images, **do not build an image-caption
+index by itself**. Index the project context that answers the question — source
+files, docs, session transcripts, asset manifests, generation specs, and tooling —
+plus compact image-summary documents whose doc ids are the real image paths.
+Treat code/docs/session files as the primary answer evidence and image paths as
+supporting visual provenance unless the user explicitly asks to inspect the image.
+
+Keep the contamination boundary clear: benchmark questions, expected answers,
+sentinels, and scoring notes must not be indexed into the corpus being evaluated.
+Image summaries should state visible facts, purpose in the project, source paths,
+derived-asset relationships, and synchronization rules in plain words. If summary
+generation needs a model, use a vision-capable local model for image inputs and a
+strong text model for text-only contextualization; never send image-only work to a
+text-only generator.
+
 ## 4. Tune and validate against YOUR corpus — don't trust defaults blindly
 
 The defaults are a strong start, **not** a guarantee. A knob that helps one corpus

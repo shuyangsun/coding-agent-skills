@@ -54,3 +54,4 @@ tree (does not restart per day).
 ### 2026-06-12
 
 - [`0022` — Wave 7: answer faithfulness on the Qwen caveat slice](2026-06-12/0022-wave7-answer-faithfulness-rag.md) · [citation data](2026-06-12/0022-wave7-caveat-metrics.tsv) · [extractive data](2026-06-12/0022-wave7-caveat-extractive-metrics.tsv)
+- [`0023` — `setting-up-rag`: image-context min-merge check](2026-06-12/0023-setting-up-rag-image-context-min-merge.md) · [data](2026-06-12/0023-setting-up-rag-image-context-min-merge-metrics.tsv)

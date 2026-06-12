@@ -110,6 +110,13 @@ for a three-file repo — the floor is the right tool there.
   paths, headings, and line ranges attached to each chunk; don't paste anonymous
   excerpts into the prompt. Require citations on factual answer sentences and
   mechanically check that the cited chunk exists and contains the claimed support.
+- **For image-backed project questions, retrieve project context first.** Ask the
+  development question in terms of the workflow, asset name, source path, script,
+  or bug history; the best evidence is usually code/docs/session history, with
+  image paths or image summaries as supporting provenance. Do not answer a
+  project question from an image summary alone when a source file or session note
+  states the behavior. If an image path is retrieved and the visual detail matters,
+  inspect the actual image before relying on the summary.
 - **Pack for the reader, not just the retriever.** For larger answer contexts, start
   with score order or parent/section grouped packs that preserve source IDs. Use
   source-path order only when you have measured it on that corpus; on this repo's
