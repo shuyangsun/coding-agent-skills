@@ -16,3 +16,11 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `prompts/` tre
 ### 2026-06-07
 
 - [`0004` — VCS jj vs Git generic benchmark](2026-06-07/0004-vcs-jj-vs-git-generic-benchmark-prompt.md)
+
+### 2026-06-08
+
+- [`0005` — optimizing the local RAG setup](2026-06-08/0005-optimizing-rag-setup.md)
+
+### 2026-06-12
+
+- [`0006` — setting up persistent local RAG](2026-06-12/0006-setting-up-local-rag.md)
