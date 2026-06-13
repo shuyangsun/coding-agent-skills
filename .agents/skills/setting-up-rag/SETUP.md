@@ -48,6 +48,15 @@ Then re-run `check-local-rag.sh`; it should print `READY`.
 | `QDRANT_URL`  | `http://localhost:6333`     | live server; probed before falling back to embedded |
 | `QDRANT_PATH` | `$RAG_HOME/qdrant`          | embedded on-disk store when no server               |
 
+The optional `answer.py` test harness also reads these OpenAI-compatible LLM
+provider variables:
+
+| Var                | Default                    | Purpose                                      |
+| ------------------ | -------------------------- | -------------------------------------------- |
+| `RAG_LLM_MODEL`    | _required_                 | served model name passed to chat completions |
+| `RAG_LLM_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-compatible API base URL               |
+| `RAG_LLM_API_KEY`  | unset                      | bearer token when the provider requires one  |
+
 ## Alternatives
 
 - **Bigger/better dense model** — set `embedding.dense_model` to

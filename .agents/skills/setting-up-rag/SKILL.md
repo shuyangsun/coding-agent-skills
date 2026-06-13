@@ -90,6 +90,28 @@ Each query runs a dense and a sparse retrieval, fuses them with RRF, then a loca
 cross-encoder reranks the top candidates. The how-and-why is in
 [RETRIEVAL.md](RETRIEVAL.md).
 
+### Optional: test answer generation with an OpenAI-compatible LLM
+
+For manual tests and future GUI/backend experiments, `answer.py` can retrieve
+chunks and ask a locally hosted or cloud LLM to synthesize a cited answer through
+an OpenAI-compatible `/v1/chat/completions` endpoint. This is deliberately
+separate from the default retrieval workflow; do not use it as the normal
+`retrieving-context` consumer path.
+
+```sh
+export RAG_LLM_BASE_URL=http://127.0.0.1:8000/v1
+export RAG_LLM_MODEL=<served-model-name>
+python3 <skill-dir>/scripts/answer.py "…" --project <name-or-path> --kind all
+python3 <skill-dir>/scripts/answer.py "…" --collection docs --model <model> --json
+python3 <skill-dir>/scripts/answer.py "…" --project <name> --dry-run --show-context
+```
+
+`RAG_LLM_API_KEY` is optional for local servers and required only when the target
+provider expects a bearer token. For cloud providers, set `RAG_LLM_BASE_URL` to
+the provider's OpenAI-compatible API base URL and set `RAG_LLM_API_KEY` (or pass
+`--api-key-env`). Local vLLM or TensorRT-LLM servers should be started separately
+with the model path or served model name they expect.
+
 ## 3. The method (what makes retrieval good, in priority order)
 
 1. **Hybrid beats either arm alone.** Dense (semantic, `bge-small`) catches

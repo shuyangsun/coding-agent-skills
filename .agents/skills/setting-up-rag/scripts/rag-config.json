@@ -31,5 +31,17 @@
     "_note": "Cross-encoder re-scores the top_n fused candidates in-process, then top_k are returned. Disable for the lowest-latency/plain arm."
   },
   "top_k": 20,
+  "answering": {
+    "_note": "Testing-only answer generation on top of retrieval. Calls an OpenAI-compatible /v1/chat/completions endpoint such as local vLLM, TensorRT-LLM, or a cloud provider. This is not part of the default retrieval workflow.",
+    "model_env": "RAG_LLM_MODEL",
+    "base_url_env": "RAG_LLM_BASE_URL",
+    "api_key_env": "RAG_LLM_API_KEY",
+    "default_base_url": "http://127.0.0.1:8000/v1",
+    "temperature": 0.2,
+    "max_tokens": 800,
+    "timeout": 120,
+    "max_context_chars": 12000,
+    "system_prompt": "You are a retrieval-grounded QA test harness. Answer only from the provided context. Cite supporting chunks with bracketed source ids like [1]. If the context is insufficient, say what is missing instead of guessing."
+  },
   "contextual_retrieval": false
 }

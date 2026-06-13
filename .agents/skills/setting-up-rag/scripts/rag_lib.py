@@ -422,6 +422,77 @@ def rerank(query: str, texts: list[str], cfg: dict) -> list[float]:
     return list(_reranker(rr["model"]).rerank(query, texts))
 
 
+# --- retrieval ---------------------------------------------------------------
+def retrieve_chunks(
+    client: Any,
+    collection: str,
+    query: str,
+    cfg: dict[str, Any],
+    top_k: int,
+    *,
+    do_rerank: bool,
+) -> list[tuple[Any, float]]:
+    """Return top chunks from one Qdrant collection using the standard RAG path."""
+    from qdrant_client import models
+
+    dv, sv = embed_query(query, cfg)
+    prefetch = int(cfg.get("hybrid", {}).get("prefetch", 60))
+    rr = cfg.get("rerank", {})
+    # Fetch enough to feed the reranker when it is on, else just top_k.
+    fuse_limit = max(top_k, int(rr.get("top_n", 50))) if (do_rerank and rr.get("enabled")) else top_k
+    fusion = models.Fusion.DBSF if cfg.get("hybrid", {}).get("fusion") == "dbsf" else models.Fusion.RRF
+
+    hits = client.query_points(
+        collection,
+        prefetch=[
+            models.Prefetch(query=dv, using="dense", limit=prefetch),
+            models.Prefetch(query=to_sparse_vector(sv), using="sparse", limit=prefetch),
+        ],
+        query=models.FusionQuery(fusion=fusion),
+        limit=fuse_limit,
+        with_payload=True,
+    ).points
+
+    if do_rerank and rr.get("enabled") and hits:
+        texts = [h.payload.get("text", "") for h in hits]
+        scores = rerank(query, texts, cfg)  # aligned to `hits`
+        order = sorted(range(len(hits)), key=lambda i: scores[i], reverse=True)
+        ranked = [(hits[i], scores[i]) for i in order]
+    else:
+        ranked = [(h, h.score) for h in hits]
+    return ranked[:top_k]
+
+
+def project_targets(client: Any, selector: str, kind: str) -> list[tuple[str, str, str]]:
+    """Resolve a registered project selector to existing collection targets."""
+    project_key, project = resolve_project(selector)
+    collections = project.get("collections", {})
+    selected_kinds = sorted(collections) if kind == "all" else [kind]
+    targets = []
+    for selected_kind in selected_kinds:
+        info = collections.get(selected_kind)
+        if not info:
+            continue
+        coll = info.get("collection")
+        if not coll:
+            continue
+        if client.collection_exists(coll):
+            targets.append((project_key, selected_kind, coll))
+        else:
+            print(
+                f"rag: warning: registered collection '{coll}' for "
+                f"{project_key}/{selected_kind} does not exist",
+                file=sys.stderr,
+            )
+    if not targets:
+        available = ", ".join(sorted(collections)) or "(none)"
+        sys.exit(
+            f"rag: project '{project_key}' has no available collection for "
+            f"kind={kind}; registered kinds: {available}"
+        )
+    return targets
+
+
 # --- Qdrant client ----------------------------------------------------------
 def qdrant_url() -> str:
     return os.environ.get("QDRANT_URL", "http://localhost:6333")

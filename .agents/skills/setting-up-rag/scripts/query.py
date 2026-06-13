@@ -24,37 +24,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rag_lib as R  # noqa: E402
 
 
-def retrieve(client, coll: str, query: str, cfg: dict, top_k: int, do_rerank: bool):
-    from qdrant_client import models
-
-    dv, sv = R.embed_query(query, cfg)
-    prefetch = int(cfg.get("hybrid", {}).get("prefetch", 60))
-    rr = cfg.get("rerank", {})
-    # fetch enough to feed the reranker when it is on, else just top_k
-    fuse_limit = max(top_k, int(rr.get("top_n", 50))) if (do_rerank and rr.get("enabled")) else top_k
-    fusion = models.Fusion.DBSF if cfg.get("hybrid", {}).get("fusion") == "dbsf" else models.Fusion.RRF
-
-    hits = client.query_points(
-        coll,
-        prefetch=[
-            models.Prefetch(query=dv, using="dense", limit=prefetch),
-            models.Prefetch(query=R.to_sparse_vector(sv), using="sparse", limit=prefetch),
-        ],
-        query=models.FusionQuery(fusion=fusion),
-        limit=fuse_limit,
-        with_payload=True,
-    ).points
-
-    if do_rerank and rr.get("enabled") and hits:
-        texts = [h.payload.get("text", "") for h in hits]
-        scores = R.rerank(query, texts, cfg)  # aligned to `hits`
-        order = sorted(range(len(hits)), key=lambda i: scores[i], reverse=True)
-        ranked = [(hits[i], scores[i]) for i in order]
-    else:
-        ranked = [(h, h.score) for h in hits]
-    return ranked[:top_k]
-
-
 def print_projects(as_json: bool) -> int:
     manifest = R.load_project_manifest()
     projects = manifest.get("projects", {})
@@ -73,35 +42,6 @@ def print_projects(as_json: bool) -> int:
         )
         print(f"{key}\t{root}\t{kinds}")
     return 0
-
-
-def project_targets(client, selector: str, kind: str):
-    project_key, project = R.resolve_project(selector)
-    collections = project.get("collections", {})
-    selected_kinds = sorted(collections) if kind == "all" else [kind]
-    targets = []
-    for selected_kind in selected_kinds:
-        info = collections.get(selected_kind)
-        if not info:
-            continue
-        coll = info.get("collection")
-        if not coll:
-            continue
-        if client.collection_exists(coll):
-            targets.append((project_key, selected_kind, coll))
-        else:
-            print(
-                f"query: warning: registered collection '{coll}' for "
-                f"{project_key}/{selected_kind} does not exist",
-                file=sys.stderr,
-            )
-    if not targets:
-        available = ", ".join(sorted(collections)) or "(none)"
-        sys.exit(
-            f"query: project '{project_key}' has no available collection for "
-            f"kind={kind}; registered kinds: {available}"
-        )
-    return targets
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -131,9 +71,9 @@ def main(argv: list[str] | None = None) -> int:
     client, where = R.get_client(force_local=args.local)
     if args.project:
         ranked = []
-        targets = project_targets(client, args.project, args.kind)
+        targets = R.project_targets(client, args.project, args.kind)
         for project_key, selected_kind, coll in targets:
-            for hit, score in retrieve(client, coll, args.query, cfg, top_k, do_rerank=not args.no_rerank):
+            for hit, score in R.retrieve_chunks(client, coll, args.query, cfg, top_k, do_rerank=not args.no_rerank):
                 ranked.append((hit, score, project_key, selected_kind, coll))
         ranked.sort(key=lambda item: item[1], reverse=True)
         ranked = ranked[:top_k]
@@ -144,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
             sys.exit(f"query: collection '{coll}' not found ({where}). Run index.py first.")
         ranked = [
             (hit, score, None, None, coll)
-            for hit, score in retrieve(client, coll, args.query, cfg, top_k, do_rerank=not args.no_rerank)
+            for hit, score in R.retrieve_chunks(client, coll, args.query, cfg, top_k, do_rerank=not args.no_rerank)
         ]
         target_label = f"collection '{coll}'"
 

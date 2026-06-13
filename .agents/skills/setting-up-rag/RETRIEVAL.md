@@ -52,7 +52,27 @@ bi-encoder similarity. It re-scores the fused `rerank.top_n` (default 50) and th
 - `prefetch`/`rerank.top_n` set how wide the funnel is before fusion/rerank. Wider
   = higher recall, more rerank cost. 50–60 is a good balance for a mid-size corpus.
 
-## 5. When to reach for more (add only if measured to help)
+## 5. Test-only answer generation
+
+The retrieval engine does not require an LLM to answer questions. For testing and
+future GUI/backend experiments, [`scripts/answer.py`](scripts/answer.py) reuses
+the same retrieval path, packs retrieved chunks with bracketed source ids, and
+calls an OpenAI-compatible `/v1/chat/completions` endpoint. Use it to test local
+servers such as vLLM or TensorRT-LLM, or a cloud provider with an OpenAI-compatible
+API:
+
+```sh
+RAG_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
+RAG_LLM_MODEL=<served-model-name> \
+python3 scripts/answer.py "your question" --project <name-or-path> --kind all
+```
+
+`answer.py --dry-run --show-context` verifies retrieval and prompt packing without
+calling the provider. Keep answer quality separate from retrieval quality: tune
+chunking, hybrid retrieval, and reranking with IR metrics first, then use answer
+generation only as an end-to-end smoke test.
+
+## 6. When to reach for more (add only if measured to help)
 
 - **Contextual Retrieval** (Anthropic): prepend a one-line, LLM-generated summary
   of the chunk's place in its document _before embedding_. **Measured** on a six-repo
