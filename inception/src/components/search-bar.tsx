@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from "react";
 import { Search, Sparkles } from "lucide-react";
 
-import type { SearchMode } from "#/types/rag";
+import type { SearchMode, SearchPhase } from "#/types/rag";
 import { Button, Segmented, Spinner, TextArea } from "#/components/ui";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   mode: SearchMode;
   onMode: (mode: SearchMode) => void;
   onSubmit: () => void;
-  pending: boolean;
+  phase: SearchPhase;
   canSubmit: boolean;
   hint: string;
 };
@@ -21,10 +21,11 @@ export function SearchBar({
   mode,
   onMode,
   onSubmit,
-  pending,
+  phase,
   canSubmit,
   hint,
 }: Props) {
+  const pending = phase !== "idle";
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (
       event.key === "Enter" &&
@@ -93,7 +94,7 @@ export function SearchBar({
           {pending ? (
             <>
               <Spinner className="h-4 w-4" />
-              {mode === "answer" ? "Generating…" : "Retrieving…"}
+              {phase === "answering" ? "Generating…" : "Querying…"}
             </>
           ) : mode === "answer" ? (
             "Answer"

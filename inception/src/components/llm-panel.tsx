@@ -137,7 +137,7 @@ export function LlmPanel({ settings, onChange }: Props) {
                   onChange={(event) =>
                     set(
                       "maxTokens",
-                      Math.round(clamp(event.target.value, 1, 100000, 800)),
+                      Math.round(clamp(event.target.value, 1, 100000, 16384)),
                     )
                   }
                 />

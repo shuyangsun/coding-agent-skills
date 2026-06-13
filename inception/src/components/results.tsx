@@ -1,6 +1,6 @@
 import { AlertTriangle, FileText, Loader2, Sparkles } from "lucide-react";
 
-import type { SearchMode, SearchState } from "#/types/rag";
+import type { SearchPhase, SearchState } from "#/types/rag";
 import { assertNever } from "#/types/rag";
 import { formatMs } from "#/lib/format";
 import { ResultCard } from "#/components/chunk-card";
@@ -8,19 +8,19 @@ import { AnswerView } from "#/components/answer-view";
 
 type Props = {
   state: SearchState;
-  pending: boolean;
-  mode: SearchMode;
+  phase: SearchPhase;
   projectName: string;
 };
 
-export function Results({ state, pending, mode, projectName }: Props) {
-  if (pending && state.status === "idle") {
-    return <LoadingPanel mode={mode} />;
+export function Results({ state, phase, projectName }: Props) {
+  // Nothing to show yet: a full loading panel for the first request.
+  if (phase !== "idle" && state.status === "idle") {
+    return <LoadingPanel phase={phase} />;
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {pending ? <PendingBar mode={mode} /> : null}
+      {phase !== "idle" ? <PendingBar phase={phase} /> : null}
       <StateView state={state} projectName={projectName} />
     </div>
   );
@@ -158,31 +158,33 @@ function hintFor(message: string): string {
   return "Adjust your query or parameters and try again.";
 }
 
-function LoadingPanel({ mode }: { mode: SearchMode }) {
+function LoadingPanel({ phase }: { phase: SearchPhase }) {
+  const answering = phase === "answering";
   return (
     <div className="grid place-items-center rounded-2xl border border-edge bg-surface px-6 py-16 text-center">
       <Loader2 className="mb-3 h-7 w-7 animate-spin text-accent" />
       <p className="text-sm font-medium text-fg">
-        {mode === "answer" ? "Generating answer…" : "Retrieving chunks…"}
+        {answering ? "Generating answer…" : "Querying…"}
       </p>
       <p className="mt-1 text-xs text-muted">
-        {mode === "answer"
-          ? "Retrieving context, then calling the model."
+        {answering
+          ? "Calling the model with the retrieved context."
           : "Embedding the query and ranking matches."}
       </p>
     </div>
   );
 }
 
-function PendingBar({ mode }: { mode: SearchMode }) {
+function PendingBar({ phase }: { phase: SearchPhase }) {
+  const answering = phase === "answering";
   return (
     <div className="flex items-center gap-2 rounded-lg border border-edge bg-surface px-3 py-2 text-xs text-muted">
-      {mode === "answer" ? (
+      {answering ? (
         <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
       ) : (
         <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
       )}
-      {mode === "answer" ? "Generating answer…" : "Retrieving…"}
+      {answering ? "Generating answer…" : "Querying…"}
     </div>
   );
 }

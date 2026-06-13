@@ -16,7 +16,7 @@ export const DEFAULT_LLM: LlmSettings = {
   model: "",
   apiKey: "",
   temperature: 0.2,
-  maxTokens: 800,
+  maxTokens: 16384,
   maxContextChars: 12000,
   systemPrompt: "",
 };

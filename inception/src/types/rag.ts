@@ -87,6 +87,10 @@ export type RetrievalParams = {
 
 export type SearchMode = "retrieve" | "answer";
 
+// In-flight stage. `querying` = retrieving + ranking chunks; `answering` =
+// calling the LLM to generate the grounded answer. `idle` = nothing running.
+export type SearchPhase = "idle" | "querying" | "answering";
+
 export type LlmTarget = "local" | "cloud";
 
 export type LlmSettings = {

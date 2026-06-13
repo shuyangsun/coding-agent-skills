@@ -1,4 +1,4 @@
-import { useActionState, useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Boxes } from "lucide-react";
 
@@ -7,6 +7,7 @@ import type {
   LlmSettings,
   Project,
   SearchMode,
+  SearchPhase,
   SearchState,
 } from "#/types/rag";
 import { runAnswer, runQuery } from "#/server/rag";
@@ -34,48 +35,79 @@ export function App({ projects }: { projects: Project[] }) {
     DEFAULT_LLM,
   );
 
+  const [state, setState] = useState<SearchState>({ status: "idle" });
+  const [phase, setPhase] = useState<SearchPhase>("idle");
+
   const selected = projects.find((p) => p.key === projectKey) ?? projects[0];
   const hasModel = llm.model.trim().length > 0;
+  const pending = phase !== "idle";
   const canSubmit =
+    !pending &&
     query.trim().length > 0 &&
     Boolean(selected) &&
     (mode === "retrieve" || hasModel);
 
-  const [state, submit, pending] = useActionState<SearchState, void>(
-    async (): Promise<SearchState> => {
-      if (!selected)
-        return { status: "error", message: "No project selected." };
-      const base = {
-        query: query.trim(),
-        project: selected.key,
-        kind,
-        topK,
-        rerank,
-      };
-      if (mode === "answer") {
-        const outcome = await runAnswer({
-          data: {
-            ...base,
-            baseUrl: llm.baseUrl,
-            model: llm.model.trim(),
-            apiKey: llm.apiKey,
-            temperature: llm.temperature,
-            maxTokens: llm.maxTokens,
-            maxContextChars: llm.maxContextChars,
-            systemPrompt: llm.systemPrompt,
-          },
-        });
-        return outcome.ok
-          ? { status: "answered", data: outcome.data }
-          : { status: "error", message: outcome.error };
+  // A plain async handler (no useActionState/transition): transitions briefly
+  // re-render the route subtree and blank the page during the request. This
+  // also lets us surface the two stages — `querying` then `answering` — and
+  // show the retrieved chunks while the model is still generating.
+  const inFlight = useRef(false);
+  async function submit() {
+    if (inFlight.current) return;
+    if (!selected) {
+      setState({ status: "error", message: "No project selected." });
+      return;
+    }
+    const base = {
+      query: query.trim(),
+      project: selected.key,
+      kind,
+      topK,
+      rerank,
+    };
+    inFlight.current = true;
+    try {
+      setPhase("querying");
+      const retrieval = await runQuery({ data: base });
+      if (!retrieval.ok) {
+        setState({ status: "error", message: retrieval.error });
+        return;
       }
-      const outcome = await runQuery({ data: base });
-      return outcome.ok
-        ? { status: "retrieved", data: outcome.data }
-        : { status: "error", message: outcome.error };
-    },
-    { status: "idle" },
-  );
+      if (mode === "retrieve") {
+        setState({ status: "retrieved", data: retrieval.data });
+        return;
+      }
+
+      // Answer mode: show the retrieved chunks, then generate the answer.
+      setState({ status: "retrieved", data: retrieval.data });
+      setPhase("answering");
+      const outcome = await runAnswer({
+        data: {
+          ...base,
+          baseUrl: llm.baseUrl,
+          model: llm.model.trim(),
+          apiKey: llm.apiKey,
+          temperature: llm.temperature,
+          maxTokens: llm.maxTokens,
+          maxContextChars: llm.maxContextChars,
+          systemPrompt: llm.systemPrompt,
+        },
+      });
+      setState(
+        outcome.ok
+          ? { status: "answered", data: outcome.data }
+          : { status: "error", message: outcome.error },
+      );
+    } catch (error) {
+      setState({
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setPhase("idle");
+      inFlight.current = false;
+    }
+  }
 
   const hint =
     mode === "answer" && !hasModel
@@ -118,14 +150,13 @@ export function App({ projects }: { projects: Project[] }) {
               mode={mode}
               onMode={setMode}
               onSubmit={submit}
-              pending={pending}
+              phase={phase}
               canSubmit={canSubmit}
               hint={hint}
             />
             <Results
               state={state}
-              pending={pending}
-              mode={mode}
+              phase={phase}
               projectName={selected?.name ?? "this project"}
             />
           </section>
