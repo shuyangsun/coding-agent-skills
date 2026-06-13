@@ -190,17 +190,35 @@ def _call_llm(
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    request = urllib.request.Request(
-        _chat_completions_url(base_url),
-        data=json.dumps(body).encode("utf-8"),
-        headers=headers,
-        method="POST",
-    )
+    url = _chat_completions_url(base_url)
     try:
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
         with urllib.request.urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:800]
+        # Newer OpenAI models reject 'max_tokens' and require
+        # 'max_completion_tokens'. Retry once with the renamed field.
+        if (
+            exc.code == 400
+            and "max_tokens" in body
+            and "max_completion_tokens" in detail
+        ):
+            retry_body = {
+                k: v for k, v in body.items() if k != "max_tokens"
+            }
+            retry_body["max_completion_tokens"] = body["max_tokens"]
+            return _call_llm(
+                base_url=base_url,
+                api_key=api_key,
+                body=retry_body,
+                timeout=timeout,
+            )
         raise ApiError(f"provider returned HTTP {exc.code}: {detail}", 502) from exc
     except urllib.error.URLError as exc:
         raise ApiError(f"could not reach provider at {base_url}: {exc.reason}", 502) from exc
