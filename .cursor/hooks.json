@@ -1,11 +1,6 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      {
-        "command": "repo=\"$(jj root 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null)\" && bash \"$repo/.agents/skills/vcs/scripts/cursor-hook.sh\" sessionStart"
-      }
-    ],
     "beforeShellExecution": [
       {
         "command": "repo=\"$(jj root 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null)\" && bash \"$repo/.agents/skills/vcs/scripts/cursor-hook.sh\" beforeShellExecution"

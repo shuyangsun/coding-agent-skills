@@ -11,7 +11,6 @@
     "git commit",
     "bash .agents/skills/vcs/scripts/isolate.sh",
     "bash .agents/skills/vcs/scripts/integrate.sh",
-    "bash .agents/skills/vcs/scripts/session-start.sh",
     "bash .agents/skills/vcs/scripts/rename-work.sh",
     "jj root",
     "jj status",
