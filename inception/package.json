@@ -6,7 +6,9 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "bun run scripts/dev.mjs",
+    "dev:web": "vite dev --port 3000",
+    "dev:rag": "bun run scripts/rag-service.mjs",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",

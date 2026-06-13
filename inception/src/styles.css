@@ -1,5 +1,72 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` responds to a `.dark` on <html> (toggled by the
+   no-FOUC script in __root.tsx and the theme store). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic tokens. `inline` makes the generated utilities reference the CSS
+   variables, so flipping them under `.dark` re-themes every utility at once. */
+@theme inline {
+  --color-base: var(--base);
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-code: var(--code);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas,
+    monospace;
+}
+
+:root {
+  --base: #f4f4f6;
+  --surface: #ffffff;
+  --panel: #fbfbfc;
+  --edge: #e7e7ec;
+  --edge-strong: #d6d6dd;
+  --fg: #19191f;
+  --muted: #61626b;
+  --faint: #9a9ba3;
+  --accent: #5b5bd6;
+  --accent-fg: #ffffff;
+  --accent-soft: #ecedfb;
+  --code: #f1f2f4;
+  --danger: #d3324b;
+  --danger-soft: #fdedf0;
+  --ok: #17935a;
+}
+
+.dark {
+  --base: #0a0b0d;
+  --surface: #15161a;
+  --panel: #0f1014;
+  --edge: #24252c;
+  --edge-strong: #34363f;
+  --fg: #ececef;
+  --muted: #989aa2;
+  --faint: #64666e;
+  --accent: #8b8bf5;
+  --accent-fg: #0b0b12;
+  --accent-soft: #191a28;
+  --code: #1a1b21;
+  --danger: #ff6b80;
+  --danger-soft: #2a1418;
+  --ok: #3ecf8e;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -10,6 +77,53 @@ body,
   min-height: 100%;
 }
 
+html {
+  color-scheme: light dark;
+}
+
 body {
   margin: 0;
+  background: var(--base);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 26%, transparent);
+}
+
+/* Subtle, theme-aware scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--edge-strong);
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+  background-clip: padding-box;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.22s ease-out both;
 }
