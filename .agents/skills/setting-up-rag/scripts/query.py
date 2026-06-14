@@ -4,7 +4,7 @@
 Pipeline (see RETRIEVAL.md):
   1. embed the query (dense + sparse),
   2. Qdrant Query API: a dense prefetch and a sparse prefetch, fused with RRF,
-  3. optional in-process cross-encoder rerank of the fused top_n,
+  3. optional rerank of the fused top_n (Qwen3 /rerank by default),
   4. return top_k chunks (doc_id, score, snippet).
 
 Usage:
@@ -90,25 +90,32 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.json:
         for hit, score, project_key, selected_kind, coll in ranked:
+            payload = hit.payload or {}
             print(json.dumps({
                 "project": project_key,
                 "kind": selected_kind,
                 "collection": coll,
-                "doc_id": hit.payload.get("doc_id"),
-                "chunk_idx": hit.payload.get("chunk_idx"),
+                "doc_id": payload.get("doc_id"),
+                "chunk_idx": payload.get("chunk_idx"),
                 "score": float(score),
-                "text": hit.payload.get("text", ""),
+                "text": R.payload_display_text(payload),
             }))
         return 0
-    scale = "cross-encoder logits" if used_rerank else "RRF fused score"
+    rr = cfg.get("rerank", {})
+    scale = (
+        f"{rr.get('model', 'reranker')} scores"
+        if used_rerank
+        else "RRF fused score"
+    )
     print(f"# {len(ranked)} results for: {args.query}  ({where}, {target_label}, scores: {scale})")
     for rank, (hit, score, project_key, selected_kind, coll) in enumerate(ranked, 1):
-        text = (hit.payload.get("text", "") or "").replace("\n", " ")
+        payload = hit.payload or {}
+        text = R.payload_display_text(payload).replace("\n", " ")
         snippet = text[:160] + ("…" if len(text) > 160 else "")
         prefix = f"{project_key}/{selected_kind}:" if project_key else ""
         print(
             f"{rank:>2}. [{score:+.4f}] "
-            f"{prefix}{hit.payload.get('doc_id')}#{hit.payload.get('chunk_idx')}  {snippet}"
+            f"{prefix}{payload.get('doc_id')}#{payload.get('chunk_idx')}  {snippet}"
         )
     return 0
 

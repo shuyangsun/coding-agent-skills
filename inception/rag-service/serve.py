@@ -358,6 +358,7 @@ def handle_answer(body: dict[str, Any]) -> dict[str, Any]:
     max_context_chars = int(
         body.get("max_context_chars", ans_cfg.get("max_context_chars", 12000))
     )
+    pack_strategy = str(body.get("pack") or ans_cfg.get("pack_strategy", "parent"))
     system_prompt = body.get("system_prompt") or str(
         ans_cfg.get("system_prompt", A.DEFAULT_SYSTEM_PROMPT)
     )
@@ -372,7 +373,7 @@ def handle_answer(body: dict[str, Any]) -> dict[str, Any]:
         top_k=_top_k(body),
         do_rerank=bool(body.get("rerank", True)),
     )
-    sources = A.pack_sources(ranked, max_context_chars)
+    sources = A.pack_sources(ranked, max_context_chars, strategy=pack_strategy)
     if not sources:
         raise ApiError("retrieval returned no usable context chunks", 422)
     context = A.build_context(sources)

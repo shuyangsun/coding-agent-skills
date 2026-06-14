@@ -48,9 +48,11 @@ than anything you'd build ad hoc.
 
 No cloud retrieval, but a **medium-to-large local corpus** (a real `docs/` tree,
 exported transcripts, a source tree)? Use the local hybrid index from
-[`setting-up-rag`](../setting-up-rag/SKILL.md) — Qdrant + FastEmbed, CPU-only, no
-cloud key. It beats keyword search on recall because it fuses dense (semantic) and
-sparse (lexical) retrieval and reranks the shortlist.
+[`setting-up-rag`](../setting-up-rag/SKILL.md). On this workstation the persistent
+profile is the measured strongest local stack: Qdrant + FastEmbed hybrid retrieval,
+Nemotron-generated contextual index text, and Qwen3-Reranker-4B on the shortlist.
+It beats keyword search on recall because it fuses dense (semantic) and sparse
+(lexical) retrieval, then reranks with a stronger query/document arbiter.
 
 - **Is it up?** Run `setting-up-rag`'s `check-local-rag.sh` (prints `READY` /
   `NOT_READY`), then query with its `query.py`. Both live in the sibling skill —
@@ -62,6 +64,10 @@ sparse (lexical) retrieval and reranks the shortlist.
   python3 <setting-up-rag-dir>/scripts/query.py "…" --project <name-or-path> --kind all
   python3 <setting-up-rag-dir>/scripts/query.py --list-projects
   ```
+
+  The default query path expects the Qwen reranker service at
+  `http://127.0.0.1:8086/rerank`. If it is not running and you only need a quick
+  candidate set, add `--no-rerank`; reranked results are the quality target.
 
 - **Up but corpus not indexed?** Index it first (one command — see `setting-up-rag`
   §1), which also records the project in `$RAG_HOME/projects.json`; then query it
@@ -120,12 +126,13 @@ for a three-file repo — the floor is the right tool there.
   project question from an image summary alone when a source file or session note
   states the behavior. If an image path is retrieved and the visual detail matters,
   inspect the actual image before relying on the summary.
-- **Pack for the reader, not just the retriever.** For larger answer contexts, start
-  with score order or parent/section grouped packs that preserve source IDs. Use
-  source-path order only when you have measured it on that corpus; on this repo's
-  mixed code/docs benchmark it was worse for both answer sentinel containment and
-  citation support. Escalate to raw top-k only when exact literal extraction matters
-  more than token budget.
+- **Pack for the reader, not just the retriever.** For larger answer contexts, prefer
+  parent/section grouped packs at about 4k tokens with an extractive prompt that tells
+  the model to preserve exact identifiers, constants, numbers, file names, commands,
+  and error text. Use source-path order only when measured on that corpus; on this
+  repo's mixed code/docs benchmark it was worse for both answer sentinel containment
+  and citation support. Escalate to raw top-k only when exact literal extraction
+  matters more than token budget.
 
 ## When retrieval comes up empty — write it down
 

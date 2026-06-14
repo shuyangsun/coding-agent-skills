@@ -61,7 +61,7 @@ export function LlmPanel({ settings, onChange }: Props) {
           spellCheck={false}
           autoCapitalize="off"
           onChange={(event) => set("baseUrl", event.target.value)}
-          placeholder="http://127.0.0.1:8000/v1"
+          placeholder="http://127.0.0.1:8085/v1"
           className="font-mono text-xs"
         />
       </Field>
@@ -77,7 +77,7 @@ export function LlmPanel({ settings, onChange }: Props) {
           spellCheck={false}
           autoCapitalize="off"
           onChange={(event) => set("model", event.target.value)}
-          placeholder="e.g. gemma-4, nemotron, gpt-4o-mini"
+          placeholder="e.g. model, gemma-4, gpt-4o-mini"
           className={cn(
             "font-mono text-xs",
             modelMissing && "border-danger/50",

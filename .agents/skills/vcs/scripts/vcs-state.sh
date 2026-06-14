@@ -88,15 +88,22 @@ vcs_git_is_linked_worktree() {
 }
 
 vcs_jj_workspace_name() {
-  local root listing cur path
+  local root listing cur path saw_missing_default=0
   root="$(jj root 2>/dev/null)" || return 1
   listing="$(jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null || true)"
   while IFS=$'\t' read -r cur path; do
+    if [[ "$cur" == "default" && "$path" == \<Error:* ]]; then
+      saw_missing_default=1
+    fi
     [[ "$path" == "$root" ]] && {
       printf '%s\n' "$cur"
       return 0
     }
   done <<<"$listing"
+  if [[ "$saw_missing_default" -eq 1 && -d "$root/.git" ]]; then
+    printf 'default\n'
+    return 0
+  fi
   return 1
 }
 
@@ -104,6 +111,9 @@ vcs_jj_default_root() {
   local root
   root="$(jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null |
     awk -F '\t' '$1=="default"{print $2; exit}')"
+  case "$root" in
+    \<Error:*) root="" ;;
+  esac
   [[ -n "$root" ]] || root="$(jj root 2>/dev/null || pwd)"
   printf '%s\n' "$root"
 }
@@ -193,6 +203,8 @@ vcs_session_id() {
     printf '%s\n' "$VCS_SESSION_ID"
   elif [[ -n "${CODEX_SESSION_ID:-}" ]]; then
     printf '%s\n' "$CODEX_SESSION_ID"
+  elif [[ -n "${CODEX_THREAD_ID:-}" ]]; then
+    printf '%s\n' "$CODEX_THREAD_ID"
   elif [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
     printf '%s\n' "$CLAUDE_SESSION_ID"
   else
@@ -369,6 +381,9 @@ vcs_session_owned_workspace_root() {
       local workspace_root
       # shellcheck disable=SC1090
       source "$f" 2>/dev/null || continue
+      if [[ "$workspace_root" == "$found_root" ]]; then
+        continue
+      fi
       count=$((count + 1))
       found_root="$workspace_root"
     fi

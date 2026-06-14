@@ -12,6 +12,10 @@ Usage:
   --kind md indexes prose/text docs (Markdown, .txt, .vtt, .rst, etc.).
   --kind code indexes source/build/config files (including CMakeLists.txt).
 
+With the shipped strong config, chunks are contextualized at index time through a
+local OpenAI-compatible Nemotron endpoint and the generated context is embedded
+with the raw chunk. The raw chunk is still stored separately for citations.
+
 Reads QDRANT_URL (live server) or falls back to embedded on-disk mode
 ($QDRANT_PATH / $RAG_HOME). See check-local-rag.sh / setup-local-rag.sh.
 """
@@ -64,6 +68,14 @@ def main(argv: list[str] | None = None) -> int:
             meta.append({"doc_id": doc_id, "chunk_idx": i, "kind": args.kind})
     if not chunks:
         sys.exit(f"index: no chunks produced from {args.corpus} (kind={args.kind})")
+    embedded_chunks = R.contextualize_chunks(
+        chunks=chunks,
+        meta=meta,
+        docs=docs,
+        cfg=cfg,
+        project_name=project_name,
+        kind=args.kind,
+    )
 
     # (re)create the hybrid collection
     emb = cfg["embedding"]
@@ -100,12 +112,18 @@ def main(argv: list[str] | None = None) -> int:
     print(f"index: {len(docs)} docs -> {n} chunks -> collection '{coll}' ({where})")
     for start in range(0, n, args.batch):
         batch = chunks[start:start + args.batch]
-        dense, sparse = R.embed_documents(batch, cfg)
+        embedded_batch = embedded_chunks[start:start + args.batch]
+        dense, sparse = R.embed_documents(embedded_batch, cfg)
         points = [
             models.PointStruct(
                 id=sf.next_id(),
                 vector={"dense": dense[j], "sparse": R.to_sparse_vector(sparse[j])},
-                payload={**meta[start + j], "text": batch[j]},
+                payload={
+                    **meta[start + j],
+                    "text": batch[j],
+                    "raw_text": batch[j],
+                    "contextualized_text": embedded_batch[j],
+                },
             )
             for j in range(len(batch))
         ]

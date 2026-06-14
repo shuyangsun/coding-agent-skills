@@ -6,18 +6,18 @@ export const LLM_PRESETS: Record<
   LlmTarget,
   { label: string; baseUrl: string }
 > = {
-  local: { label: "Local", baseUrl: "http://127.0.0.1:8000/v1" },
+  local: { label: "Local", baseUrl: "http://127.0.0.1:8085/v1" },
   cloud: { label: "Cloud", baseUrl: "https://llm.shuyangsun.com/v1" },
 };
 
 export const DEFAULT_LLM: LlmSettings = {
   target: "local",
   baseUrl: LLM_PRESETS.local.baseUrl,
-  model: "",
+  model: "model",
   apiKey: "",
-  temperature: 0.2,
+  temperature: 0,
   maxTokens: 16384,
-  maxContextChars: 12000,
+  maxContextChars: 16000,
   systemPrompt: "",
 };
 

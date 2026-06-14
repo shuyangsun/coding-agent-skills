@@ -1,20 +1,23 @@
 ---
 name: setting-up-rag
 description: Load when STANDING UP or TUNING a local retrieval (RAG) system over a
-  document or code set — provision the stack, chunk, embed, index, and configure
-  hybrid (dense+sparse) search, reranking, and vector-DB knobs. Local-first
-  (Qdrant + FastEmbed, CPU, no cloud). To merely RETRIEVE context for a task (not
-  build the index), load `retrieving-context` instead; it queries this stack.
+  document or code set — provision the stack, chunk, contextualize, embed, index,
+  and configure hybrid search, Qwen3 reranking, answer packing, and vector-DB
+  knobs. Local-first (Qdrant + FastEmbed + local LLM/reranker endpoints, no cloud).
+  To merely RETRIEVE context for a task (not build the index), load
+  `retrieving-context` instead; it queries this stack.
 ---
 
-# Setting up RAG — local-first retrieval over a doc set
+# Setting up RAG — strongest local retrieval over a doc set
 
 **Stand up and tune** effective retrieval over a given corpus (prose/text docs,
 transcripts, or source code) so a downstream agent can answer from it. The
-pipeline is **Qdrant + FastEmbed**, CPU-only, no cloud key: chunk → embed
-(dense + sparse) → index → hybrid retrieve (RRF) → rerank → top-k. Defaults live
-in [`scripts/rag-config.json`](scripts/rag-config.json); the helpers do the
-mechanics, so spend tokens on the corpus-specific choices, not the boilerplate.
+default persistent profile is the strongest measured local stack: chunk →
+generate a short Nemotron situating context per chunk → embed dense+sparse into
+Qdrant → hybrid retrieve (RRF) → **Qwen3-Reranker-4B** rerank → top-k. Answer
+tests use **parent-4k + extractive** packing. Defaults live in
+[`scripts/rag-config.json`](scripts/rag-config.json); the helpers do the mechanics,
+so spend tokens on the corpus-specific choices, not the boilerplate.
 
 > **Building the index vs. using it.** This skill is the **operator** side —
 > provision the stack, index a corpus, and tune the config. An agent that just
@@ -47,12 +50,16 @@ python3 <skill-dir>/scripts/index.py --corpus <dir> --kind code # source code
 ```
 
 Indexes into a hybrid collection (named `dense` + `sparse` vectors); point IDs are
-time-ordered Snowflakes (`snowflake.py`). **Re-running replaces the prior chunks of
-changed and added docs** — each doc's old points are dropped before re-insert, so
-no duplicates or orphans accumulate. Pass `--recreate` after a chunking/embedding
-change or when docs were **removed**; `--local` forces embedded mode. Use a
-distinct `--collection` per corpus or content type. Chunking adapts to `--kind`
-(heading-aware for prose/text, block-packed for code) — see [CHUNKING.md](CHUNKING.md).
+time-ordered Snowflakes (`snowflake.py`). With the shipped config, `index.py`
+calls the local OpenAI-compatible Nemotron endpoint at `http://127.0.0.1:8085/v1`
+and caches generated contexts under `$RAG_HOME/context/`. The generated context is
+embedded and used for reranking, while `raw_text` stays byte-verbatim for answer
+citations. **Re-running replaces the prior chunks of changed and added docs** —
+each doc's old points are dropped before re-insert, so no duplicates or orphans
+accumulate. Pass `--recreate` after a chunking/embedding change or when docs were
+**removed**; `--local` forces embedded mode. Use a distinct `--collection` per
+corpus or content type. Chunking adapts to `--kind` (heading-aware for prose/text,
+block-packed for code) — see [CHUNKING.md](CHUNKING.md).
 
 Every successful index run also registers the corpus in
 `$RAG_HOME/projects.json` (default `~/.cache/rag-skill/projects.json`) unless
@@ -86,9 +93,10 @@ python3 <skill-dir>/scripts/query.py "…" --json        # JSONL for a consumer/
 python3 <skill-dir>/scripts/query.py "…" --no-rerank   # skip the rerank stage
 ```
 
-Each query runs a dense and a sparse retrieval, fuses them with RRF, then a local
-cross-encoder reranks the top candidates. The how-and-why is in
-[RETRIEVAL.md](RETRIEVAL.md).
+Each query runs dense and sparse retrieval, fuses them with RRF, then reranks the
+top candidates with the configured Qwen3 `/rerank` endpoint at
+`http://127.0.0.1:8086`. Use `--no-rerank` when that service is not running or
+latency matters more than quality. The how-and-why is in [RETRIEVAL.md](RETRIEVAL.md).
 
 ### Optional: test answer generation with an OpenAI-compatible LLM
 
@@ -99,8 +107,8 @@ separate from the default retrieval workflow; do not use it as the normal
 `retrieving-context` consumer path.
 
 ```sh
-export RAG_LLM_BASE_URL=http://127.0.0.1:8000/v1
-export RAG_LLM_MODEL=<served-model-name>
+export RAG_LLM_BASE_URL=http://127.0.0.1:8085/v1
+export RAG_LLM_MODEL=model
 python3 <skill-dir>/scripts/answer.py "…" --project <name-or-path> --kind all
 python3 <skill-dir>/scripts/answer.py "…" --collection docs --model <model> --json
 python3 <skill-dir>/scripts/answer.py "…" --project <name> --dry-run --show-context
@@ -114,17 +122,21 @@ with the model path or served model name they expect.
 
 ## 3. The method (what makes retrieval good, in priority order)
 
-1. **Hybrid beats either arm alone.** Dense (semantic, `bge-small`) catches
+1. **Contextualize at index time when the local LLM is available.** Nemotron writes
+   1-2 situating sentences per chunk. That context sharpens identifier-dense code
+   chunks before embedding/sparse indexing; raw chunks remain the citation payload.
+2. **Hybrid beats either arm alone.** Dense (semantic, `bge-small`) catches
    paraphrase; sparse (lexical, `bm25`) catches exact identifiers, error codes,
    API names. Fuse rank lists with **RRF** (robust to incompatible score scales).
-2. **Chunk on structure, with a size floor.** Split markdown on headings, but
+3. **Chunk on structure, with a size floor.** Split markdown on headings, but
    **merge tiny sections** up to `min_words` so a heading-dense doc doesn't
    explode into hundreds of one-line chunks (a real cost: ~2.5× fewer chunks at
    equal recall on this repo). Code chunks pack whole blocks. → [CHUNKING.md](CHUNKING.md)
-3. **Rerank the shortlist.** A cross-encoder re-scores the fused top-N; it sharply
-   separates the right chunk from near-misses, at a small CPU cost. Worth it for
-   search; drop it when latency is critical. → [RETRIEVAL.md](RETRIEVAL.md)
-4. **Right-size top-k and prefetch** to the consumer's context budget.
+4. **Rerank the shortlist with Qwen3.** Qwen3-Reranker-4B with its required
+   instruction template was the largest measured retrieval win; without the
+   template it anti-ranks. → [RETRIEVAL.md](RETRIEVAL.md)
+5. **Pack answers as parent-4k + extractive** for cited answer generation. Keep
+   source IDs, group nearby chunks, and ask the model to preserve exact literals.
 
 ### Image-backed project context
 
@@ -157,13 +169,17 @@ chunk sizes, fusion, prefetch, rerank, top-k) and documented inline. Pass an
 edited copy with `--config`. Provider/model alternatives (bigger dense model,
 SPLADE sparse, Ollama embeddings) are noted there and in SETUP.md.
 
-## 6. Optional: local-GPU campaign upgrades (not in the CPU default)
+## 6. Strong local profile and measured alternatives
 
-The default above is CPU-only and ships as-is. With a local GPU and an
-OpenAI-compatible LLM endpoint, **contextual retrieval** is a measured upgrade for
-mixed **code**+docs corpora — generate a 1–2-sentence "situating context" per chunk
-with a local model and prepend it to the **embedding/sparse** field, keeping
-`raw_text` byte-verbatim for citations:
+The shipped persistent profile uses the strongest measured local combination:
+**Nemotron-generated contextual retrieval + Qwen3 reranking + parent-4k extractive
+answer packing**. It remains local-first and cloud-free, but it requires the local
+Nemotron OpenAI-compatible chat endpoint for indexing/answer tests and the local
+Qwen3 `/rerank` endpoint for reranked queries.
+
+Contextual retrieval generates a 1–2-sentence "situating context" per chunk and
+prepends it to the **embedding/sparse** field, keeping `raw_text` byte-verbatim
+for citations:
 
 ```text
 [repo] path :: heading/symbol (lang)     # deterministic header — keep it
@@ -172,20 +188,25 @@ with a local model and prepend it to the **embedding/sparse** field, keeping
 <verbatim raw_text>                      # embedded AND what is retrieved/cited
 ```
 
-Measured on a six-repo gold set (held-out): **nDCG +0.031 overall, +0.045 on the code
-domain, sentinel coverage +0.080**, and it is **index-time only** — query latency and
-answer-context token cost are unchanged (the context is embedded, never packed into the
-answer). Lessons that transfer:
+Measured on a six-repo gold set (held-out): Gemma contextual retrieval gave
+**nDCG +0.031 overall, +0.045 on the code domain, sentinel coverage +0.080**.
+Nemotron was the best context generator: **nDCG +0.059 overall, code nDCG +0.089,
+code sentinel +0.158**. Qwen3-Reranker-4B on a contextual index was the largest
+single retrieval win: held-out **nDCG 0.848, pMRR 0.800, sentinel 0.955, hit@5
+0.991**. Parent-4k + extractive was the best citation-sensitive answer pack on
+the Wave-7 caveat slice. Lessons that transfer:
 
 - **Contextualize all chunks, code included** — the "it'll dilute identifiers" worry was
   wrong; code is exactly where it helps (prose is usually already near ceiling).
 - **Keep the deterministic header** — dropping it regresses prose retrieval.
-- **Serve the generator with vLLM** (NVFP4/FP8), not llama.cpp GGUF-Q8: ~25× faster for
-  this bulk index-time pass (≈8 vs ≈0.3 chunk/s on a Blackwell GPU).
-- It needs an index-time LLM, so it is **campaign-only**; the portable default stays CPU.
+- **Serve the generator with vLLM or TensorRT-LLM** (NVFP4/FP8), not llama.cpp
+  GGUF-Q8: ~25× faster for this bulk index-time pass.
+- **Use Qwen3's required reranker template.** The benchmark found scores inverted
+  without it; the shipped `rag_lib.py` applies the template when
+  `rerank.template=qwen3`.
 
-Method + numbers: `docs/benchmarks/2026-06-10/0014`–`0015` and the campaign harness
-(`wave4_context.py`) under `docs/plans/2026-06-08/0008-…/`. Re-validate on YOUR corpus (§4).
+Method + numbers: `docs/benchmarks/2026-06-10/0014`–`0015`, `0021`, and
+`docs/benchmarks/2026-06-12/0022`. Re-validate on YOUR corpus (§4).
 
 ### Other index-time techniques, measured on the same gold set
 

@@ -1,6 +1,6 @@
 {
-  "rag_config_id": "rag-r",
-  "_note": "Default config the `setting-up-rag` skill applies to a doc set. Local-first: Qdrant + FastEmbed (CPU, no cloud). Heading-aware chunking with a min-merge floor (avoids the tiny-section chunk explosion), hybrid dense+sparse retrieval fused with RRF, then a local cross-encoder rerank. Validate and adjust against a held-out gold set per TUNING.md before trusting a change; never keep a knob that does not beat the baseline.",
+  "rag_config_id": "rag-strongest-nemotron-qwen-parent-extractive",
+  "_note": "Strong local persistent config, based on the 2026-06-10..12 campaign benchmarks: Nemotron-generated contextual retrieval at index time, hybrid dense+sparse retrieval fused with RRF, Qwen3-Reranker-4B over the fused shortlist, and parent-4k extractive answer packing. Requires local OpenAI-compatible endpoints for Nemotron (:8085) during indexing/answer tests and Qwen3 rerank (:8086) during reranked queries. Validate and adjust against a held-out gold set per TUNING.md before trusting a change on a new corpus.",
   "collection": "docs",
   "embedding": {
     "dense_model": "BAAI/bge-small-en-v1.5",
@@ -26,22 +26,49 @@
   },
   "rerank": {
     "enabled": true,
-    "model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "backend": "http",
+    "endpoint": "http://127.0.0.1:8086",
+    "model": "qwen3-reranker-4b",
     "top_n": 50,
-    "_note": "Cross-encoder re-scores the top_n fused candidates in-process, then top_k are returned. Disable for the lowest-latency/plain arm."
+    "template": "qwen3",
+    "timeout": 180,
+    "use_contextualized_text": true,
+    "_note": "Qwen3-Reranker-4B served through a Jina-compatible /rerank endpoint (vLLM pooling runner in the benchmark). The qwen3 template is required; without it the model anti-ranks. Disable with --no-rerank when the service is down or latency matters."
   },
   "top_k": 20,
   "answering": {
-    "_note": "Testing-only answer generation on top of retrieval. Calls an OpenAI-compatible /v1/chat/completions endpoint such as local vLLM, TensorRT-LLM, or a cloud provider. This is not part of the default retrieval workflow.",
+    "_note": "Testing-only answer generation on top of retrieval. Parent-4k + extractive was the best citation-sensitive answer pack on the Wave-7 caveat slice. Calls an OpenAI-compatible /v1/chat/completions endpoint such as local TensorRT-LLM Nemotron, vLLM, or a cloud provider. This is not part of the default retrieval workflow.",
     "model_env": "RAG_LLM_MODEL",
+    "default_model": "model",
     "base_url_env": "RAG_LLM_BASE_URL",
     "api_key_env": "RAG_LLM_API_KEY",
-    "default_base_url": "http://127.0.0.1:8000/v1",
-    "temperature": 0.2,
+    "default_base_url": "http://127.0.0.1:8085/v1",
+    "pack_strategy": "parent",
+    "max_context_tokens": 4000,
+    "chars_per_token": 4.0,
+    "temperature": 0,
     "max_tokens": 800,
-    "timeout": 120,
-    "max_context_chars": 12000,
-    "system_prompt": "You are a retrieval-grounded QA test harness. Answer only from the provided context. Cite supporting chunks with bracketed source ids like [1]. If the context is insufficient, say what is missing instead of guessing."
+    "timeout": 180,
+    "max_context_chars": 16000,
+    "system_prompt": "You are a retrieval-grounded QA test harness. Answer only from the provided context. Cite every factual sentence with bracketed source ids like [1]. Copy exact source identifiers, constants, numbers, file names, quoted strings, commands, and error text instead of paraphrasing them. If the context is insufficient, say what is missing instead of guessing."
   },
-  "contextual_retrieval": false
+  "contextual_header": true,
+  "contextual_retrieval": true,
+  "contextual_llm": {
+    "enabled": true,
+    "model": "model",
+    "cache_model": "nemotron-w12k",
+    "base_url": "http://127.0.0.1:8085/v1",
+    "apply_to": ["md", "code"],
+    "max_doc_chars": 12000,
+    "max_chunk_chars": 6000,
+    "max_tokens": 96,
+    "temperature": 0,
+    "timeout": 180,
+    "workers": 12,
+    "retries": 4,
+    "required": true,
+    "no_think": true,
+    "_note": "Anthropic-style contextual retrieval: generate 1-2 situating sentences per chunk with Docker-hosted Nemotron, prepend header+context to the embedding/sparse field, and keep raw_text for answer/citation payloads."
+  }
 }

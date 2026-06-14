@@ -3,7 +3,7 @@
 
 This is a thin harness on top of the retrieval engine:
   1. retrieve chunks with the same hybrid + rerank path as query.py,
-  2. pack citation-labeled context,
+  2. pack citation-labeled context (parent-4k extractive by default),
   3. call a local or cloud /v1/chat/completions endpoint.
 
 It is for manual tests and future UI/backend experiments, not the default RAG
@@ -11,7 +11,7 @@ consumer path.
 
 Usage:
   answer.py "your question" --project NAME_OR_PATH --model MODEL
-  answer.py "..." --collection docs --model MODEL --base-url http://127.0.0.1:8000/v1
+  answer.py "..." --collection docs --model MODEL --base-url http://127.0.0.1:8085/v1
   answer.py "..." --project repo --model MODEL --json
   answer.py "..." --project repo --model MODEL --dry-run --show-context
 """
@@ -33,7 +33,9 @@ import rag_lib as R  # noqa: E402
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are a retrieval-grounded QA test harness. Answer only from the provided "
-    "context. Cite supporting chunks with bracketed source ids like [1]. If the "
+    "context. Cite every factual sentence with bracketed source ids like [1]. "
+    "Copy exact source identifiers, constants, numbers, file names, quoted "
+    "strings, commands, and error text instead of paraphrasing them. If the "
     "context is insufficient, say what is missing instead of guessing."
 )
 
@@ -80,18 +82,57 @@ def source_label(source: Source) -> str:
     return f"[{source.source_id}] {scope}{source.doc_id}{chunk}"
 
 
+def ordered_for_pack(
+    ranked: list[tuple[Any, float, str | None, str | None, str]],
+    strategy: str,
+) -> list[tuple[Any, float, str | None, str | None, str]]:
+    if strategy == "score":
+        return ranked
+    if strategy == "source":
+        return sorted(
+            ranked,
+            key=lambda item: (
+                str((item[0].payload or {}).get("doc_id", "")),
+                int((item[0].payload or {}).get("chunk_idx", 0) or 0),
+            ),
+        )
+    if strategy != "parent":
+        sys.exit("answer: --pack must be one of score, parent, source")
+
+    groups: dict[str, list[tuple[Any, float, str | None, str | None, str]]] = {}
+    order: list[str] = []
+    for item in ranked:
+        payload = item[0].payload or {}
+        key = str(payload.get("parent_id") or payload.get("doc_id") or "")
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(item)
+    packed: list[tuple[Any, float, str | None, str | None, str]] = []
+    for key in order:
+        packed.extend(
+            sorted(
+                groups[key],
+                key=lambda item: int((item[0].payload or {}).get("chunk_idx", 0) or 0),
+            )
+        )
+    return packed
+
+
 def pack_sources(
     ranked: list[tuple[Any, float, str | None, str | None, str]],
     max_context_chars: int,
+    *,
+    strategy: str = "score",
 ) -> list[Source]:
     if max_context_chars <= 0:
         sys.exit("answer: --max-context-chars must be greater than zero")
 
     sources: list[Source] = []
     used = 0
-    for hit, score, project, kind, collection in ranked:
+    for hit, score, project, kind, collection in ordered_for_pack(ranked, strategy):
         payload = hit.payload or {}
-        raw_text = str(payload.get("text", "") or "").strip()
+        raw_text = R.payload_display_text(payload).strip()
         if not raw_text:
             continue
 
@@ -149,7 +190,8 @@ def build_messages(
         f"Question:\n{question}\n\n"
         f"Retrieved context:\n{context}\n\n"
         "Answer the question from the retrieved context. Cite sources with the "
-        "bracketed ids shown above."
+        "bracketed ids shown above. Preserve exact identifiers and literals from "
+        "the context when they matter."
     )
     return [
         {"role": "system", "content": system_prompt},
@@ -342,6 +384,16 @@ def main(argv: list[str] | None = None) -> int:
         help="context character budget before truncation",
     )
     ap.add_argument(
+        "--max-context-tokens",
+        type=int,
+        help="approximate context token budget; converted using config chars_per_token",
+    )
+    ap.add_argument(
+        "--pack",
+        choices=["score", "parent", "source"],
+        help="context order before truncation (default: config answering.pack_strategy)",
+    )
+    ap.add_argument(
         "--system-prompt", help="override the default grounded-answer system prompt"
     )
     ap.add_argument(
@@ -370,7 +422,7 @@ def main(argv: list[str] | None = None) -> int:
     base_url_env = str(ans_cfg.get("base_url_env", "RAG_LLM_BASE_URL"))
     api_key_env = args.api_key_env or str(ans_cfg.get("api_key_env", "RAG_LLM_API_KEY"))
 
-    model = args.model or os.environ.get(model_env)
+    model = args.model or os.environ.get(model_env) or ans_cfg.get("default_model")
     if not model:
         ap.error(f"--model or ${model_env} is required")
     base_url = (
@@ -392,17 +444,27 @@ def main(argv: list[str] | None = None) -> int:
     timeout = (
         args.timeout if args.timeout is not None else float(ans_cfg.get("timeout", 120))
     )
-    max_context_chars = (
-        args.max_context_chars
-        if args.max_context_chars is not None
-        else int(ans_cfg.get("max_context_chars", 12000))
-    )
+    if args.max_context_chars is not None:
+        max_context_chars = args.max_context_chars
+    else:
+        token_budget = (
+            args.max_context_tokens
+            if args.max_context_tokens is not None
+            else ans_cfg.get("max_context_tokens")
+        )
+        if token_budget is not None:
+            max_context_chars = int(
+                float(token_budget) * float(ans_cfg.get("chars_per_token", 4.0))
+            )
+        else:
+            max_context_chars = int(ans_cfg.get("max_context_chars", 12000))
+    pack_strategy = args.pack or str(ans_cfg.get("pack_strategy", "parent"))
     system_prompt = args.system_prompt or str(
         ans_cfg.get("system_prompt", DEFAULT_SYSTEM_PROMPT)
     )
 
     ranked, where, target_label = collect_ranked(args, cfg)
-    sources = pack_sources(ranked, max_context_chars)
+    sources = pack_sources(ranked, max_context_chars, strategy=pack_strategy)
     if not sources:
         sys.exit("answer: retrieval returned no usable context chunks")
     context = build_context(sources)
@@ -439,6 +501,7 @@ def main(argv: list[str] | None = None) -> int:
                     "qdrant": where,
                     "target": target_label,
                     "sources": [asdict(source) for source in sources],
+                    "pack_strategy": pack_strategy,
                     "usage": response.get("usage") if response else None,
                     "request": body if args.dry_run else None,
                 }

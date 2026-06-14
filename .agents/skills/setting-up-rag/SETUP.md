@@ -13,16 +13,22 @@ It is idempotent — safe to re-run; each step is a no-op if already done.
 
 ## What "local RAG" is
 
-Two pieces, both local and CPU-only:
+The base pieces are local and CPU-only; the strongest shipped profile also uses
+local GPU services when they are available:
 
 - **Embeddings — [FastEmbed](https://github.com/qdrant/fastembed).** ONNX runtime,
   no PyTorch, no GPU, no cloud key. Dense (`BAAI/bge-small-en-v1.5`, 384-dim) +
-  sparse (`Qdrant/bm25`) + an optional cross-encoder reranker
-  (`Xenova/ms-marco-MiniLM-L-6-v2`). Models download once (~150 MB total) and cache.
+  sparse (`Qdrant/bm25`). Models download once and cache.
 - **Vector store — [Qdrant](https://qdrant.tech).** Either a **server** (Docker,
   persistent, fast) or **embedded on-disk mode** (`QdrantClient(path=…)`, no
   daemon). The scripts pick automatically: server if `$QDRANT_URL` answers, else
   embedded. The same `query_points` hybrid path runs in both.
+- **Context generator — Nemotron at `http://127.0.0.1:8085/v1`.** Used by
+  `index.py` to generate per-chunk situating context and by `answer.py` for manual
+  answer tests. Disable with a config where `contextual_llm.enabled=false`.
+- **Reranker — Qwen3-Reranker-4B at `http://127.0.0.1:8086/rerank`.** Used by
+  `query.py` unless `--no-rerank` is passed. Disable with a config where
+  `rerank.enabled=false`.
 
 ## Manual steps (if you'd rather not use the helper)
 
@@ -41,21 +47,25 @@ Then re-run `check-local-rag.sh`; it should print `READY`.
 
 ## Environment variables
 
-| Var           | Default                     | Purpose                                             |
-| ------------- | --------------------------- | --------------------------------------------------- |
-| `RAG_HOME`    | `~/.cache/rag-skill`        | venv, embedded Qdrant storage, model cache          |
-| `RAG_PYTHON`  | `$RAG_HOME/venv/bin/python` | interpreter with the deps (else falls back to PATH) |
-| `QDRANT_URL`  | `http://localhost:6333`     | live server; probed before falling back to embedded |
-| `QDRANT_PATH` | `$RAG_HOME/qdrant`          | embedded on-disk store when no server               |
+| Var           | Default                     | Purpose                                                   |
+| ------------- | --------------------------- | --------------------------------------------------------- |
+| `RAG_HOME`    | `~/.cache/rag-skill`        | venv, embedded Qdrant storage, model cache, context cache |
+| `RAG_PYTHON`  | `$RAG_HOME/venv/bin/python` | interpreter with the deps (else falls back to PATH)       |
+| `QDRANT_URL`  | `http://localhost:6333`     | live server; probed before falling back to embedded       |
+| `QDRANT_PATH` | `$RAG_HOME/qdrant`          | embedded on-disk store when no server                     |
 
 The optional `answer.py` test harness also reads these OpenAI-compatible LLM
 provider variables:
 
 | Var                | Default                    | Purpose                                      |
 | ------------------ | -------------------------- | -------------------------------------------- |
-| `RAG_LLM_MODEL`    | _required_                 | served model name passed to chat completions |
-| `RAG_LLM_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-compatible API base URL               |
+| `RAG_LLM_MODEL`    | `model`                    | served model name passed to chat completions |
+| `RAG_LLM_BASE_URL` | `http://127.0.0.1:8085/v1` | OpenAI-compatible API base URL               |
 | `RAG_LLM_API_KEY`  | unset                      | bearer token when the provider requires one  |
+
+The contextual indexer also reads `RAG_CONTEXT_LLM_BASE_URL` /
+`RAG_CONTEXT_LLM_API_KEY` if the config asks it to. The Qwen reranker reads
+`RAG_RERANK_ENDPOINT` / `RAG_RERANK_MODEL` when config values are omitted.
 
 ## Alternatives
 
