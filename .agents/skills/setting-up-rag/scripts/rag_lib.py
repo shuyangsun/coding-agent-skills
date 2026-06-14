@@ -537,6 +537,59 @@ def chat_response_content(response: dict[str, Any]) -> str:
     return str(content)
 
 
+def render_context_user_prompt(
+    template: str,
+    *,
+    project_name: str,
+    kind: str,
+    doc_id: str,
+    document: str,
+    chunk_text: str,
+) -> str:
+    return template.format(
+        project=project_name,
+        kind=kind,
+        doc_id=doc_id,
+        document=document,
+        chunk=chunk_text,
+    )
+
+
+def fitted_context_prompt(
+    *,
+    system_prompt: str,
+    user_template: str,
+    project_name: str,
+    kind: str,
+    doc_id: str,
+    document: str,
+    chunk_text: str,
+    max_prompt_chars: int,
+) -> str:
+    doc = document
+    chunk = chunk_text
+    floor = 1000
+    while True:
+        prompt = render_context_user_prompt(
+            user_template,
+            project_name=project_name,
+            kind=kind,
+            doc_id=doc_id,
+            document=doc,
+            chunk_text=chunk,
+        )
+        if max_prompt_chars <= 0 or len(system_prompt) + len(prompt) <= max_prompt_chars:
+            return prompt
+        overage = len(system_prompt) + len(prompt) - max_prompt_chars
+        trim_by = max(500, overage)
+        if len(doc) >= len(chunk) and len(doc) > floor:
+            doc = doc[: max(floor, len(doc) - trim_by)]
+        elif len(chunk) > floor:
+            chunk = chunk[: max(floor, len(chunk) - trim_by)]
+        else:
+            return prompt[: max(0, max_prompt_chars - len(system_prompt))]
+
+
 def generate_context_one(
     *,
     project_name: str,
@@ -558,6 +611,7 @@ def generate_context_one(
     max_tokens = int(block.get("max_tokens", 96))
     timeout = float(block.get("timeout", 180))
     max_chunk_chars = int(block.get("max_chunk_chars", 6000))
+    max_prompt_chars = int(block.get("max_prompt_chars", 12000))
     extra_body = block.get("extra_body") if isinstance(block.get("extra_body"), dict) else {}
     if block.get("no_think", True):
         extra_body = {
@@ -568,20 +622,27 @@ def generate_context_one(
             },
         }
 
+    system_prompt = str(block.get("system_prompt", DEFAULT_CONTEXT_SYSTEM_PROMPT))
+    user_template = str(block.get("user_prompt", DEFAULT_CONTEXT_USER_PROMPT))
+    user_prompt = fitted_context_prompt(
+        system_prompt=system_prompt,
+        user_template=user_template,
+        project_name=project_name,
+        kind=kind,
+        doc_id=doc_id,
+        document=document,
+        chunk_text=chunk_text[:max_chunk_chars],
+        max_prompt_chars=max_prompt_chars,
+    )
+
     messages = [
         {
             "role": "system",
-            "content": str(block.get("system_prompt", DEFAULT_CONTEXT_SYSTEM_PROMPT)),
+            "content": system_prompt,
         },
         {
             "role": "user",
-            "content": str(block.get("user_prompt", DEFAULT_CONTEXT_USER_PROMPT)).format(
-                project=project_name,
-                kind=kind,
-                doc_id=doc_id,
-                document=document,
-                chunk=chunk_text[:max_chunk_chars],
-            ),
+            "content": user_prompt,
         },
     ]
     body: dict[str, Any] = {
