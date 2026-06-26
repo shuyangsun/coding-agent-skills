@@ -1,12 +1,20 @@
+---
+title: "inception — local RAG web GUI"
+date: 2026-06-13
+repo: "coding-agent-skills (jj bookmark: `claude-inception-rag-gui`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: max)"
+summary: >-
+  Built a modern, minimal TanStack Start + React 19 GUI in `inception/` for the repo's
+  local RAG system, backed by a warm stdlib-Python sidecar that keeps the
+  embedding/reranker models hot. Verified end-to-end (typecheck, oxlint, production build,
+  and a real headless-browser drive). Removed the scaffold's TanStack devtools after the
+  browser drive caught a hydration mismatch they caused.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # inception — local RAG web GUI
-
-- **Date:** 2026-06-13
-- **Repo:** coding-agent-skills (jj bookmark: `claude-inception-rag-gui`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: max)
-- **Summary:** Built a modern, minimal TanStack Start + React 19 GUI in `inception/` for the repo's local RAG system, backed by a warm stdlib-Python sidecar that keeps the embedding/reranker models hot. Verified end-to-end (typecheck, oxlint, production build, and a real headless-browser drive). Removed the scaffold's TanStack devtools after the browser drive caught a hydration mismatch they caused.
 
 ## User
 

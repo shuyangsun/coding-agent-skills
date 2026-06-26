@@ -1,12 +1,26 @@
+---
+title: "vcs skill: workspace naming convention + a measurable `NAME_OK` harness metric"
+date: 2026-06-06
+repo: "coding-agent-skills (jj; work landed on `main` from the `vcs-tune` workspace, since retired)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context)"
+summary: >-
+  Ran the `improving-vcs-skill` start-isolation harness to confirm agents create their own
+  workspace/worktree before working (14/14 pass), added the `<ide>-<work>`
+  workspace-naming convention to the `vcs` skill, and built a new durable, measurable
+  `NAME_OK` metric into the harness (git reference-transaction hook + jj op log) —
+  validated end-to-end, including a real small-model naming miss. Reordered
+  "workspace/worktree" jj-first and documented the jj workspace-path one-liner.
+  Mid-session, isolated the work into its own jj workspace after the user flagged it.
+  Merged via a clean 3-commit split (no push), then over follow-up turns documented two jj
+  multi-workspace lifecycle gaps in `docs/issues/0001` (stale `default` workspace; retired
+  workspaces not cleaned up), un-staled `default`, and cleaned up the `vcs-tune`
+  workspace.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # vcs skill: workspace naming convention + a measurable `NAME_OK` harness metric
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj; work landed on `main` from the `vcs-tune` workspace, since retired)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context)
-- **Summary:** Ran the `improving-vcs-skill` start-isolation harness to confirm agents create their own workspace/worktree before working (14/14 pass), added the `<ide>-<work>` workspace-naming convention to the `vcs` skill, and built a new durable, measurable `NAME_OK` metric into the harness (git reference-transaction hook + jj op log) — validated end-to-end, including a real small-model naming miss. Reordered "workspace/worktree" jj-first and documented the jj workspace-path one-liner. Mid-session, isolated the work into its own jj workspace after the user flagged it. Merged via a clean 3-commit split (no push), then over follow-up turns documented two jj multi-workspace lifecycle gaps in `docs/issues/0001` (stale `default` workspace; retired workspaces not cleaned up), un-staled `default`, and cleaned up the `vcs-tune` workspace.
 
 ## User
 

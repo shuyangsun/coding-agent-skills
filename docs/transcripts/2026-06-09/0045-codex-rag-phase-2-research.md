@@ -1,12 +1,18 @@
+---
+title: "Codex RAG Phase 2 Research"
+date: 2026-06-09
+repo: "coding-agent-skills (`codex-rag-phase-2-doc`, change `tntwslzwzxsv`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Created Codex-marked Phase 2 RAG optimization plan and research docs, expanded them with
+  parallel subagent SOTA research, rebased onto Cursor's parallel Phase 2 work, resolved
+  additive overview conflicts, and prepared the work for VCS integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex RAG Phase 2 Research
-
-- Date: 2026-06-09
-- Repo: coding-agent-skills (`codex-rag-phase-2-doc`, change `tntwslzwzxsv`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5.5, reasoning effort: xhigh)
-- Summary: Created Codex-marked Phase 2 RAG optimization plan and research docs, expanded them with parallel subagent SOTA research, rebased onto Cursor's parallel Phase 2 work, resolved additive overview conflicts, and prepared the work for VCS integration.
 
 <!-- markdownlint-disable MD025 -->
 

@@ -1,19 +1,23 @@
+---
+title: "VCS skill: orphan empty side-head sweep + multi-agent etiquette (issues 5-7)"
+date: 2026-06-07
+repo: "coding-agent-skills (bookmark `claude-vcs-issues-567`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Fixed `vcs` issue 7 (jj `integrate.sh` now sweeps orphan empty side-heads, with a
+  conservative predicate; plus a macOS `/tmp` vs `/private/tmp` cwd-guard fix) and added
+  an `ORPHAN_EMPTY_HEADS` harness metric + deterministic seed; added "touch only your own
+  work" etiquette rules for issues 5/6. Validated on Claude Haiku (jj/easy, jj/medium,
+  git/easy — all PASS, `ORPHAN_EMPTY_HEADS=0`). A Haiku harness sub-agent moved the real
+  repo's `main` mid-run via the cwd-hazard (a live instance of issue 5), recovered cleanly
+  since the work was isolated and unpushed — so issue 5 was reopened with the new incident
+  documented.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # VCS skill: orphan empty side-head sweep + multi-agent etiquette (issues 5-7)
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (bookmark `claude-vcs-issues-567`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Fixed `vcs` issue 7 (jj `integrate.sh` now sweeps orphan empty
-  side-heads, with a conservative predicate; plus a macOS `/tmp` vs `/private/tmp`
-  cwd-guard fix) and added an `ORPHAN_EMPTY_HEADS` harness metric + deterministic
-  seed; added "touch only your own work" etiquette rules for issues 5/6. Validated
-  on Claude Haiku (jj/easy, jj/medium, git/easy — all PASS, `ORPHAN_EMPTY_HEADS=0`).
-  A Haiku harness sub-agent moved the real repo's `main` mid-run via the cwd-hazard
-  (a live instance of issue 5), recovered cleanly since the work was isolated and
-  unpushed — so issue 5 was reopened with the new incident documented.
 
 ## User
 

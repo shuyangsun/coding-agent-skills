@@ -1,12 +1,20 @@
+---
+title: "Claude VCS jj vs Git token & speed benchmark"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace `claude-vcs-benchmark`, target bookmark `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Reproduced the GPT/Codex `vcs`-skill jj-vs-Git benchmark with Claude models across tiers
+  (opus/sonnet/haiku) using the `improving-vcs-skill` harness; extracted a
+  model/tooling-generic reproduction prompt, ran medium serialized integration plus
+  mid-tier start-isolation rounds in both VCS modes, scored time/tokens/quality, and
+  merged the Claude results into the renamed generic benchmark file alongside the GPT run.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Claude VCS jj vs Git token & speed benchmark
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace `claude-vcs-benchmark`, target bookmark `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Reproduced the GPT/Codex `vcs`-skill jj-vs-Git benchmark with Claude models across tiers (opus/sonnet/haiku) using the `improving-vcs-skill` harness; extracted a model/tooling-generic reproduction prompt, ran medium serialized integration plus mid-tier start-isolation rounds in both VCS modes, scored time/tokens/quality, and merged the Claude results into the renamed generic benchmark file alongside the GPT run.
 
 ## User
 

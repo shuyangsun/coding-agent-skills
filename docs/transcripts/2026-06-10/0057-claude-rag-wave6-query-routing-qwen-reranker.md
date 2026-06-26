@@ -1,14 +1,25 @@
+---
+title: "Phase 3 RAG — Wave 6 (query routing rejects; faithfully-served Qwen3-Reranker-4B becomes the campaign best)"
+date: 2026-06-10
+repo: "coding-agent-skills (bookmark `main`; work changes `feat(rag): Phase 3 Wave 6 …` and `docs(rag): pin Wave-7 generator candidates …`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Fable 5, 1M context, effort: max)"
+summary: >-
+  Executed Wave 6 of the consolidated RAG optimization (plan `0008`): built the
+  query-routing toolkit (router features, self-query soft filters, LLM/deterministic
+  decomposition, HyDE/multi-query, a dev-fitted CRAG confidence gate, rerank guards) and
+  measured **every adaptive mechanism to a REJECT** — while the wave's reranker A/B,
+  prompted by the user mid-session, found that **`Qwen3-Reranker-4B` served faithfully
+  (vLLM seq-cls conversion + mandatory instruction template) is the campaign's largest
+  single-variable win** (held-out nDCG 0.848 (+0.090), pMRR 0.800, hit@5 0.991,
+  replicated) and promoted it campaign-side. Recorded benchmark `0021`, updated plan
+  `0008` (including pinning Wave-7 generators to locally-downloaded models), landed two
+  commits on `main`, then exported this session.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Phase 3 RAG — Wave 6 (query routing rejects; faithfully-served Qwen3-Reranker-4B becomes the campaign best)
-
-- **Date:** 2026-06-10
-- **Repo:** coding-agent-skills (bookmark `main`; work changes `feat(rag): Phase 3 Wave 6 …` and `docs(rag): pin Wave-7 generator candidates …`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Fable 5, 1M context, effort: max)
-- **Summary:** Executed Wave 6 of the consolidated RAG optimization (plan `0008`): built the query-routing toolkit (router features, self-query soft filters, LLM/deterministic decomposition, HyDE/multi-query, a dev-fitted CRAG confidence gate, rerank guards) and measured **every adaptive mechanism to a REJECT** — while the wave's reranker A/B, prompted by the user mid-session, found that **`Qwen3-Reranker-4B` served faithfully (vLLM seq-cls conversion + mandatory instruction template) is the campaign's largest single-variable win** (held-out nDCG 0.848 (+0.090), pMRR 0.800, hit@5 0.991, replicated) and promoted it campaign-side. Recorded benchmark `0021`, updated plan `0008` (including pinning Wave-7 generators to locally-downloaded models), landed two commits on `main`, then exported this session.
-
----
 
 ## User
 

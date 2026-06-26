@@ -1,14 +1,22 @@
+---
+title: "Making the vcs harness deterministic, tiered, and conflict-focused"
+date: 2026-06-06
+repo: "coding-agent-skills (bookmark: `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: ultracode — xhigh + dynamic workflow orchestration)"
+summary: >-
+  Reworked the `improving-vcs-skill` harness so it tests only VCS collaboration, not
+  coding ability: a new `scenario.py` content engine generates each agent's change
+  deterministically and pre-commits it on its own branch/bookmark (agents only integrate
+  and resolve conflicts); added an easy/medium/hard difficulty ladder, an objective
+  resolution-quality oracle in `check-quality.sh`, a no-post-merge-work rule in the
+  briefs, and a vendor-agnostic model-tier dimension reported per tier by `scoreboard.sh`.
+  Validated end-to-end across both modes × all three difficulties.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Making the vcs harness deterministic, tiered, and conflict-focused
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (bookmark: `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: ultracode — xhigh + dynamic workflow orchestration)
-- **Summary:** Reworked the `improving-vcs-skill` harness so it tests only VCS collaboration, not coding ability: a new `scenario.py` content engine generates each agent's change deterministically and pre-commits it on its own branch/bookmark (agents only integrate and resolve conflicts); added an easy/medium/hard difficulty ladder, an objective resolution-quality oracle in `check-quality.sh`, a no-post-merge-work rule in the briefs, and a vendor-agnostic model-tier dimension reported per tier by `scoreboard.sh`. Validated end-to-end across both modes × all three difficulties.
-
----
 
 ## User
 

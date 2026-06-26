@@ -1,14 +1,23 @@
+---
+title: "markdownlint config + commit-author attribution"
+date: 2026-06-06
+repo: "coding-agent-skills (colocated Git + Jujutsu repo; parent commit on `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context)"
+summary: >-
+  Resolved markdownlint errors across the repo by aligning the linter with our Prettier
+  setup (a root `.markdownlint-cli2.jsonc` disabling `MD013`, a per-transcript
+  `MD013`/`MD024` disable directive emitted by the export skill) and wired markdownlint
+  into the dependency/script/lefthook toolchain. Then added human-author attribution: an
+  `Author:` commit trailer and a transcript-header `Author:` line (both derived from VCS
+  config), plus a "focus the message on content, not the transcript" rule in the commit
+  skill. Made the markdownlint directive an explicit idempotent check in the export skill,
+  then exported this session and committed/pushed it with `jj`.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # markdownlint config + commit-author attribution
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (colocated Git + Jujutsu repo; parent commit on `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context)
-- **Summary:** Resolved markdownlint errors across the repo by aligning the linter with our Prettier setup (a root `.markdownlint-cli2.jsonc` disabling `MD013`, a per-transcript `MD013`/`MD024` disable directive emitted by the export skill) and wired markdownlint into the dependency/script/lefthook toolchain. Then added human-author attribution: an `Author:` commit trailer and a transcript-header `Author:` line (both derived from VCS config), plus a "focus the message on content, not the transcript" rule in the commit skill. Made the markdownlint directive an explicit idempotent check in the export skill, then exported this session and committed/pushed it with `jj`.
-
----
 
 ## User
 

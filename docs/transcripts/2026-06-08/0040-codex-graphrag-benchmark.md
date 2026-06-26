@@ -1,12 +1,19 @@
+---
+title: "Codex GraphRAG Benchmark Session"
+date: 2026-06-08
+repo: "coding-agent-skills (jj bookmark codex-graphrag-benchmark, change yxnquzym)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, CLI 0.137.0-alpha.4, reasoning effort: not exposed in session metadata)"
+summary: >-
+  Benchmarked Qdrant/FastEmbed against local GraphRAG on inception and alpha-zero,
+  researched contextual retrieval with GraphRAG, then prepared the work for integration.
+  Logged token usage through the exported session: 9291578 input, 52534 output, 16859
+  reasoning, 9344112 total.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex GraphRAG Benchmark Session
-
-Date: 2026-06-08
-Repo: coding-agent-skills (jj bookmark codex-graphrag-benchmark, change yxnquzym)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex Desktop (GPT-5, CLI 0.137.0-alpha.4, reasoning effort: not exposed in session metadata)
-Summary: Benchmarked Qdrant/FastEmbed against local GraphRAG on inception and alpha-zero, researched contextual retrieval with GraphRAG, then prepared the work for integration. Logged token usage through the exported session: 9291578 input, 52534 output, 16859 reasoning, 9344112 total.
 
 <!-- markdownlint-disable MD034 -->
 

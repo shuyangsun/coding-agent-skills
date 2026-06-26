@@ -1,12 +1,18 @@
+---
+title: "RAG Optimization Phase 2 (Antigravity)"
+date: 2026-06-09
+repo: "coding-agent-skills (bookmark: agy-rag-phase-2)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Gemini 3.1 Pro (High)"
+summary: >-
+  Executed Phase 2 RAG optimization planning. Researched SOTA techniques (LangGraph,
+  Tree-sitter AST chunking), dispatched subagents to gather more details, integrated
+  findings into a plan, handled a recurring usage limit timer, and reindexed output files.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # RAG Optimization Phase 2 (Antigravity)
-
-**Date**: 2026-06-09
-**Repo**: coding-agent-skills (bookmark: agy-rag-phase-2)
-**Author**: Shuyang Sun <shuyangsun10@gmail.com>
-**Agent**: Gemini 3.1 Pro (High)
-**Summary**: Executed Phase 2 RAG optimization planning. Researched SOTA techniques (LangGraph, Tree-sitter AST chunking), dispatched subagents to gather more details, integrated findings into a plan, handled a recurring usage limit timer, and reindexed output files.
 
 ## User
 Work on Phase 2 of @docs/prompts/2026-06-08/0005-optimizing-rag-setup.md, but instead of folding into the @docs/plans/2026-06-08/0003-rag-eval-set-phase-1.md doc, create a new phase-2.md doc. Usage limit is getting low, so set a timer to wake yourself up once every 30 minutes to check usage limits, if it's not hit then continue, otherwise if it was hit, continue where you left off.

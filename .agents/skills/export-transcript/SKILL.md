@@ -67,24 +67,42 @@ they need, so they work from any agent and any working directory.
      message contains excessive profanity or hostile phrasing; in that case,
      rephrase only the offending words or sentence(s) while preserving the
      request's meaning and surrounding text as-is.
-4. **Write the file** — start with a single markdownlint directive line,
-   `<!-- markdownlint-disable MD013 MD024 -->`, then a blank line, then the `#`
-   title. The transcript format deliberately keeps long, unwrapped prose lines
-   and repeats `## User` / `## Assistant` headings, which trip markdownlint's
-   `MD013` and `MD024`; the per-file directive keeps the transcript lint-clean
-   even in host projects that don't share this repo's `.markdownlint-cli2.jsonc`.
-   Always confirm that exact directive is the file's first line — if you're
-   (re)writing or editing a transcript that lacks it, add it; never assume it's
-   already there. After the title, add a metadata block recording the date,
+4. **Write the file** — start the transcript with YAML front matter, then the
+   markdownlint directive, then the `#` title and transcript content:
+
+   ```markdown
+   ---
+   title: Codex RAG LLM Answering
+   date: 2026-06-13
+   repo: "coding-agent-skills (jj workspace `codex-add-rag-llm-answering`)"
+   author: "Shuyang Sun <shuyangsun10@gmail.com>"
+   agent: "Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)"
+   summary: >-
+     Added a test-only OpenAI-compatible answer harness on top of the local RAG
+     retrieval engine.
+   ---
+
+   <!-- markdownlint-disable MD013 MD024 -->
+
+   # Codex RAG LLM Answering
+   ```
+
+   Order the YAML keys `title`, `date`, `repo`, `author`, `agent`, `summary`, so
+   the human author sits directly above the AI agent. Record the date,
    repo/branch (or current bookmark or change), the **author** (the human owner —
    `Full Name <email>` read from the repo's VCS config: `git config user.name` /
    `git config user.email`, falling back to `jj config get user.name` /
    `jj config get user.email`), and the **agent with precise model version and
    thinking/reasoning effort** (e.g.
    `Claude Code (Opus 4.7, 1M context, thinking: high)`) — that keeps the
-   filename version-free — then a one-line summary and the transcript. Order the
-   block `Date`, `Repo`, `Author`, `Agent`, `Summary`, so the human author sits
-   directly above the AI agent. Never fabricate turns.
+   filename version-free — plus a one-line summary. Quote string values that
+   contain punctuation, angle brackets, backticks, or `:`; use a folded scalar
+   (`>-`) for long summaries. The transcript format deliberately keeps long,
+   unwrapped prose lines and repeats `## User` / `## Assistant` headings, which
+   trip markdownlint's `MD013` and `MD024`; keep
+   `<!-- markdownlint-disable MD013 MD024 -->` as the first non-frontmatter line
+   so the transcript stays lint-clean even in host projects that don't share this
+   repo's `.markdownlint-cli2.jsonc`. Never fabricate turns.
 
 ## Redact sensitive data (IMPORTANT)
 

@@ -1,12 +1,19 @@
+---
+title: "VCS benchmark (Composer 2.5 jj vs git) and unused orchestration workspace"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace: default; orchestration workspace `cursor-vcs-benchmark` created but unused)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Cursor Composer 2.5"
+summary: >-
+  Ran the `improving-vcs-skill` harness with Composer 2.5 across six serialized rounds (jj
+  and git × easy/medium/hard), wrote benchmark 0002 and metrics TSV; user flagged that the
+  agent never worked from the isolated `cursor-vcs-benchmark` jj workspace; documented
+  that gap in issue 0004; session ended with export, jj commit/push, and jj state cleanup.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # VCS benchmark (Composer 2.5 jj vs git) and unused orchestration workspace
-
-- Date: 2026-06-07
-- Repo: coding-agent-skills (jj workspace: default; orchestration workspace `cursor-vcs-benchmark` created but unused)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Cursor Composer 2.5
-- Summary: Ran the `improving-vcs-skill` harness with Composer 2.5 across six serialized rounds (jj and git × easy/medium/hard), wrote benchmark 0002 and metrics TSV; user flagged that the agent never worked from the isolated `cursor-vcs-benchmark` jj workspace; documented that gap in issue 0004; session ended with export, jj commit/push, and jj state cleanup.
 
 ## User
 

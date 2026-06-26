@@ -1,14 +1,19 @@
+---
+title: "Authoring the improving-vcs-skill harness"
+date: 2026-06-06
+repo: "coding-agent-skills (bookmark: `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Authored a repo-local, authoring-only meta-skill (`improving-vcs-skill`) that
+  iteratively hardens the `vcs` skill via measured rounds of parallel sub-agent conflict
+  testing; built and end-to-end-tested five helper scripts across both Git-only and
+  jj-on-Git modes, then relocated/renamed the skill and updated the kick-start prompts.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Authoring the improving-vcs-skill harness
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (bookmark: `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Authored a repo-local, authoring-only meta-skill (`improving-vcs-skill`) that iteratively hardens the `vcs` skill via measured rounds of parallel sub-agent conflict testing; built and end-to-end-tested five helper scripts across both Git-only and jj-on-Git modes, then relocated/renamed the skill and updated the kick-start prompts.
-
----
 
 ## User
 

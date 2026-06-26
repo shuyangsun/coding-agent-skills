@@ -1,12 +1,18 @@
+---
+title: "VCS guardrails implementation"
+date: 2026-06-07
+repo: "coding-agent-skills (bookmark `codex-vcs-guardrails-impl`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning: xhigh)"
+summary: >-
+  Implemented mechanical `vcs` guardrails for jj/Git workspace isolation, extended the
+  `improving-vcs-skill` harness with wrong-cwd checks, validated with low-tier agents, and
+  prepared the change for merge.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # VCS guardrails implementation
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (bookmark `codex-vcs-guardrails-impl`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (GPT-5.5, reasoning: xhigh)
-- **Summary:** Implemented mechanical `vcs` guardrails for jj/Git workspace isolation, extended the `improving-vcs-skill` harness with wrong-cwd checks, validated with low-tier agents, and prepared the change for merge.
 
 ## User
 

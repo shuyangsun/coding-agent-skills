@@ -1,12 +1,19 @@
+---
+title: "Updating Docs Contextual Retrieval Benchmark"
+date: 2026-06-08
+repo: "coding-agent-skills (`codex-improve-updating-docs-retrieval`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Benchmarked `updating-docs` with the `improving-context-retrieval-skills` harness on
+  `inception/` plus an alpha-zero test project, researched contextual retrieval and
+  related RAG techniques, updated `updating-docs` with context-capsule/source-map
+  guidance, documented research and metrics, then prepared the jj work for integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Updating Docs Contextual Retrieval Benchmark
-
-- Date: 2026-06-08
-- Repo: coding-agent-skills (`codex-improve-updating-docs-retrieval`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5.5, reasoning effort: xhigh)
-- Summary: Benchmarked `updating-docs` with the `improving-context-retrieval-skills` harness on `inception/` plus an alpha-zero test project, researched contextual retrieval and related RAG techniques, updated `updating-docs` with context-capsule/source-map guidance, documented research and metrics, then prepared the jj work for integration.
 
 ## User
 

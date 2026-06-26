@@ -1,12 +1,19 @@
+---
+title: "Codex Git worktree helper automation"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace `codex-optimize-git-worktrees-vcs`, `main` bookmark)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (`gpt-5.5`, reasoning: xhigh)"
+summary: >-
+  Optimized the `vcs` skill's Git + worktrees integration path by moving deterministic
+  rebase conflict handling into helper scripts, benchmarked the before/after with the
+  `improving-vcs-skill` harness, saved benchmark results, rebased onto updated `main`, and
+  prepared the change for merge/push.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Git worktree helper automation
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace `codex-optimize-git-worktrees-vcs`, `main` bookmark)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (`gpt-5.5`, reasoning: xhigh)
-- **Summary:** Optimized the `vcs` skill's Git + worktrees integration path by moving deterministic rebase conflict handling into helper scripts, benchmarked the before/after with the `improving-vcs-skill` harness, saved benchmark results, rebased onto updated `main`, and prepared the change for merge/push.
 
 ## Transcript
 

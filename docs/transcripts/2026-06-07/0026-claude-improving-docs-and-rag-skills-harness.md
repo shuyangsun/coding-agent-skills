@@ -1,12 +1,22 @@
+---
+title: "Improving-docs-and-rag-skills harness: Phase-0 build (and an isolation-aware vcs guard fix)"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace/bookmark `claude-improving-docs-rag-skills`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Started building the `improving-docs-and-rag-skills` harness from `docs/plans/0002`;
+  immediately hit the open vcs-guard cwd-drift trap (`docs/issues/0008`), so — at the
+  owner's direction — first made the guard isolation-aware (path-based edits +
+  leading-`cd` + owner-marker, plus `session_id` preservation on rename) and landed it on
+  local `main`, then built and committed a deterministic, zero-dependency Phase-0 of the
+  harness (gold set, thin BM25+hashed-dense eval, N/D corpus axis, and a 2×2 factorial
+  scoreboard) that runs the full factorial end-to-end.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Improving-docs-and-rag-skills harness: Phase-0 build (and an isolation-aware vcs guard fix)
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace/bookmark `claude-improving-docs-rag-skills`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Started building the `improving-docs-and-rag-skills` harness from `docs/plans/0002`; immediately hit the open vcs-guard cwd-drift trap (`docs/issues/0008`), so — at the owner's direction — first made the guard isolation-aware (path-based edits + leading-`cd` + owner-marker, plus `session_id` preservation on rename) and landed it on local `main`, then built and committed a deterministic, zero-dependency Phase-0 of the harness (gold set, thin BM25+hashed-dense eval, N/D corpus axis, and a 2×2 factorial scoreboard) that runs the full factorial end-to-end.
 
 ## User
 

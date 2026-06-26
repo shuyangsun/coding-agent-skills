@@ -1,12 +1,18 @@
+---
+title: "Codex RAG Strongest Rebuild Transcript"
+date: 2026-06-14
+repo: "coding-agent-skills (jj workspace `codex-export-rag-transcript`, change `nywxspxl`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, reasoning: xhigh)"
+summary: >-
+  Updated the local persistent RAG skills to the strongest benchmarked Nemotron + Qwen3 +
+  parent-4k extractive profile, rebuilt registered Qdrant RAG collections, verified the
+  local services, and exported this transcript through the VCS workflow.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex RAG Strongest Rebuild Transcript
-
-Date: 2026-06-14
-Repo: coding-agent-skills (jj workspace `codex-export-rag-transcript`, change `nywxspxl`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, reasoning: xhigh)
-Summary: Updated the local persistent RAG skills to the strongest benchmarked Nemotron + Qwen3 + parent-4k extractive profile, rebuilt registered Qdrant RAG collections, verified the local services, and exported this transcript through the VCS workflow.
 
 ## User
 

@@ -1,12 +1,21 @@
+---
+title: "inception — TanStack Start scaffold + root Prettier/oxlint/jj-fix tooling"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace/bookmark `claude-inception-tanstack`, parent `main` `52354eb4`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context)"
+summary: >-
+  Scaffolded a clean-state `inception` TanStack Start app (Vite 8, Bun, React 19 + React
+  Compiler, TypeScript 7 native `tsgo` via `@typescript/native-preview`) as a target
+  codebase for the `improving-docs-and-rag-skills` harness, then extended the repo-root
+  tooling so Prettier formats and oxlint lints code + JSON through both the lefthook
+  pre-commit hook and `jj fix`. Verified typecheck, production build, lint (clean +
+  catches a planted violation), formatter, `jj fix` round-trip, and the dev server.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # inception — TanStack Start scaffold + root Prettier/oxlint/jj-fix tooling
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace/bookmark `claude-inception-tanstack`, parent `main` `52354eb4`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context)
-- **Summary:** Scaffolded a clean-state `inception` TanStack Start app (Vite 8, Bun, React 19 + React Compiler, TypeScript 7 native `tsgo` via `@typescript/native-preview`) as a target codebase for the `improving-docs-and-rag-skills` harness, then extended the repo-root tooling so Prettier formats and oxlint lints code + JSON through both the lefthook pre-commit hook and `jj fix`. Verified typecheck, production build, lint (clean + catches a planted violation), formatter, `jj fix` round-trip, and the dev server.
 
 ## User
 

@@ -1,12 +1,19 @@
+---
+title: "RAG Phase 2 research (cursor): SOTA survey, plan, and cursor-prefixed filenames"
+date: 2026-06-08
+repo: "coding-agent-skills (jj workspace: cursor-rag-phase-2-research)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Cursor Composer 2.5"
+summary: >-
+  Completed Phase 2 of optimizing RAG setup — SOTA research doc, experiment plan with
+  dependency checklist and local-LLM guidance, cursor-prefixed filenames for multi-agent
+  disambiguation; armed a 30-minute usage-limit loop; session export and integrate to
+  main.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # RAG Phase 2 research (cursor): SOTA survey, plan, and cursor-prefixed filenames
-
-- Date: 2026-06-08
-- Repo: coding-agent-skills (jj workspace: cursor-rag-phase-2-research)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Cursor Composer 2.5
-- Summary: Completed Phase 2 of optimizing RAG setup — SOTA research doc, experiment plan with dependency checklist and local-LLM guidance, cursor-prefixed filenames for multi-agent disambiguation; armed a 30-minute usage-limit loop; session export and integrate to main.
 
 ## User
 

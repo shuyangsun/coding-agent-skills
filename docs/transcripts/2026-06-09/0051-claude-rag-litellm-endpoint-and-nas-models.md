@@ -1,12 +1,21 @@
+---
+title: "RAG: document the live LiteLLM endpoint + stage embedding/reranker models on the NAS"
+date: 2026-06-09
+repo: "`coding-agent-skills` (jj workspace `claude-rag-models`, off `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Documented how to call the already-live local LiteLLM endpoint in
+  `0005-optimizing-rag-setup.md` (placeholder-keyed, no secret-manager reference),
+  researched + HF-verified the current SOTA embedding/reranker models, downloaded a
+  curated 22-model set (embedding + reranker only) to the Synology NAS, updated the doc
+  with a portable-vs-campaign "models staged on the NAS" section, and reconciled the
+  consolidated Phase-2 plan (`0008`) against the new live-endpoint/staged-model reality.
+---
+
 <!-- markdownlint-disable MD013 MD024 MD034 -->
 
 # RAG: document the live LiteLLM endpoint + stage embedding/reranker models on the NAS
-
-- **Date:** 2026-06-09
-- **Repo:** `coding-agent-skills` (jj workspace `claude-rag-models`, off `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Documented how to call the already-live local LiteLLM endpoint in `0005-optimizing-rag-setup.md` (placeholder-keyed, no secret-manager reference), researched + HF-verified the current SOTA embedding/reranker models, downloaded a curated 22-model set (embedding + reranker only) to the Synology NAS, updated the doc with a portable-vs-campaign "models staged on the NAS" section, and reconciled the consolidated Phase-2 plan (`0008`) against the new live-endpoint/staged-model reality.
 
 > Session was started with `/model` → Opus 4.8 (1M context), `/effort max`, and `/remote-control rag-setup`, which delivered the task prompt below.
 

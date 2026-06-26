@@ -1,12 +1,19 @@
+---
+title: "Inception GUI: fix black-page flash and add staged querying/answering indicators"
+date: 2026-06-13
+repo: "coding-agent-skills (bookmark `claude-pending-eb9b37e0`, change `xulrozktupss`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Diagnosed why the inception RAG GUI blanks to black on submit (a `useActionState`
+  transition re-rendering the route subtree), replaced it with a plain async handler that
+  exposes distinct `querying` → `answering` stages, and raised the default `maxTokens`
+  from 800 to 16384.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Inception GUI: fix black-page flash and add staged querying/answering indicators
-
-- **Date:** 2026-06-13
-- **Repo:** coding-agent-skills (bookmark `claude-pending-eb9b37e0`, change `xulrozktupss`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Diagnosed why the inception RAG GUI blanks to black on submit (a `useActionState` transition re-rendering the route subtree), replaced it with a plain async handler that exposes distinct `querying` → `answering` stages, and raised the default `maxTokens` from 800 to 16384.
 
 ## User
 

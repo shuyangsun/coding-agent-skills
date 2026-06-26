@@ -1,12 +1,23 @@
+---
+title: "Authoring the testing-vcs-skill kick-start prompt and its measurement focus"
+date: 2026-06-06
+repo: "coding-agent-skills (bookmark: `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Wrote a single self-contained kick-start prompt that directs a coding agent to author
+  `testing-vcs-skill` (a meta/authoring harness that exercises the `vcs` skill across
+  multiple agentic tools and environments, WITH `jj` on a Git backend vs. Git-only) and
+  then run it to validate and harden `vcs`. Saved it to the `0002` prompts doc, then
+  revised it so the harness measures wall-clock time — especially conflict-resolution time
+  — and output quality, treating those as the closed-loop optimization target. Exported
+  this session and committed the doc and transcript as two separate `jj` changes, then
+  pushed.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Authoring the testing-vcs-skill kick-start prompt and its measurement focus
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (bookmark: `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Wrote a single self-contained kick-start prompt that directs a coding agent to author `testing-vcs-skill` (a meta/authoring harness that exercises the `vcs` skill across multiple agentic tools and environments, WITH `jj` on a Git backend vs. Git-only) and then run it to validate and harden `vcs`. Saved it to the `0002` prompts doc, then revised it so the harness measures wall-clock time — especially conflict-resolution time — and output quality, treating those as the closed-loop optimization target. Exported this session and committed the doc and transcript as two separate `jj` changes, then pushed.
 
 ## User
 

@@ -1,12 +1,28 @@
+---
+title: "improving-docs-and-rag harness — no-doc/no-RAG floor baseline + code-vs-NL content-type axis"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace/bookmark `claude-baseline-cell-docs-rag`, parent `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high; the very first exploration ran on Sonnet 4.6 before the owner switched models)"
+summary: >-
+  Two changes to the `improving-docs-and-rag-skills` Phase-0 harness. (1) Added an
+  absolute **no-doc/no-RAG floor** baseline (`Z` empty corpus + `docs-eval.py
+  --no-retrieval`) that runs first, with a scoreboard "baseline-first" lift view (floor →
+  docs-only → RAG-only → docs+RAG). (2) Added a **content-type axis** that scores
+  natural-language docs/transcripts vs **code** (the repo's `inception/` TanStack app)
+  **separately**, with per-domain metrics and a code-vs-NL scoreboard view. Along the way
+  fixed two bugs the exploration surfaced: 4 stale gold-fact primary paths (date-dir drift
+  that broke `gold.py validate`) and `OVERVIEW.md` index docs leaking sentinels into the
+  corpus. Ran a 5-dimension adversarial review workflow (20 agents); fixed all 10
+  confirmed findings (graceful no-`inception/` skip, a `--domain`/`--corpus-kind`
+  consistency guard, an honest code-recall-saturation caveat, scoreboard
+  round-gating/empty-bucket/dup-column hardening, and several doc corrections). Then
+  exported this session and handed off to `vcs` to merge/clean up/push.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # improving-docs-and-rag harness — no-doc/no-RAG floor baseline + code-vs-NL content-type axis
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace/bookmark `claude-baseline-cell-docs-rag`, parent `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high; the very first exploration ran on Sonnet 4.6 before the owner switched models)
-- **Summary:** Two changes to the `improving-docs-and-rag-skills` Phase-0 harness. (1) Added an absolute **no-doc/no-RAG floor** baseline (`Z` empty corpus + `docs-eval.py --no-retrieval`) that runs first, with a scoreboard "baseline-first" lift view (floor → docs-only → RAG-only → docs+RAG). (2) Added a **content-type axis** that scores natural-language docs/transcripts vs **code** (the repo's `inception/` TanStack app) **separately**, with per-domain metrics and a code-vs-NL scoreboard view. Along the way fixed two bugs the exploration surfaced: 4 stale gold-fact primary paths (date-dir drift that broke `gold.py validate`) and `OVERVIEW.md` index docs leaking sentinels into the corpus. Ran a 5-dimension adversarial review workflow (20 agents); fixed all 10 confirmed findings (graceful no-`inception/` skip, a `--domain`/`--corpus-kind` consistency guard, an honest code-recall-saturation caveat, scoreboard round-gating/empty-bucket/dup-column hardening, and several doc corrections). Then exported this session and handed off to `vcs` to merge/clean up/push.
 
 ## User
 

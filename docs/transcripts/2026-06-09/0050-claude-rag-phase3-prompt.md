@@ -1,12 +1,22 @@
+---
+title: "Improve the Phase 3 RAG-optimization prompt"
+date: 2026-06-09
+repo: "coding-agent-skills (bookmark `claude-rag-phase3-prompt`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Reviewed the 3-phase RAG-optimization prompt against the consolidated Phase-2 plan
+  (`0008`) and the just-landed pre-work harness, recommended six targeted improvements to
+  the Phase 3 prompt, then drafted and applied a full replacement Phase 3 section —
+  anchoring it to `0008` + the harness, fixing the outdated cohort-split wording, naming
+  the gates/controls, and adding local-LLM/GPU sequencing with the corrected LAN topology.
+  Also patched `0008`'s GPU section for the separate-LAN-machine fact, then exported this
+  transcript.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Improve the Phase 3 RAG-optimization prompt
-
-- **Date:** 2026-06-09
-- **Repo:** coding-agent-skills (bookmark `claude-rag-phase3-prompt`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Reviewed the 3-phase RAG-optimization prompt against the consolidated Phase-2 plan (`0008`) and the just-landed pre-work harness, recommended six targeted improvements to the Phase 3 prompt, then drafted and applied a full replacement Phase 3 section — anchoring it to `0008` + the harness, fixing the outdated cohort-split wording, naming the gates/controls, and adding local-LLM/GPU sequencing with the corrected LAN topology. Also patched `0008`'s GPU section for the separate-LAN-machine fact, then exported this transcript.
 
 ## User
 

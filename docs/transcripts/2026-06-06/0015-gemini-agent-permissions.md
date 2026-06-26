@@ -1,12 +1,17 @@
+---
+title: "Export session: Antigravity + Gemini Permission Configuration"
+date: 2026-06-06
+repo: "coding-agent-skills @ a89be69"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Gemini 3.5 Flash (thinking: high)"
+summary: >-
+  Configure project-level permission settings for Antigravity and Gemini CLI and update
+  the permission update skill.
+---
+
 <!-- markdownlint-disable MD013 MD024 MD033 MD038 -->
 
 # Export session: Antigravity + Gemini Permission Configuration
-
-- **Date**: 2026-06-06
-- **Repo**: coding-agent-skills @ a89be69
-- **Author**: Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent**: Gemini 3.5 Flash (thinking: high)
-- **Summary**: Configure project-level permission settings for Antigravity and Gemini CLI and update the permission update skill.
 
 ## User
 

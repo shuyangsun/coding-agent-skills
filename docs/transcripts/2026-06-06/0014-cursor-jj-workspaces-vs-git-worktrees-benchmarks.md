@@ -1,12 +1,21 @@
+---
+title: "jj workspaces vs git worktrees: what docs/benchmarks actually show"
+date: 2026-06-06
+repo: "coding-agent-skills (jj, `default` workspace on `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Cursor (Composer 2.5)"
+summary: >-
+  Read `docs/benchmarks` and related harness/issue docs to answer whether jj workspaces
+  solve pain points git worktrees do not. Conclusion: both solve the same
+  filesystem-isolation problem for co-located agents; the benchmarks show jj adding
+  integration friction (conflicted commits on `main`, bookmark clobber, stale `default`,
+  longer cleanup) rather than a measured advantage. Exported this session and committed
+  from `default` without creating a sibling workspace.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # jj workspaces vs git worktrees: what docs/benchmarks actually show
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj, `default` workspace on `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Cursor (Composer 2.5)
-- **Summary:** Read `docs/benchmarks` and related harness/issue docs to answer whether jj workspaces solve pain points git worktrees do not. Conclusion: both solve the same filesystem-isolation problem for co-located agents; the benchmarks show jj adding integration friction (conflicted commits on `main`, bookmark clobber, stale `default`, longer cleanup) rather than a measured advantage. Exported this session and committed from `default` without creating a sibling workspace.
 
 ## User
 

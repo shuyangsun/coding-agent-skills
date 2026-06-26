@@ -1,12 +1,18 @@
+---
+title: "Codex Image-Backed Retrieval Harness"
+date: 2026-06-12
+repo: "coding-agent-skills (jj workspace `codex-image-backed-retrieval-questions`, change `wyovtuqm`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, reasoning: xhigh)"
+summary: >-
+  Reworked the context-retrieval improvement harness so the image domain evaluates real
+  website project questions with code, docs, session transcripts, and supporting image
+  paths.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Image-Backed Retrieval Harness
-
-Date: 2026-06-12
-Repo: coding-agent-skills (jj workspace `codex-image-backed-retrieval-questions`, change `wyovtuqm`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, reasoning: xhigh)
-Summary: Reworked the context-retrieval improvement harness so the image domain evaluates real website project questions with code, docs, session transcripts, and supporting image paths.
 
 ## User
 

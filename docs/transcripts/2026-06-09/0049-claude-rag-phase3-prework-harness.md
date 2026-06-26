@@ -1,12 +1,22 @@
+---
+title: "RAG Phase 3 pre-work — benchmark harness + combined-corpus fix"
+date: 2026-06-09
+repo: "`coding-agent-skills` (jj bookmark `claude-rag-phase3-prework`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Built the reusable Phase-3 RAG-optimization benchmark harness under
+  `docs/plans/2026-06-08/0008-consolidated-rag-optimization-phase-2/` (gold loader,
+  per-repo corpus manifest, enriched dual-field indexer, contamination controls,
+  slice-aware metrics, Wave-0 config arms, readiness gate) without starting Phase 3;
+  surfaced and fixed a C++/CUDA extension gap; then, per owner feedback, reworked the
+  scoring so the IR task is one combined code+docs corpus per repo with code-vs-doc as a
+  reporting slice only.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # RAG Phase 3 pre-work — benchmark harness + combined-corpus fix
-
-- **Date:** 2026-06-09
-- **Repo:** `coding-agent-skills` (jj bookmark `claude-rag-phase3-prework`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Built the reusable Phase-3 RAG-optimization benchmark harness under `docs/plans/2026-06-08/0008-consolidated-rag-optimization-phase-2/` (gold loader, per-repo corpus manifest, enriched dual-field indexer, contamination controls, slice-aware metrics, Wave-0 config arms, readiness gate) without starting Phase 3; surfaced and fixed a C++/CUDA extension gap; then, per owner feedback, reworked the scoring so the IR task is one combined code+docs corpus per repo with code-vs-doc as a reporting slice only.
 
 ## User
 

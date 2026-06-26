@@ -1,12 +1,21 @@
+---
+title: "Native RAG software install on the Ubuntu workstation (Waves 0–3)"
+date: 2026-06-09
+repo: "`coding-agent-skills` (isolated jj workspace `claude-pending-94508a16`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Installed all software the consolidated RAG-optimization plan (`0008`) needs for Waves
+  0–3 natively (no Docker) on the Ubuntu GPU workstation `delos` — three uv/CPython-3.12
+  venvs (portable skill stack, campaign harness tooling, Infinity GPU embed/rerank
+  serving), verified each, recorded the install state in plan `0008` and in memory, and
+  filed a `docs/issues/` note about the `vcs` PreToolUse friction. Then exported this
+  transcript and integrated/committed via the `vcs` skill.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Native RAG software install on the Ubuntu workstation (Waves 0–3)
-
-- **Date:** 2026-06-09
-- **Repo:** `coding-agent-skills` (isolated jj workspace `claude-pending-94508a16`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Installed all software the consolidated RAG-optimization plan (`0008`) needs for Waves 0–3 natively (no Docker) on the Ubuntu GPU workstation `delos` — three uv/CPython-3.12 venvs (portable skill stack, campaign harness tooling, Infinity GPU embed/rerank serving), verified each, recorded the install state in plan `0008` and in memory, and filed a `docs/issues/` note about the `vcs` PreToolUse friction. Then exported this transcript and integrated/committed via the `vcs` skill.
 
 ## User
 

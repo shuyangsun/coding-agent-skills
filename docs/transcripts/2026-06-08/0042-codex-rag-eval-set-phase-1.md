@@ -1,12 +1,18 @@
+---
+title: "RAG Eval Set Phase 1"
+date: 2026-06-08
+repo: "coding-agent-skills (`codex-rag-eval-set`, change `uymqywuystklynxyytnotmmoolyvwqwn`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, reasoning effort: high)"
+summary: >-
+  Collected a Phase 1 RAG evaluation set across six repositories, documented 84
+  source-grounded Q&A candidates under `docs/plans/`, exported the session, and prepared
+  the jj work for integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # RAG Eval Set Phase 1
-
-- Date: 2026-06-08
-- Repo: coding-agent-skills (`codex-rag-eval-set`, change `uymqywuystklynxyytnotmmoolyvwqwn`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5, reasoning effort: high)
-- Summary: Collected a Phase 1 RAG evaluation set across six repositories, documented 84 source-grounded Q&A candidates under `docs/plans/`, exported the session, and prepared the jj work for integration.
 
 <!-- markdownlint-disable MD025 -->
 

@@ -1,14 +1,21 @@
+---
+title: "Improving-docs-and-rag harness: scaffold the `docs` skill + floor-vs-doc benchmark (0005)"
+date: 2026-06-08
+repo: "`coding-agent-skills` @ `main` (work isolated in jj workspace/bookmark `claude-docs-skill`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Used the `improving-docs-and-rag-skills` Phase-0 harness to measure the repo's docs
+  (floor `Z` = no doc vs `Nb`/`Db` = naive/structured docs, `baseline-b` retrieval only —
+  RAG deliberately not exercised), wrote benchmark report `0005`, scaffolded the initial
+  `docs` skill, ran a 3-agent adversarial review that caught two contamination leaks + a
+  corpus-poisoning hole, fixed them, then exported, rebased onto current `main`, and
+  integrated.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Improving-docs-and-rag harness: scaffold the `docs` skill + floor-vs-doc benchmark (0005)
-
-- **Date:** 2026-06-08
-- **Repo:** `coding-agent-skills` @ `main` (work isolated in jj workspace/bookmark `claude-docs-skill`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Used the `improving-docs-and-rag-skills` Phase-0 harness to measure the repo's docs (floor `Z` = no doc vs `Nb`/`Db` = naive/structured docs, `baseline-b` retrieval only — RAG deliberately not exercised), wrote benchmark report `0005`, scaffolded the initial `docs` skill, ran a 3-agent adversarial review that caught two contamination leaks + a corpus-poisoning hole, fixed them, then exported, rebased onto current `main`, and integrated.
-
----
 
 ## User
 

@@ -1,12 +1,17 @@
+---
+title: "Gemini VCS jj vs Git benchmark (Run D)"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace `antigravity-vcs-benchmarks`, target bookmark `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Gemini / Antigravity (Gemini 3.5 Flash (High), thinking: high)"
+summary: >-
+  Extracted model/tooling-generic VCS benchmark prompt; attempted Gemini VCS benchmark
+  sweep and initiated cleanup of sandboxes.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Gemini VCS jj vs Git benchmark (Run D)
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace `antigravity-vcs-benchmarks`, target bookmark `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Gemini / Antigravity (Gemini 3.5 Flash (High), thinking: high)
-- **Summary:** Extracted model/tooling-generic VCS benchmark prompt; attempted Gemini VCS benchmark sweep and initiated cleanup of sandboxes.
 
 ## User
 

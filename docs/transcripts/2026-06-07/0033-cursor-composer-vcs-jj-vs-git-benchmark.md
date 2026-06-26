@@ -1,12 +1,18 @@
+---
+title: "Cursor Composer VCS jj vs Git benchmark (Run C)"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace `cursor-composer-vcs-benchmark`, target bookmark `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Cursor (Composer 2.5 Fast)"
+summary: >-
+  Reproduced the GPT/Claude `vcs`-skill jj-vs-Git token/speed benchmark with Composer 2.5
+  via the `improving-vcs-skill` harness (rounds 701–704), merged Run C into the shared
+  benchmark report and TSV, then exported this session for landing on `main`.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Cursor Composer VCS jj vs Git benchmark (Run C)
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace `cursor-composer-vcs-benchmark`, target bookmark `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Cursor (Composer 2.5 Fast)
-- **Summary:** Reproduced the GPT/Claude `vcs`-skill jj-vs-Git token/speed benchmark with Composer 2.5 via the `improving-vcs-skill` harness (rounds 701–704), merged Run C into the shared benchmark report and TSV, then exported this session for landing on `main`.
 
 ## User
 

@@ -1,12 +1,20 @@
+---
+title: "Restructure context-retrieval skills for clearer responsibilities"
+date: 2026-06-08
+repo: "coding-agent-skills (bookmark `claude-restructure-context-skills`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Renamed/split the docs + rag + vcs-setup skills into clearer responsibilities —
+  `setting-up-vcs`, `setting-up-rag`, `retrieving-context` (new), `updating-docs`, and the
+  `improving-context-retrieval-skills` harness — verified with a deterministic check pass
+  plus an adversarial multi-agent review, then advanced/rebased onto `main` and
+  integrated.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Restructure context-retrieval skills for clearer responsibilities
-
-- **Date:** 2026-06-08
-- **Repo:** coding-agent-skills (bookmark `claude-restructure-context-skills`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Renamed/split the docs + rag + vcs-setup skills into clearer responsibilities — `setting-up-vcs`, `setting-up-rag`, `retrieving-context` (new), `updating-docs`, and the `improving-context-retrieval-skills` harness — verified with a deterministic check pass plus an adversarial multi-agent review, then advanced/rebased onto `main` and integrated.
 
 ## User
 

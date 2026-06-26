@@ -1,14 +1,22 @@
+---
+title: "Add branch/bookmark hygiene + token metrics to the vcs harness, then iterate the vcs skill"
+date: 2026-06-06
+repo: "coding-agent-skills (jj change `tsvvsyqq`, colocated jj-on-git)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: ultracode / xhigh)"
+summary: >-
+  Added two new metrics to the `improving-vcs-skill` harness — branch/bookmark **stale-ref
+  hygiene** and per-agent **output-token** efficiency — plus a branch-cleanup rule (with a
+  PR carve-out) and a jj concurrent lost-update guard to the `vcs` skill itself, then ran
+  a 12-round / 54-agent baseline→revised eval that drove the cleanup right. Hygiene went
+  from a ref left for 5/6 baseline agents to 3/48 revised; correctness held (9/10, the one
+  failure being a real jj clobber that was then fixed); tokens stayed flat. Results
+  written to `docs/benchmarks/0001-...`.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Add branch/bookmark hygiene + token metrics to the vcs harness, then iterate the vcs skill
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj change `tsvvsyqq`, colocated jj-on-git)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: ultracode / xhigh)
-- **Summary:** Added two new metrics to the `improving-vcs-skill` harness — branch/bookmark **stale-ref hygiene** and per-agent **output-token** efficiency — plus a branch-cleanup rule (with a PR carve-out) and a jj concurrent lost-update guard to the `vcs` skill itself, then ran a 12-round / 54-agent baseline→revised eval that drove the cleanup right. Hygiene went from a ref left for 5/6 baseline agents to 3/48 revised; correctness held (9/10, the one failure being a real jj clobber that was then fixed); tokens stayed flat. Results written to `docs/benchmarks/0001-...`.
-
----
 
 ## User
 

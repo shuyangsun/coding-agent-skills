@@ -1,12 +1,19 @@
+---
+title: "Graphify GraphRAG Retrieval Benchmark"
+date: 2026-06-08
+repo: "coding-agent-skills (`codex-graphify-graphrag-retrieval-benchmark`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Benchmarked local Qdrant/FastEmbed RAG against a local GraphRAG prototype and graphify
+  on `inception/` plus an alpha-zero test project, researched contextual retrieval
+  integration with graphify, documented the results, then rebased the work onto the latest
+  `main` and resolved additive documentation index conflicts.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Graphify GraphRAG Retrieval Benchmark
-
-- Date: 2026-06-08
-- Repo: coding-agent-skills (`codex-graphify-graphrag-retrieval-benchmark`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5.5, reasoning effort: xhigh)
-- Summary: Benchmarked local Qdrant/FastEmbed RAG against a local GraphRAG prototype and graphify on `inception/` plus an alpha-zero test project, researched contextual retrieval integration with graphify, documented the results, then rebased the work onto the latest `main` and resolved additive documentation index conflicts.
 
 <!-- markdownlint-disable MD034 -->
 

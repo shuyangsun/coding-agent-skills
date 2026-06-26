@@ -1,12 +1,19 @@
+---
+title: "Inception: fix OpenAI `max_tokens` unsupported-parameter error"
+date: 2026-06-13
+repo: "coding-agent-skills (change `qnlnsxswrnlq`, parent `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  The Inception RAG service always sent `max_tokens` to the OpenAI-compatible chat
+  endpoint; newer OpenAI models reject it and require `max_completion_tokens`. Added a
+  one-shot retry in `_call_llm` that renames the field only when the provider asks for it,
+  so local (gemma) endpoints keep working.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Inception: fix OpenAI `max_tokens` unsupported-parameter error
-
-- **Date:** 2026-06-13
-- **Repo:** coding-agent-skills (change `qnlnsxswrnlq`, parent `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** The Inception RAG service always sent `max_tokens` to the OpenAI-compatible chat endpoint; newer OpenAI models reject it and require `max_completion_tokens`. Added a one-shot retry in `_call_llm` that renames the field only when the provider asks for it, so local (gemma) endpoints keep working.
 
 ## User
 

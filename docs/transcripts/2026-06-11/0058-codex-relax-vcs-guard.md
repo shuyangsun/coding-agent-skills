@@ -1,12 +1,17 @@
+---
+title: "Codex VCS Guard Relaxation"
+date: 2026-06-11
+repo: "coding-agent-skills (`codex-relax-vcs-guard`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "GPT-5 (Codex CLI 0.139.0, reasoning effort: high)"
+summary: >-
+  Relaxed the `vcs` guard so owned agent workspaces are inferred when tool cwd is missing,
+  while explicit shared-checkout writes remain blocked.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex VCS Guard Relaxation
-
-- Date: 2026-06-11
-- Repo: coding-agent-skills (`codex-relax-vcs-guard`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: GPT-5 (Codex CLI 0.139.0, reasoning effort: high)
-- Summary: Relaxed the `vcs` guard so owned agent workspaces are inferred when tool cwd is missing, while explicit shared-checkout writes remain blocked.
 
 ## User
 

@@ -1,12 +1,19 @@
+---
+title: "Skip author email in export redaction scanner"
+date: 2026-06-06
+repo: "coding-agent-skills (bookmark: `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Cursor (Composer 2.5)"
+summary: >-
+  Updated `redaction-scan.sh` so the email pass ignores the repo author's VCS-configured
+  address — intentional transcript metadata and already-public contact info per the export
+  skill — while still flagging third-party addresses. Exported this session and committed
+  the script change and transcript as separate `jj` changes, then pushed.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Skip author email in export redaction scanner
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (bookmark: `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Cursor (Composer 2.5)
-- **Summary:** Updated `redaction-scan.sh` so the email pass ignores the repo author's VCS-configured address — intentional transcript metadata and already-public contact info per the export skill — while still flagging third-party addresses. Exported this session and committed the script change and transcript as separate `jj` changes, then pushed.
 
 ## User
 

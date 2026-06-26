@@ -1,12 +1,21 @@
+---
+title: "Fix jj degenerate-merge land (0003) and isolate-cd gap (0004)"
+date: 2026-06-07
+repo: "coding-agent-skills (bookmark `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Fixed two `vcs`-skill issues — `integrate.sh` now fast-forwards linear jj work (no
+  degenerate empty merge) and forms only described, pushable merges on real divergence;
+  `isolate.sh` emits `NEXT_CWD=` on creation so agents cd into the new workspace. Verified
+  both on Claude Haiku via the `improving-vcs-skill` harness. Mid-session a concurrent
+  Cursor/Composer session pushed the uncommitted work bundled with an unrelated edit; per
+  the user's choice the history was split into clean separate commits and force-pushed.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Fix jj degenerate-merge land (0003) and isolate-cd gap (0004)
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (bookmark `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Fixed two `vcs`-skill issues — `integrate.sh` now fast-forwards linear jj work (no degenerate empty merge) and forms only described, pushable merges on real divergence; `isolate.sh` emits `NEXT_CWD=` on creation so agents cd into the new workspace. Verified both on Claude Haiku via the `improving-vcs-skill` harness. Mid-session a concurrent Cursor/Composer session pushed the uncommitted work bundled with an unrelated edit; per the user's choice the history was split into clean separate commits and force-pushed.
 
 ## User
 

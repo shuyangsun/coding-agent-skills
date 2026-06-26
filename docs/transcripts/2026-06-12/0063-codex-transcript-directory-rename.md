@@ -1,12 +1,18 @@
+---
+title: "Codex Transcript Directory Rename"
+date: 2026-06-12
+repo: "coding-agent-skills (jj workspace `codex-export-transcript`, change `codex-export-transcript`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI 0.139.0 (gpt-5.5, reasoning effort: xhigh)"
+summary: >-
+  Renamed session transcript directories to `docs/transcripts/`, updated context-retrieval
+  skills and harness references, propagated the rename to another repo, and exported this
+  session transcript.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Transcript Directory Rename
-
-Date: 2026-06-12
-Repo: coding-agent-skills (jj workspace `codex-export-transcript`, change `codex-export-transcript`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI 0.139.0 (gpt-5.5, reasoning effort: xhigh)
-Summary: Renamed session transcript directories to `docs/transcripts/`, updated context-retrieval skills and harness references, propagated the rename to another repo, and exported this session transcript.
 
 ## User
 

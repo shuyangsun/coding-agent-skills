@@ -1,13 +1,22 @@
+---
+title: "Wave 4 — RAG contextual retrieval + context-generator model comparison (gemma-4 / Qwen3.6-27B / Nemotron-120B via TensorRT-LLM)"
+date: 2026-06-10
+repo: "coding-agent-skills (jj workspace bookmark: claude-ir-optimization-wave-4)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: max)"
+summary: >-
+  Wave-4 IR optimization on the 207-question 6-repo gold set: implemented Anthropic-style
+  LLM contextual retrieval in the campaign harness (held-out nDCG +0.031, code-domain
+  +0.045, sentinel +0.080, index-time only) — promoted campaign-side; then compared
+  gemma-4 / Qwen3.6-27B / Nemotron-120B as context generators (Nemotron best on code, ~2×
+  the 31B/27B lift), standing up Nemotron-3-Super-120B-A12B-NVFP4 via TensorRT-LLM (native
+  trtllm-serve hung at MPI/IPC bootstrap; the official Docker image with --ipc=host
+  worked).
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Wave 4 — RAG contextual retrieval + context-generator model comparison (gemma-4 / Qwen3.6-27B / Nemotron-120B via TensorRT-LLM)
-
-- **Date:** 2026-06-10
-- **Repo:** coding-agent-skills (jj workspace bookmark: claude-ir-optimization-wave-4)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: max)
-- **Summary:** Wave-4 IR optimization on the 207-question 6-repo gold set: implemented Anthropic-style LLM contextual retrieval in the campaign harness (held-out nDCG +0.031, code-domain +0.045, sentinel +0.080, index-time only) — promoted campaign-side; then compared gemma-4 / Qwen3.6-27B / Nemotron-120B as context generators (Nemotron best on code, ~2× the 31B/27B lift), standing up Nemotron-3-Super-120B-A12B-NVFP4 via TensorRT-LLM (native trtllm-serve hung at MPI/IPC bootstrap; the official Docker image with --ipc=host worked).
-
 
 ## User
 <command-name>/model</command-name>

@@ -1,12 +1,19 @@
+---
+title: "Codex VCS jj vs Git token benchmark"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace `codex-benchmark-vcs-workflows-run`, target bookmark `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (`gpt-5.5`, reasoning: not recorded in session metadata)"
+summary: >-
+  Benchmarked the `vcs` skill's Jujutsu workspace workflow against the Git worktree
+  workflow with Codex sub-agents, captured speed and output-token data across model tiers,
+  documented the conclusion under `docs/benchmarks/`, then prepared the benchmark and
+  transcript for landing on `main`.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex VCS jj vs Git token benchmark
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace `codex-benchmark-vcs-workflows-run`, target bookmark `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (`gpt-5.5`, reasoning: not recorded in session metadata)
-- **Summary:** Benchmarked the `vcs` skill's Jujutsu workspace workflow against the Git worktree workflow with Codex sub-agents, captured speed and output-token data across model tiers, documented the conclusion under `docs/benchmarks/`, then prepared the benchmark and transcript for landing on `main`.
 
 ## User
 

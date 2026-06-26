@@ -1,12 +1,18 @@
+---
+title: "Codex Python Style uv CUDA Update"
+date: 2026-06-12
+repo: "coding-agent-skills (`codex-update-python-style`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI 0.139.0 (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Added concise Python coding-style rules with uv-first dependency management, modern
+  tooling guidance, and explicit Torch/CUDA compatibility footguns for the inspected
+  Ubuntu Blackwell workstation.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Python Style uv CUDA Update
-
-- Date: 2026-06-12
-- Repo: coding-agent-skills (`codex-update-python-style`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex CLI 0.139.0 (GPT-5.5, reasoning effort: xhigh)
-- Summary: Added concise Python coding-style rules with uv-first dependency management, modern tooling guidance, and explicit Torch/CUDA compatibility footguns for the inspected Ubuntu Blackwell workstation.
 
 <!-- markdownlint-disable MD025 MD033 MD049 -->
 

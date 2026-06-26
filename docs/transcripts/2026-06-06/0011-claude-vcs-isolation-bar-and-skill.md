@@ -1,14 +1,24 @@
+---
+title: "Add a session-start isolation measurable bar to the harness, then teach the vcs skill to isolate parallel work"
+date: 2026-06-06
+repo: "coding-agent-skills (jj change `rsxwxtnm`, colocated jj-on-git)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: ultracode / xhigh)"
+summary: >-
+  Established that the `vcs` skill had no session-start isolation guidance and the
+  `improving-vcs-skill` harness couldn't measure it; added a new `--task start` measurable
+  bar (deterministic greenfield scenario + `check-isolation.sh` oracle scoring git-reflog
+  / jj-op-log durable signals + an `iso` scoreboard column + exit-bar criterion),
+  dry-tested it across 8 simulated agent behaviors and adversarially reviewed it
+  (false-pass refuted); then changed the `vcs` skill itself — a new `ISOLATE.md` (create
+  your own worktree/workspace before new work unless already isolated, with the
+  technically-grounded "already in a git worktree + jj available" judgement case) wired
+  into `SKILL.md` and the `INTEGRATE.md` cleanup.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Add a session-start isolation measurable bar to the harness, then teach the vcs skill to isolate parallel work
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj change `rsxwxtnm`, colocated jj-on-git)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: ultracode / xhigh)
-- **Summary:** Established that the `vcs` skill had no session-start isolation guidance and the `improving-vcs-skill` harness couldn't measure it; added a new `--task start` measurable bar (deterministic greenfield scenario + `check-isolation.sh` oracle scoring git-reflog / jj-op-log durable signals + an `iso` scoreboard column + exit-bar criterion), dry-tested it across 8 simulated agent behaviors and adversarially reviewed it (false-pass refuted); then changed the `vcs` skill itself — a new `ISOLATE.md` (create your own worktree/workspace before new work unless already isolated, with the technically-grounded "already in a git worktree + jj available" judgement case) wired into `SKILL.md` and the `INTEGRATE.md` cleanup.
-
----
 
 ## User
 

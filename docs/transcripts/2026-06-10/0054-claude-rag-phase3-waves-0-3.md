@@ -1,12 +1,30 @@
+---
+title: "RAG Optimization Phase 3 — Waves 0–3 (baseline, re-index-free, contextual headers, GPU reranker)"
+date: 2026-06-10
+repo: "coding-agent-skills (`claude-rag-optimization-phase3`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Ran Phase-3 Waves 0–3 of the RAG-optimization campaign (plan `0008`) on the Ubuntu GPU
+  box `delos` over the 207-query / 6-repo gold set. Built the benchmark runner + GPU
+  serving harness, declared the `plain-current` baseline with clean leakage controls, and
+  found that **deterministic contextual headers** are the top retrieval win (held-out
+  nDCG@10 +0.056 / primary-MRR +0.055, no slice regresses, no LLM) while the **shipped CPU
+  MiniLM reranker hurts** ranking and costs 40× latency; on GPU, `bge-reranker-v2-m3`
+  strictly beats MiniLM and fixes the two weak repos but is a coverage-vs-precision lever,
+  and a `bge-small`→`bge-base` embedder swap is a wash. Promoted two proven, CPU-clean
+  correctness fixes into the shipped `setting-up-rag` skill: **`.gitignore`-respecting
+  corpus loading** and the **comprehensive C/C++/CUDA/CMake extension set**. Also records
+  the corpus-hygiene pivot (caught that `alpha-zero` was 84% git-ignored self-play traces
+  and re-ran Wave 0 from scratch), the macOS→Ubuntu harness portability fixes, the
+  dedicated isolated Qdrant on `:6343`, and the Infinity-`v2`-CLI-broken →
+  Python-`create_server` serving workaround. Wave 1 was a deliberate **negative result**
+  (no re-index-free fusion knob beats baseline on held-out).
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # RAG Optimization Phase 3 — Waves 0–3 (baseline, re-index-free, contextual headers, GPU reranker)
-
-- **Date:** 2026-06-10
-- **Repo:** coding-agent-skills (`claude-rag-optimization-phase3`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Ran Phase-3 Waves 0–3 of the RAG-optimization campaign (plan `0008`) on the Ubuntu GPU box `delos` over the 207-query / 6-repo gold set. Built the benchmark runner + GPU serving harness, declared the `plain-current` baseline with clean leakage controls, and found that **deterministic contextual headers** are the top retrieval win (held-out nDCG@10 +0.056 / primary-MRR +0.055, no slice regresses, no LLM) while the **shipped CPU MiniLM reranker hurts** ranking and costs 40× latency; on GPU, `bge-reranker-v2-m3` strictly beats MiniLM and fixes the two weak repos but is a coverage-vs-precision lever, and a `bge-small`→`bge-base` embedder swap is a wash. Promoted two proven, CPU-clean correctness fixes into the shipped `setting-up-rag` skill: **`.gitignore`-respecting corpus loading** and the **comprehensive C/C++/CUDA/CMake extension set**. Also records the corpus-hygiene pivot (caught that `alpha-zero` was 84% git-ignored self-play traces and re-ran Wave 0 from scratch), the macOS→Ubuntu harness portability fixes, the dedicated isolated Qdrant on `:6343`, and the Infinity-`v2`-CLI-broken → Python-`create_server` serving workaround. Wave 1 was a deliberate **negative result** (no re-index-free fusion knob beats baseline on held-out).
 
 ## User
 

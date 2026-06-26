@@ -1,12 +1,18 @@
+---
+title: "Codex Session Export Verbatim"
+date: 2026-06-08
+repo: "coding-agent-skills (`codex-session-export-verbatim`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, reasoning effort not recorded in session log)"
+summary: >-
+  Updated the session export skill to preserve user turns verbatim except for required
+  redactions and minimal workplace-friendly cleanup for excessive profanity, then
+  validated the change and exported this session.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Session Export Verbatim
-
-- Date: 2026-06-08
-- Repo: coding-agent-skills (`codex-session-export-verbatim`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5, reasoning effort not recorded in session log)
-- Summary: Updated the session export skill to preserve user turns verbatim except for required redactions and minimal workplace-friendly cleanup for excessive profanity, then validated the change and exported this session.
 
 ## User
 

@@ -1,12 +1,18 @@
+---
+title: "Codex RAG Text Formats"
+date: 2026-06-12
+repo: "coding-agent-skills (jj workspace `codex-rag-text-formats`, change `rvnulysz`, commit `764315aa`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)"
+summary: >-
+  Expanded the `setting-up-rag` prose/text corpus loader beyond Markdown while keeping
+  fixed-name build files such as `CMakeLists.txt` classified as code, then prepared the
+  work for VCS integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex RAG Text Formats
-
-Date: 2026-06-12
-Repo: coding-agent-skills (jj workspace `codex-rag-text-formats`, change `rvnulysz`, commit `764315aa`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)
-Summary: Expanded the `setting-up-rag` prose/text corpus loader beyond Markdown while keeping fixed-name build files such as `CMakeLists.txt` classified as code, then prepared the work for VCS integration.
 
 ## User
 

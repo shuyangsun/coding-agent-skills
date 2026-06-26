@@ -1,14 +1,22 @@
+---
+title: "RAG Optimization Phase 2 — research, plan, and integration (claude)"
+date: 2026-06-09
+repo: "coding-agent-skills (jj workspace/bookmark `claude-rag-phase2`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context)"
+summary: >-
+  Phase 2 of "Optimizing RAG Setup" — an 8-axis web-research fan-out with adversarial
+  verification of every benchmark number, written up as three research notes
+  (`0004`–`0006`, claude) plus a new optimization plan
+  (`plans/0005-claude-rag-optimization-phase-2.md`); answered the local-LLM/GPU-serving
+  question for a 2× RTX PRO 6000 Blackwell workstation; survived a session-limit
+  interruption via workflow resume; then advanced/rebased onto main alongside parallel
+  codex+cursor passes, renamed all files with the `claude` keyword, and integrated.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # RAG Optimization Phase 2 — research, plan, and integration (claude)
-
-- **Date:** 2026-06-09
-- **Repo:** coding-agent-skills (jj workspace/bookmark `claude-rag-phase2`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context)
-- **Summary:** Phase 2 of "Optimizing RAG Setup" — an 8-axis web-research fan-out with adversarial verification of every benchmark number, written up as three research notes (`0004`–`0006`, claude) plus a new optimization plan (`plans/0005-claude-rag-optimization-phase-2.md`); answered the local-LLM/GPU-serving question for a 2× RTX PRO 6000 Blackwell workstation; survived a session-limit interruption via workflow resume; then advanced/rebased onto main alongside parallel codex+cursor passes, renamed all files with the `claude` keyword, and integrated.
-
----
 
 ## User
 

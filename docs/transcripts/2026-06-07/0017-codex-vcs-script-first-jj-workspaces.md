@@ -1,12 +1,18 @@
+---
+title: "Codex VCS script-first jj workspaces"
+date: 2026-06-07
+repo: "coding-agent-skills (jj, `main` bookmark, default workspace)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, reasoning: high)"
+summary: >-
+  Iterated on the `vcs` skill toward script-first Jujutsu workspace flows, measured the
+  helper-based path against Git, documented that this parent session incorrectly edited
+  from the `default` jj workspace, and prepared the session for commit and push.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex VCS script-first jj workspaces
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj, `main` bookmark, default workspace)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (GPT-5, reasoning: high)
-- **Summary:** Iterated on the `vcs` skill toward script-first Jujutsu workspace flows, measured the helper-based path against Git, documented that this parent session incorrectly edited from the `default` jj workspace, and prepared the session for commit and push.
 
 ## Transcript
 

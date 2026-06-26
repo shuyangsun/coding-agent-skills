@@ -1,14 +1,19 @@
+---
+title: "Creating the `rag` skill via the improving-docs-and-rag harness (round 0 + Snowflake IDs)"
+date: 2026-06-08
+repo: "coding-agent-skills (jj bookmark `claude-rag-skill`, rebased onto `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Used the `improving-docs-and-rag-skills` Phase-0 harness to author a new local-first
+  `rag` skill (Qdrant + FastEmbed, lean SKILL.md with on-demand setup), benchmarked no-RAG
+  vs RAG (saved as `0006`), ran research + adversarial-review workflows, then switched
+  point IDs from UUIDv5 to Snowflake (epoch 2026-06-08), rebased onto main, and published.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Creating the `rag` skill via the improving-docs-and-rag harness (round 0 + Snowflake IDs)
-
-**Date:** 2026-06-08
-**Repo:** coding-agent-skills (jj bookmark `claude-rag-skill`, rebased onto `main`)
-**Author:** Shuyang Sun <shuyangsun10@gmail.com>
-**Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-**Summary:** Used the `improving-docs-and-rag-skills` Phase-0 harness to author a new local-first `rag` skill (Qdrant + FastEmbed, lean SKILL.md with on-demand setup), benchmarked no-RAG vs RAG (saved as `0006`), ran research + adversarial-review workflows, then switched point IDs from UUIDv5 to Snowflake (epoch 2026-06-08), rebased onto main, and published.
-
----
 
 ## User
 

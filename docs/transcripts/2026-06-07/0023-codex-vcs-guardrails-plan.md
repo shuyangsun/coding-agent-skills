@@ -1,12 +1,18 @@
+---
+title: "VCS guardrails plan for jj workspace isolation"
+date: 2026-06-07
+repo: "coding-agent-skills (bookmark `codex-vcs-guardrails`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning: xhigh)"
+summary: >-
+  Created a plan for mechanical `vcs` guardrails around jj workspace isolation, validated
+  the current happy path with a small model, updated the plan with user decisions, and
+  prepared it for merge.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # VCS guardrails plan for jj workspace isolation
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (bookmark `codex-vcs-guardrails`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (GPT-5.5, reasoning: xhigh)
-- **Summary:** Created a plan for mechanical `vcs` guardrails around jj workspace isolation, validated the current happy path with a small model, updated the plan with user decisions, and prepared it for merge.
 
 ## User
 

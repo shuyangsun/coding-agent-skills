@@ -1,12 +1,18 @@
+---
+title: "Codex session: stale jj default metrics and vcs cleanup"
+date: 2026-06-06
+repo: "coding-agent-skills (`jj @ romzoptxkk 490be24bda`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "GPT-5.5 Codex (Codex Desktop, reasoning: xhigh)"
+summary: >-
+  Added measurable jj default-workspace and retired-workspace hygiene metrics to the
+  `improving-vcs-skill` harness, updated `vcs` guidance, verified the harness with a
+  sub-agent, then prepared to commit and clean the jj graph.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex session: stale jj default metrics and vcs cleanup
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (`jj @ romzoptxkk 490be24bda`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** GPT-5.5 Codex (Codex Desktop, reasoning: xhigh)
-- **Summary:** Added measurable jj default-workspace and retired-workspace hygiene metrics to the `improving-vcs-skill` harness, updated `vcs` guidance, verified the harness with a sub-agent, then prepared to commit and clean the jj graph.
 
 ## User
 

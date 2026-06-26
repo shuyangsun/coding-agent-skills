@@ -1,12 +1,20 @@
+---
+title: "Codex skill discovery and canonical `.agents/skills` layout"
+date: 2026-06-06
+repo: "coding-agent-skills (jj; work in the default workspace)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Investigated why Codex could not see the repo-local `vcs` skill, tried a `.codex/skills
+  -> ../skills` symlink, then moved `export-coding-session` and `vcs` into real
+  directories under `.agents/skills/`, removed the old `skills/` tree, updated the repo
+  docs, verified the two skills parse from the new canonical location, and prepared this
+  transcript before commit and push.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex skill discovery and canonical `.agents/skills` layout
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj; work in the default workspace)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (GPT-5.5, reasoning effort: xhigh)
-- **Summary:** Investigated why Codex could not see the repo-local `vcs` skill, tried a `.codex/skills -> ../skills` symlink, then moved `export-coding-session` and `vcs` into real directories under `.agents/skills/`, removed the old `skills/` tree, updated the repo docs, verified the two skills parse from the new canonical location, and prepared this transcript before commit and push.
 
 ## User
 

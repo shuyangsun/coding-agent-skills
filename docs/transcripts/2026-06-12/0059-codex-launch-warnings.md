@@ -1,12 +1,18 @@
+---
+title: "Codex Launch Warnings"
+date: 2026-06-12
+repo: "coding-agent-skills (`codex-fix-launch-warnings`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI 0.139.0 (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Fixed Codex launch warnings by repairing `retrieving-context` YAML frontmatter, avoiding
+  the Linux bubblewrap sandbox by default in this repo, and preserving command-rule
+  guardrails.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Launch Warnings
-
-- Date: 2026-06-12
-- Repo: coding-agent-skills (`codex-fix-launch-warnings`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex CLI 0.139.0 (GPT-5.5, reasoning effort: xhigh)
-- Summary: Fixed Codex launch warnings by repairing `retrieving-context` YAML frontmatter, avoiding the Linux bubblewrap sandbox by default in this repo, and preserving command-rule guardrails.
 
 ## Transcript
 

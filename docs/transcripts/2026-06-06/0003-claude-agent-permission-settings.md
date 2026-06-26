@@ -1,14 +1,20 @@
+---
+title: "Agent permission settings across Claude Code, Codex, Cursor, and Antigravity"
+date: 2026-06-06
+repo: "coding-agent-skills (jj change `knmqwnroyvvt`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Built a checked-in Claude Code `settings.json` permission policy, simplified it, then
+  mirrored the same allow/deny/prompt posture into Codex, Cursor, and Antigravity configs
+  — researched via parallel subagents and verified against primary docs. Finally reworked
+  the accompanying skill from a static snapshot into a reusable, intent-focused procedure
+  (`update-agent-permissions`), and repaired an externally-corrupted ignore file.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Agent permission settings across Claude Code, Codex, Cursor, and Antigravity
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (jj change `knmqwnroyvvt`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Built a checked-in Claude Code `settings.json` permission policy, simplified it, then mirrored the same allow/deny/prompt posture into Codex, Cursor, and Antigravity configs — researched via parallel subagents and verified against primary docs. Finally reworked the accompanying skill from a static snapshot into a reusable, intent-focused procedure (`update-agent-permissions`), and repaired an externally-corrupted ignore file.
-
----
 
 ## User
 

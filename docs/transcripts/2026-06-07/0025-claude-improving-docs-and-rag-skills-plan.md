@@ -1,12 +1,22 @@
+---
+title: "Planning the improving-docs-and-rag-skills harness"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace/bookmark `claude-improving-docs-harness-plan`, on `main` `89f98d23`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Wrote a plan (`docs/plans/0002-improving-docs-and-rag-skills.md`) for a
+  measurement-driven meta-skill that co-optimizes a `docs` skill and a `rag` skill,
+  modeled on `improving-vcs-skill`. Used a research → design-panel → adversarial-critique
+  workflow, then hardened the design (no deterministic oracle → surrogates; a 2×2
+  corpus×RAG factorial whose interaction term is the coupling signal; five metrics incl.
+  factuality and token usage). Also hit and documented the new `vcs` guard hook's
+  persisted-cwd / missing-owner-marker traps (`docs/issues/0008`).
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Planning the improving-docs-and-rag-skills harness
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace/bookmark `claude-improving-docs-harness-plan`, on `main` `89f98d23`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Wrote a plan (`docs/plans/0002-improving-docs-and-rag-skills.md`) for a measurement-driven meta-skill that co-optimizes a `docs` skill and a `rag` skill, modeled on `improving-vcs-skill`. Used a research → design-panel → adversarial-critique workflow, then hardened the design (no deterministic oracle → surrogates; a 2×2 corpus×RAG factorial whose interaction term is the coupling signal; five metrics incl. factuality and token usage). Also hit and documented the new `vcs` guard hook's persisted-cwd / missing-owner-marker traps (`docs/issues/0008`).
 
 ## User
 

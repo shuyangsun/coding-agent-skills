@@ -1,12 +1,22 @@
+---
+title: "Create the setup-vcs skill (hooks + guardrails + jj install)"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace `claude-setup-vcs-skill`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Authored a new `setup-vcs` method-skill that wires the `vcs` skill's isolation
+  hooks/guardrails into every agent tool (Claude, Codex, Cursor, Antigravity, Gemini) and
+  installs Jujutsu without pinning a version. Read every current setup so the skill
+  mirrors it, captured the motivation/incentive, ran an adversarial verification workflow,
+  and — prompted by that review — fixed a real botched-merge bug in
+  `session-start.sh`/`vcs-check.sh` that silently broke Antigravity and Cursor
+  session-start isolation.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Create the setup-vcs skill (hooks + guardrails + jj install)
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace `claude-setup-vcs-skill`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Authored a new `setup-vcs` method-skill that wires the `vcs` skill's isolation hooks/guardrails into every agent tool (Claude, Codex, Cursor, Antigravity, Gemini) and installs Jujutsu without pinning a version. Read every current setup so the skill mirrors it, captured the motivation/incentive, ran an adversarial verification workflow, and — prompted by that review — fixed a real botched-merge bug in `session-start.sh`/`vcs-check.sh` that silently broke Antigravity and Cursor session-start isolation.
 
 ## User
 

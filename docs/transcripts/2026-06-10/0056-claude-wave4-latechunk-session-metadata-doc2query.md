@@ -1,14 +1,20 @@
+---
+title: "Phase 3 RAG — Wave 4 steps 2–6 (late chunking, session metadata, Doc2Query, reader/packing)"
+date: 2026-06-10
+repo: "coding-agent-skills (bookmark `main`; work change `feat(rag): Phase 3 Wave 4 steps 2-6 …`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Completed the remaining Wave-4 items of the consolidated RAG optimization (plan `0008`):
+  built late-chunking and Doc2Query harness modules plus a deterministic session-metadata
+  capsule, ran one-variable-at-a-time benchmarks on the GPU box, recorded `0016`–`0019`,
+  updated the plan and the `setting-up-rag` skill, landed the work on `main`, then
+  exported this session and pushed.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Phase 3 RAG — Wave 4 steps 2–6 (late chunking, session metadata, Doc2Query, reader/packing)
-
-- **Date:** 2026-06-10
-- **Repo:** coding-agent-skills (bookmark `main`; work change `feat(rag): Phase 3 Wave 4 steps 2-6 …`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Completed the remaining Wave-4 items of the consolidated RAG optimization (plan `0008`): built late-chunking and Doc2Query harness modules plus a deterministic session-metadata capsule, ran one-variable-at-a-time benchmarks on the GPU box, recorded `0016`–`0019`, updated the plan and the `setting-up-rag` skill, landed the work on `main`, then exported this session and pushed.
-
----
 
 ## User
 

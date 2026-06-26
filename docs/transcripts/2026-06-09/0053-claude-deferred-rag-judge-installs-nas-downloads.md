@@ -1,14 +1,20 @@
+---
+title: "0053 Claude: Deferred RAG Judge Model Installs and NAS Downloads"
+date: 2026-06-09
+repo: "coding-agent-skills / claude-pending-1489ad0a"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Sonnet 4.6, max effort)"
+summary: >-
+  Install deferred Wave-4/7 Python packages (transformers 5.10.2, torch 2.12.0,
+  sentence-transformers 5.5.1) in campaign venv; download judge model weights
+  (HHEM-2.1/vectara_hallucination_evaluation_model, MiniCheck-7B, Lynx-8B v1.1, Lynx-70B)
+  to NAS; write sudo install script for universal-ctags; update 0008 plan with corrected
+  model IDs and install status.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # 0053 Claude: Deferred RAG Judge Model Installs and NAS Downloads
-
-| | |
-|---|---|
-| **Date** | 2026-06-09 |
-| **Repo** | coding-agent-skills / claude-pending-1489ad0a |
-| **Author** | Shuyang Sun <shuyangsun10@gmail.com> |
-| **Agent** | Claude Code (Sonnet 4.6, max effort) |
-| **Summary** | Install deferred Wave-4/7 Python packages (transformers 5.10.2, torch 2.12.0, sentence-transformers 5.5.1) in campaign venv; download judge model weights (HHEM-2.1/vectara_hallucination_evaluation_model, MiniCheck-7B, Lynx-8B v1.1, Lynx-70B) to NAS; write sudo install script for universal-ctags; update 0008 plan with corrected model IDs and install status. |
 
 ## User
 

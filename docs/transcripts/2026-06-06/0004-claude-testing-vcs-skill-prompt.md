@@ -1,12 +1,21 @@
+---
+title: "Consolidating a chat into a single testing-vcs-skill creation prompt"
+date: 2026-06-06
+repo: "coding-agent-skills (bookmark: `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: max)"
+summary: >-
+  Consolidated a multi-turn LLM chat into one self-contained meta-prompt added to the `##
+  Consolidated` section of the prompts doc. The meta-prompt is fed to a chatbot, which
+  returns the kick-start prompt that later authors `testing-vcs-skill` — a harness that
+  exercises the `vcs` skill across multiple agentic tools and environments, with `jj` on a
+  Git backend vs. Git-only. Then exported this session and committed the work and
+  transcript as two separate `jj` changes, and pushed.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Consolidating a chat into a single testing-vcs-skill creation prompt
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (bookmark: `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: max)
-- **Summary:** Consolidated a multi-turn LLM chat into one self-contained meta-prompt added to the `## Consolidated` section of the prompts doc. The meta-prompt is fed to a chatbot, which returns the kick-start prompt that later authors `testing-vcs-skill` — a harness that exercises the `vcs` skill across multiple agentic tools and environments, with `jj` on a Git backend vs. Git-only. Then exported this session and committed the work and transcript as two separate `jj` changes, and pushed.
 
 ## User
 

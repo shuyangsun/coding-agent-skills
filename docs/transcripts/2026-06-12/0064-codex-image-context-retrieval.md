@@ -1,12 +1,17 @@
+---
+title: "Codex Image Context Retrieval"
+date: 2026-06-12
+repo: "coding-agent-skills (jj workspace `codex-image-context-retrieval`, change `yklmklqy`, commit `794d97c9`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, reasoning: xhigh)"
+summary: >-
+  Improved image-backed context retrieval guidance and the Phase-0 min-merge chunking
+  benchmark, then prepared the work for VCS integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Image Context Retrieval
-
-Date: 2026-06-12
-Repo: coding-agent-skills (jj workspace `codex-image-context-retrieval`, change `yklmklqy`, commit `794d97c9`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, reasoning: xhigh)
-Summary: Improved image-backed context retrieval guidance and the Phase-0 min-merge chunking benchmark, then prepared the work for VCS integration.
 
 ## User
 

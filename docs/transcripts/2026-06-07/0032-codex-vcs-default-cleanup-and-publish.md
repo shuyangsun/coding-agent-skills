@@ -1,12 +1,18 @@
+---
+title: "Codex VCS Default Cleanup And Publish"
+date: 2026-06-07
+repo: "coding-agent-skills (`codex-inspect-svzzmzml-publish`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, reasoning effort not recorded in session log)"
+summary: >-
+  Fixed overly strict `vcs` default-workspace guard behavior, cleaned residual jj
+  workspaces/bookmarks, discarded a stale Claude scheduled-tasks lock side-head, exported
+  this session, and prepared `main` for push.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex VCS Default Cleanup And Publish
-
-- Date: 2026-06-07
-- Repo: coding-agent-skills (`codex-inspect-svzzmzml-publish`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5, reasoning effort not recorded in session log)
-- Summary: Fixed overly strict `vcs` default-workspace guard behavior, cleaned residual jj workspaces/bookmarks, discarded a stale Claude scheduled-tasks lock side-head, exported this session, and prepared `main` for push.
 
 ## User
 

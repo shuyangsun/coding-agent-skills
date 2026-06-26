@@ -1,12 +1,18 @@
+---
+title: "Codex RAG LLM Answering"
+date: 2026-06-13
+repo: "coding-agent-skills (jj workspace `codex-add-rag-llm-answering`, change `xorkozlk`, commit `3d498747`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)"
+summary: >-
+  Added a test-only OpenAI-compatible answer harness on top of the local RAG retrieval
+  engine, documented local/cloud LLM provider configuration, exported this transcript, and
+  prepared the work for VCS integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex RAG LLM Answering
-
-Date: 2026-06-13
-Repo: coding-agent-skills (jj workspace `codex-add-rag-llm-answering`, change `xorkozlk`, commit `3d498747`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)
-Summary: Added a test-only OpenAI-compatible answer harness on top of the local RAG retrieval engine, documented local/cloud LLM provider configuration, exported this transcript, and prepared the work for VCS integration.
 
 ## User
 

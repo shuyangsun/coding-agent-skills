@@ -1,12 +1,18 @@
+---
+title: "Codex Exclude VCS Workspaces From RAG"
+date: 2026-06-08
+repo: "coding-agent-skills (`codex-exclude-jj-workspaces-from-rag`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Added a context-retrieval harness metric and generic RAG loader filtering so nested
+  Jujutsu workspaces and Git worktrees are not indexed as parent-repo files, then exported
+  this session and prepared the work for VCS integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Exclude VCS Workspaces From RAG
-
-- Date: 2026-06-08
-- Repo: coding-agent-skills (`codex-exclude-jj-workspaces-from-rag`)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Codex Desktop (GPT-5.5, reasoning effort: xhigh)
-- Summary: Added a context-retrieval harness metric and generic RAG loader filtering so nested Jujutsu workspaces and Git worktrees are not indexed as parent-repo files, then exported this session and prepared the work for VCS integration.
 
 ## User
 

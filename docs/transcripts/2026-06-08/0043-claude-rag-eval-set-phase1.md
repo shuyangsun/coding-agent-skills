@@ -1,12 +1,21 @@
+---
+title: "Optimizing RAG setup — Phase 1 eval-set collection, recovery, and merge"
+date: 2026-06-08
+repo: "`coding-agent-skills` (workspace `claude-rageval-collect`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Collected a 207-question RAG retrieval eval set across six repos for the
+  `improving-context-retrieval-skills` harness: fanned out generator +
+  adversarial-verifier workflows in gold-`Fact` shape (paraphrased query + grep-verified
+  sentinels), recovered from a usage-limit interruption and a concurrently-forgotten jj
+  workspace by rebuilding from workflow transcripts, merged a parallel Codex pass into one
+  deduped set, then flattened the plan doc and integrated it.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Optimizing RAG setup — Phase 1 eval-set collection, recovery, and merge
-
-- **Date:** 2026-06-08
-- **Repo:** `coding-agent-skills` (workspace `claude-rageval-collect`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Collected a 207-question RAG retrieval eval set across six repos for the `improving-context-retrieval-skills` harness: fanned out generator + adversarial-verifier workflows in gold-`Fact` shape (paraphrased query + grep-verified sentinels), recovered from a usage-limit interruption and a concurrently-forgotten jj workspace by rebuilding from workflow transcripts, merged a parallel Codex pass into one deduped set, then flattened the plan doc and integrated it.
 
 > Tool calls are summarized and tool output is truncated to a one-line note; user turns are verbatim. `## User` blocks that contain `<task-notification>` or skill text are harness/system messages, not human input.
 

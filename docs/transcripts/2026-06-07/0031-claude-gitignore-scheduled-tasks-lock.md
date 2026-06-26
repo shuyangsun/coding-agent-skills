@@ -1,14 +1,17 @@
+---
+title: "Add .claude/scheduled_tasks.lock to .gitignore"
+date: 2026-06-07
+repo: "coding-agent-skills / claude-gitignore-scheduled-tasks-lock"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (claude-sonnet-4-6, auto mode)"
+summary: >-
+  Added `.claude/scheduled_tasks.lock` to `.gitignore` as a runtime ephemeral file, then
+  renamed the jj workspace, exported the session, committed, and published.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Add .claude/scheduled_tasks.lock to .gitignore
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills / claude-gitignore-scheduled-tasks-lock
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (claude-sonnet-4-6, auto mode)
-- **Summary:** Added `.claude/scheduled_tasks.lock` to `.gitignore` as a runtime ephemeral file, then renamed the jj workspace, exported the session, committed, and published.
-
----
 
 ## User
 

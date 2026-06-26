@@ -1,12 +1,17 @@
+---
+title: "Codex Cursor VCS hooks"
+date: 2026-06-07
+repo: "coding-agent-skills (jj workspace/bookmark `codex-cursor-vcs-hooks`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, reasoning: high)"
+summary: >-
+  Added Cursor project hooks for the `vcs` skill, validated the guard behavior, then
+  prepared the change for integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Cursor VCS hooks
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (jj workspace/bookmark `codex-cursor-vcs-hooks`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (GPT-5, reasoning: high)
-- **Summary:** Added Cursor project hooks for the `vcs` skill, validated the guard behavior, then prepared the change for integration.
 
 ## User
 

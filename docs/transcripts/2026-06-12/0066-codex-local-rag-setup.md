@@ -1,12 +1,18 @@
+---
+title: "Codex Local RAG Setup"
+date: 2026-06-12
+repo: "coding-agent-skills (jj workspace `codex-export-local-rag-transcript`, change `vvlpyqzq`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)"
+summary: >-
+  Ran Phase 1 documentation coverage across multiple repositories, set up persistent local
+  Qdrant/FastEmbed RAG collections, added project registry querying, verified
+  llm-presentation archive indexing, and answered usage questions.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Local RAG Setup
-
-Date: 2026-06-12
-Repo: coding-agent-skills (jj workspace `codex-export-local-rag-transcript`, change `vvlpyqzq`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, CLI 0.139.0, reasoning: xhigh)
-Summary: Ran Phase 1 documentation coverage across multiple repositories, set up persistent local Qdrant/FastEmbed RAG collections, added project registry querying, verified llm-presentation archive indexing, and answered usage questions.
 
 ## User
 

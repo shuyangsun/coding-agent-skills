@@ -1,14 +1,28 @@
+---
+title: "Baselining and revising the vcs skill to the exit bar"
+date: 2026-06-06
+repo: "coding-agent-skills (bookmark: `main`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, effort: ultracode — xhigh + dynamic workflow orchestration)"
+summary: >-
+  Ran the `improving-vcs-skill` measurement loop end-to-end against the `vcs` skill. First
+  proved the harness measures real resolution quality and fixed a measurement-validity gap
+  (jj mode-integrity was asserted, not verified — a jj round integrated with pure git
+  scored a false PASS; hardened `check-quality.sh` to require op-log proof that `main`
+  advanced through jj). Established a baseline (stub `vcs` = commit-messages only): 71%
+  pass, one outright jj/medium FAIL (conflicted commit left in jj history), and
+  small-model conflict thrash to 380s. Diagnosed the real gaps as jj conflict hygiene +
+  missing integrate/publish procedure + small-model thrash (not mode detection). Rewrote
+  `SKILL.md` as a compact router and added `INTEGRATE.md` (per-mode integrate-and-resolve
+  recipes). Re-measured across 12 revised rounds / 58 agents in both modes ×
+  easy/medium/hard × large/mid/small tiers × serialized and concurrent integration: 100%
+  pass, 0 mode-detection errors, 0 serialized retries/stalls, jj/medium FAIL→PASS, worst
+  small-model conflict 380s→~85s. Saved a benchmark report and exported this session.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Baselining and revising the vcs skill to the exit bar
-
-- **Date:** 2026-06-06
-- **Repo:** coding-agent-skills (bookmark: `main`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, effort: ultracode — xhigh + dynamic workflow orchestration)
-- **Summary:** Ran the `improving-vcs-skill` measurement loop end-to-end against the `vcs` skill. First proved the harness measures real resolution quality and fixed a measurement-validity gap (jj mode-integrity was asserted, not verified — a jj round integrated with pure git scored a false PASS; hardened `check-quality.sh` to require op-log proof that `main` advanced through jj). Established a baseline (stub `vcs` = commit-messages only): 71% pass, one outright jj/medium FAIL (conflicted commit left in jj history), and small-model conflict thrash to 380s. Diagnosed the real gaps as jj conflict hygiene + missing integrate/publish procedure + small-model thrash (not mode detection). Rewrote `SKILL.md` as a compact router and added `INTEGRATE.md` (per-mode integrate-and-resolve recipes). Re-measured across 12 revised rounds / 58 agents in both modes × easy/medium/hard × large/mid/small tiers × serialized and concurrent integration: 100% pass, 0 mode-detection errors, 0 serialized retries/stalls, jj/medium FAIL→PASS, worst small-model conflict 380s→~85s. Saved a benchmark report and exported this session.
-
----
 
 ## User
 

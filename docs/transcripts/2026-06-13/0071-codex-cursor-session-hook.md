@@ -1,12 +1,17 @@
+---
+title: "Codex Cursor Session Hook Transcript"
+date: 2026-06-13
+repo: "coding-agent-skills (jj workspace `codex-remove-cursor-session-hook`, change `zoklptzq`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex CLI (GPT-5.5, reasoning: medium)"
+summary: >-
+  Updated the `vcs` skill so Cursor no longer creates jj workspaces on session start,
+  copied the change to `llm-presentation`, and prepared the source repo for integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Cursor Session Hook Transcript
-
-Date: 2026-06-13
-Repo: coding-agent-skills (jj workspace `codex-remove-cursor-session-hook`, change `zoklptzq`)
-Author: Shuyang Sun <shuyangsun10@gmail.com>
-Agent: Codex CLI (GPT-5.5, reasoning: medium)
-Summary: Updated the `vcs` skill so Cursor no longer creates jj workspaces on session start, copied the change to `llm-presentation`, and prepared the source repo for integration.
 
 ## User
 

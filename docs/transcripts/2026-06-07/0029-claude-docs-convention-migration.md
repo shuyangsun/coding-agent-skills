@@ -1,12 +1,20 @@
+---
+title: "Migrate `docs/` to the dated convention + kick-start the docs skill"
+date: 2026-06-07
+repo: "coding-agent-skills (bookmark `claude-docs-convention-migration`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Located the reference `writing-docs` skill in the sibling `website` repo, then
+  reorganized every non-session `docs/` folder (`benchmarks`, `issues`, `plans`,
+  `prompts`) into the `coding-sessions` layout — dated `YYYY-MM-DD/` subdirs with clean
+  `NNNN-slug.md` filenames — as history-preserving renames, rewrote all cross-links, and
+  authored six `OVERVIEW.md` files to kick-start the docs skill.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Migrate `docs/` to the dated convention + kick-start the docs skill
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (bookmark `claude-docs-convention-migration`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Located the reference `writing-docs` skill in the sibling `website` repo, then reorganized every non-session `docs/` folder (`benchmarks`, `issues`, `plans`, `prompts`) into the `coding-sessions` layout — dated `YYYY-MM-DD/` subdirs with clean `NNNN-slug.md` filenames — as history-preserving renames, rewrote all cross-links, and authored six `OVERVIEW.md` files to kick-start the docs skill.
 
 ## User
 

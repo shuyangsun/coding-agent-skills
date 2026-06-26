@@ -1,12 +1,20 @@
+---
+title: "Shorten the vcs skill description and add early isolation mandates"
+date: 2026-06-07
+repo: "coding-agent-skills (bookmark/workspace: claude-vcs-desc-when)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Rewrote the `vcs` skill's frontmatter description to be shorter and WHEN-focused (load
+  before editing for new work, and before commit/merge/rebase/publish) instead of
+  enumerating WHAT it does, and added a prominent "Isolate before you edit" mandate at the
+  top of the skill body so agents reliably create a workspace/worktree before changing
+  files.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Shorten the vcs skill description and add early isolation mandates
-
-- Date: 2026-06-07
-- Repo: coding-agent-skills (bookmark/workspace: claude-vcs-desc-when)
-- Author: Shuyang Sun <shuyangsun10@gmail.com>
-- Agent: Claude Code (Opus 4.8, 1M context, thinking: high)
-- Summary: Rewrote the `vcs` skill's frontmatter description to be shorter and WHEN-focused (load before editing for new work, and before commit/merge/rebase/publish) instead of enumerating WHAT it does, and added a prominent "Isolate before you edit" mandate at the top of the skill body so agents reliably create a workspace/worktree before changing files.
 
 ## User
 

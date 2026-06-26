@@ -1,12 +1,17 @@
+---
+title: "Codex Antigravity VCS hooks"
+date: 2026-06-07
+repo: "coding-agent-skills (`codex-antigravity-hooks`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex Desktop (GPT-5, reasoning: high)"
+summary: >-
+  Added Antigravity hook support for the `vcs` skill, validated the hook contract, and
+  prepared the change for integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Antigravity VCS hooks
-
-- **Date:** 2026-06-07
-- **Repo:** coding-agent-skills (`codex-antigravity-hooks`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex Desktop (GPT-5, reasoning: high)
-- **Summary:** Added Antigravity hook support for the `vcs` skill, validated the hook contract, and prepared the change for integration.
 
 ## User
 

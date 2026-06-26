@@ -1,12 +1,18 @@
+---
+title: "Codex Image Retrieval Harness"
+date: 2026-06-12
+repo: "coding-agent-skills (`codex-improve-image-retrieval-harness`)"
+author: "Shuyang Sun"
+agent: "GPT-5 (Codex CLI 0.139.0, reasoning effort: high)"
+summary: >-
+  Extended only the `improving-context-retrieval-skills` harness so it can model image
+  files as retrievable context, added website image summaries and image-dependent eval
+  facts, verified the eval/reporting path, then exported the session for VCS integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex Image Retrieval Harness
-
-Date: 2026-06-12
-Repo: coding-agent-skills (`codex-improve-image-retrieval-harness`)
-Author: Shuyang Sun
-Agent: GPT-5 (Codex CLI 0.139.0, reasoning effort: high)
-Summary: Extended only the `improving-context-retrieval-skills` harness so it can model image files as retrievable context, added website image summaries and image-dependent eval facts, verified the eval/reporting path, then exported the session for VCS integration.
 
 ## User
 

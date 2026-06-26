@@ -1,14 +1,23 @@
+---
+title: "Coding-style skill: non-negotiable React + TypeScript rules with oxlint enforcement"
+date: 2026-06-08
+repo: "coding-agent-skills (jj workspace / bookmark `claude-coding-style`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Claude Code (Opus 4.8, 1M context, thinking: high)"
+summary: >-
+  Started as a request for an `inception/docs/coding-style.md` doc plus linter/formatter
+  enforcement of modern React 19 + TypeScript practices; pivoted (per follow-up turns)
+  into a reusable, repo-agnostic `coding-style` skill that declares style rules
+  non-negotiable and routes by technology to `styles/react.md` / `styles/typescript.md`,
+  with the oxlint rules extracted into reusable `*.oxlintrc.json` fragments consumed via
+  `extends`. Research was fan-out + adversarially verified; the headline "ban memoization"
+  was implemented as an error-level ban with a documented escape hatch for three real
+  exceptions.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Coding-style skill: non-negotiable React + TypeScript rules with oxlint enforcement
-
-- **Date:** 2026-06-08
-- **Repo:** coding-agent-skills (jj workspace / bookmark `claude-coding-style`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Claude Code (Opus 4.8, 1M context, thinking: high)
-- **Summary:** Started as a request for an `inception/docs/coding-style.md` doc plus linter/formatter enforcement of modern React 19 + TypeScript practices; pivoted (per follow-up turns) into a reusable, repo-agnostic `coding-style` skill that declares style rules non-negotiable and routes by technology to `styles/react.md` / `styles/typescript.md`, with the oxlint rules extracted into reusable `*.oxlintrc.json` fragments consumed via `extends`. Research was fan-out + adversarially verified; the headline "ban memoization" was implemented as an error-level ban with a documented escape hatch for three real exceptions.
-
----
 
 ## User
 

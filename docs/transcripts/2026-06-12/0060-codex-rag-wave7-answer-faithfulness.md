@@ -1,12 +1,17 @@
+---
+title: "Codex RAG Wave 7 Answer Faithfulness"
+date: 2026-06-12
+repo: "`coding-agent-skills` (`codex-rag-wave7`, change `vtnqopkr`, commit `9b91650e`)"
+author: "Shuyang Sun <shuyangsun10@gmail.com>"
+agent: "Codex (GPT-5.5, reasoning effort: xhigh)"
+summary: >-
+  Benchmarked Wave 7 answer packing and faithfulness, updated `retrieving-context`,
+  exported this session before integration.
+---
+
 <!-- markdownlint-disable MD013 MD024 -->
 
 # Codex RAG Wave 7 Answer Faithfulness
-
-- **Date:** 2026-06-12
-- **Repo:** `coding-agent-skills` (`codex-rag-wave7`, change `vtnqopkr`, commit `9b91650e`)
-- **Author:** Shuyang Sun <shuyangsun10@gmail.com>
-- **Agent:** Codex (GPT-5.5, reasoning effort: xhigh)
-- **Summary:** Benchmarked Wave 7 answer packing and faithfulness, updated `retrieving-context`, exported this session before integration.
 
 ## User
 
