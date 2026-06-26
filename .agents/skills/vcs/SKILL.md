@@ -142,8 +142,14 @@ Several agents may share one machine, or even one checkout. Act only on the work
   residue, handled automatically by `integrate.sh`) — never another agent's
   _unmerged_ work.
 
-## 5. Fallback docs and commits
+## 5. Fallback docs and commit messages
 
 Detailed fallback markdown lives beside this file. Do not read it up front. Open
-the matching fallback only if a helper is missing, reports an unexpected setup
-problem, or you are authoring/editing a commit message.
+the matching fallback only if a helper is missing or reports an unexpected setup
+problem.
+
+Authoring or editing a commit message — including the merge commits you write
+while integrating — is governed by the separate **`commit`** skill, not this one.
+Load `commit` for the required subject/body format and the `Author` /
+`Co-Authored-By` trailers every time you write a commit message; good commit
+habits are not optional.

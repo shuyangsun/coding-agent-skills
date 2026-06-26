@@ -425,7 +425,7 @@ jj_is_pushable() {
   return 0
 }
 
-# Described message for a real merge, so jj will push it (see COMMITS.md).
+# Described message for a real merge, so jj will push it (see the commit skill).
 jj_merge_message() {
   local name email body
   name="$(jj config get user.name 2>/dev/null || true)"

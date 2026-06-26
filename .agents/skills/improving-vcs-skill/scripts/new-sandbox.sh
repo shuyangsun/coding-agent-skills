@@ -330,7 +330,7 @@ manifest_env="$round_dir/manifest.env"
 } >"$manifest_env"
 : >"$round_dir/guard-blocks.log"
 
-# commit message for a pre-made agent change (COMMITS.md-shaped; it's test data).
+# commit message for a pre-made agent change (commit-skill-shaped; it's test data).
 agent_msg() {
   local slug="$1" feature="$2"
   cat <<EOF

@@ -144,9 +144,9 @@ the measurements justify:
   intuitive bookmark/branch names; integrate-and-publish) that resolve the repo
   root themselves and respect the repo's hooks (lefthook under Git, `jj fix`
   under jj). If a missing script cost agents time, add it; measure that it helped.
-- **`COMMITS.md`** — refine the existing commit-message guidance, don't duplicate
-  it. (Feature commits are pre-made here, so this is exercised mainly on the
-  merge commits agents author while integrating.)
+- **The `commit` skill** — `vcs` defers to it for commit-message format; refine
+  the guidance there, don't duplicate it. (Feature commits are pre-made here, so
+  this is exercised mainly on the merge commits agents author while integrating.)
 - **Conflict etiquette** — the exact sequence to detect, resolve, and verify a
   conflict in each mode, since conflict time is the cost you most want down. The
   briefs ask for union resolution and a higher-version tie-break; if agents get

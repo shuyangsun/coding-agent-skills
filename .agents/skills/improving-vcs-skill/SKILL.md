@@ -80,9 +80,10 @@ where mode integrity broke. **Verify this holds — never assert it.**
    conflict cost, **output tokens**, stale-ref hygiene, **jj default readiness**,
    and **retired-workspace cleanup**, broken down by round and by tier) —
    [METRICS.md](METRICS.md).
-5. **Revise** `vcs` (its `SKILL.md`, referenced files, helper scripts, `COMMITS.md`)
-   to fix what stalled, then **re-run and re-measure**. Keep changes that improve
-   the numbers; revert changes that don't, or that buy speed with botched merges.
+5. **Revise** `vcs` (its `SKILL.md`, referenced files, helper scripts) — and the
+   companion `commit` skill it defers to for message format — to fix what stalled,
+   then **re-run and re-measure**. Keep changes that improve the numbers; revert
+   changes that don't, or that buy speed with botched merges.
 6. **Repeat** until the exit bar is met — [LOOP.md](LOOP.md) and [METRICS.md](METRICS.md).
 
 The loop above is the `--task integrate` flow (land work, resolve conflicts). A
