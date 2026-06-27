@@ -128,6 +128,27 @@ fmt_epoch() { # fmt_epoch <epoch> <strftime-fmt>  -> formats in UTC
   fi
 }
 
+fmt_epoch_local() { # fmt_epoch_local <epoch> <strftime-fmt>  -> formats in local time
+  if [ "$kernel" = "Darwin" ]; then
+    date -r "$1" +"$2" 2>/dev/null
+  else
+    date -d "@$1" +"$2" 2>/dev/null
+  fi
+}
+
+# Resolve the machine's IANA timezone name (e.g. America/New_York), best-effort.
+local_tz_name() {
+  if [ -n "${TZ:-}" ]; then printf '%s' "$TZ"; return; fi
+  local link
+  link="$(readlink /etc/localtime 2>/dev/null || true)"
+  case "$link" in
+    */zoneinfo/*) printf '%s' "${link#*/zoneinfo/}"; return ;;
+  esac
+  if command -v timedatectl >/dev/null 2>&1; then
+    timedatectl show -p Timezone --value 2>/dev/null || true
+  fi
+}
+
 sha256_of() {
   if command -v shasum >/dev/null 2>&1; then
     shasum -a 256 "$1" 2>/dev/null | awk '{print $1}'
@@ -384,6 +405,17 @@ now_iso="$(fmt_epoch "$now_epoch" '%Y-%m-%dT%H:%M:%SZ')"
 ts="$(fmt_epoch "$now_epoch" '%Y%m%dT%H%M%SZ')"
 date_dir="$(fmt_epoch "$now_epoch" '%Y%m%d')"
 
+# Local-time + timezone context for the same instant (so a UTC stamp can be read
+# back as a wall-clock time). Offset %z is normalized from -0400 to -04:00.
+tz_offset="$(fmt_epoch_local "$now_epoch" '%z')"
+case "$tz_offset" in
+  [+-][0-9][0-9][0-9][0-9]) tz_offset="${tz_offset:0:3}:${tz_offset:3:2}" ;;
+esac
+tz_abbr="$(fmt_epoch_local "$now_epoch" '%Z')"
+tz_name="$(local_tz_name)"
+now_local="$(fmt_epoch_local "$now_epoch" '%Y-%m-%dT%H:%M:%S')"
+[ -n "$now_local" ] && now_local="$now_local$tz_offset"
+
 dest_dir="$OUT_ROOT/$date_dir"
 mkdir -p "$dest_dir" || die "could not create destination dir: $dest_dir"
 
@@ -448,6 +480,12 @@ cat >"$meta_path" <<EOF
   "summary": $(jstr "$SUMMARY"),
   "exported_at_utc": $(jstr "$now_iso"),
   "exported_at_unix": $(jnum "$now_epoch"),
+  "exported_at_local": $(jstr "$now_local"),
+  "timezone": {
+    "name": $(jstr "$tz_name"),
+    "abbreviation": $(jstr "$tz_abbr"),
+    "utc_offset": $(jstr "$tz_offset")
+  },
   "agent": {
     "vendor": $(jstr "$vendor"),
     "tool": $(jstr "$tool_name"),

@@ -131,7 +131,10 @@ and machine-readable. The script fills everything automatically except `title`,
 `summary`, and `model`, which you pass in. Top-level keys:
 
 - `title`, `short_name`, `summary`, `schema_version`
-- `exported_at_utc` / `exported_at_unix`
+- `exported_at_utc` / `exported_at_unix` / `exported_at_local`
+- `timezone`: `name` (IANA, e.g. `America/New_York`), `abbreviation` (e.g.
+  `EDT`), `utc_offset` (e.g. `-04:00`) — lets a UTC stamp be read back as local
+  wall-clock time
 - `agent`: `vendor`, `tool`, `tool_version`, `model`, `effort`, `entrypoint`,
   `session_id`, `detected_via`
 - `os`: `kernel`, `platform`, `arch`, `hostname`
