@@ -38,13 +38,12 @@ transcript file into your context.** The bundled script does the mechanical work
 (detect, locate, copy, checksum, write metadata). For Codex and Claude Code
 transcripts it also delegates to a companion parser — `parse-codex-transcript.sh`
 or `parse-claude-transcript.sh` — that reads the raw records in a subprocess so
-the model, CLI version, session id, entrypoint, cwd, and (for Claude) the session
-span, turn counts, models, and token totals come from the log itself without the
-transcript bytes ever entering the agent's context. The Codex parser reads only
-its small metadata records (`session_meta` and the first `turn_context`) in bash;
-the Claude parser makes a full streaming pass with python3 (already required for
-schema validation) because Claude records have an unstable key order and the
-aggregates need every record.
+the model, CLI version, session id, entrypoint, cwd, session span, turn counts,
+models, and token totals come from the log itself without the transcript bytes
+ever entering the agent's context. Both parsers make a streaming pass with
+python3 (already required for schema validation): Claude needs a JSON parser
+because record key order is unstable, and Codex needs a full pass because session
+aggregates live across `event_msg`, `response_item`, and `token_count` records.
 
 Your only job is to hand it a few short descriptive strings you already know
 from the live conversation — a name, a title, and a one-line summary. A
@@ -103,7 +102,6 @@ its own, so it works from any agent and any working directory.
 
    From the same live knowledge, also pass the session's **references and tags**
    (all optional, all repeatable) so the card can show them:
-
    - `--issue "<url> [short title]"` — an issue or bug the session worked on. A
      session may reference several; repeat the flag for each. The exporter parses
      the URL for the tracker and display key (GitHub, GitLab, Jira, Linear,
@@ -149,13 +147,13 @@ then falls back to the most-recently-written transcript across all known stores
 (reliable because the live session is the file being appended to right now). You
 can always override with `--tool`.
 
-| Agent (`--tool`)            | Current-session signal                         | Raw transcript location                                                                                                        |
-| --------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`; metadata is parsed from the JSONL records (version, model, span, turn counts, tokens) |
-| Codex CLI (`codex`)         | newest mtime (no session env var)              | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta` and first `turn_context` |
-| Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                     |
-| Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                            |
-| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`                                                                            |
+| Agent (`--tool`)            | Current-session signal                         | Raw transcript location                                                                                                                                                |
+| --------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`; metadata is parsed from the JSONL records (version, model, span, turn counts, tokens)                           |
+| Codex CLI (`codex`)         | newest mtime (no session env var)              | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta`, `turn_context`, `event_msg`, `response_item`, and `token_count` |
+| Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                                                             |
+| Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                                                                    |
+| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`                                                                                                                    |
 
 **Claude Code is the primary, fully-verified path.** The others are derived from
 each tool's published storage layout; tools change paths between versions, so use
@@ -179,11 +177,9 @@ Top-level keys:
   length-bounded (70 / 160 chars) and trimmed at a word boundary so they fit the
   gem card
 - `tags`: array of short topic strings (normalized, de-duplicated) for the card
-- `issues`: array of the issues/bugs the session referenced — each `{ key, title,
-  url, tracker }` (`tracker` ∈ github/gitlab/jira/linear/buganizer). A session may
+- `issues`: array of the issues/bugs the session referenced — each `{ key, title, url, tracker }` (`tracker` ∈ github/gitlab/jira/linear/buganizer). A session may
   reference several; identity only, live status is enriched downstream
-- `changes`: array of the PRs/MRs/CLs the session referenced — each `{ number,
-  title, url, host, repo }` (`host` ∈ github/gitlab/gerrit). Identity only; live
+- `changes`: array of the PRs/MRs/CLs the session referenced — each `{ number, title, url, host, repo }` (`host` ∈ github/gitlab/gerrit). Identity only; live
   state, additions and deletions are enriched downstream
 - `exported_at_utc` / `exported_at_unix` / `exported_at_local`
 - `timezone`: `name` (IANA, e.g. `America/New_York`), `abbreviation` (e.g.
@@ -207,19 +203,29 @@ Top-level keys:
   (the raw `type=user` / `type=assistant` record counts — the larger
   pre-collapse numbers, kept for debugging), `models` (array), `tokens` (`input`,
   `output`, `cache_read`, `cache_creation`, `total`), `title`, `agent_name`,
-  `bridge_session_id` — populated from the transcript for Claude; for other agents
-  only `records` (the copied file's line count) is set and the rest are `null`/`[]`.
-  The block is always written (the schema requires it)
+  `bridge_session_id` — populated from the transcript for Claude and Codex when
+  the source log contains the corresponding signal. Codex does not currently
+  expose a session title, agent name, or bridge session id, so those stay `null`
+  for Codex. For agents without a parser, only `records` (the copied file's line
+  count) is set and the rest are `null`/`[]`. The block is always written (the
+  schema requires it)
 - `export`: `transcript_file`, `metadata_file`, `dest_dir`
 
-For Codex transcripts, the parser can currently extract these additional raw
-metadata signals for more accurate sidecars: `session_id`, `cli_version`,
-`originator`, `source`, `thread_source`, `model_provider`, launch `cwd`,
-`turn_id`, first `workspace_root`, `current_date`, `timezone`, `approval_policy`,
+For Codex transcripts, `parse-codex-transcript.sh` extracts: `session_id`,
+`cli_version`, `originator`, `source`, `thread_source`, `model_provider`, launch
+`cwd`, recorded git commit/remote when present, `turn_id`, first
+`workspace_root`, `current_date`, `timezone`, `approval_policy`,
 `sandbox_policy.type`, `permission_profile.type`, `model`, `comp_hash`,
 `personality`, `collaboration_mode.mode`, `reasoning_effort`,
-`multi_agent_version`, `realtime_active`, `effort`, and transcript `summary`.
-The exporter uses the subset that maps to the current schema.
+`multi_agent_version`, `realtime_active`, `effort`, transcript `summary`,
+`records`, `user_turns`, `assistant_turns`, `user_records`, `assistant_records`,
+`models`, `started_at`, `ended_at`, and cumulative token totals. Codex
+`user_turns` are `event_msg` / `user_message` records (human inputs);
+`assistant_turns` are distinct assistant `response_item` message ids;
+`user_records` / `assistant_records` are raw `response_item` message counts by
+role. Codex `token_count` records are cumulative, so the parser uses the latest
+`total_token_usage` block instead of summing every cumulative event. The exporter
+uses the subset that maps to the current schema.
 
 For Claude Code transcripts, `parse-claude-transcript.sh` extracts: `session_id`,
 `version` (the real CLI version, e.g. `2.1.195`), `git_branch`, `cwd`,

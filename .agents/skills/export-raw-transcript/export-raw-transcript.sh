@@ -10,12 +10,13 @@
 # resolves the working repo on its own, and creates the destination directory if
 # missing.
 #
-# It NEVER reads transcript *contents* into the agent. For Codex, a companion
-# parser reads only the small metadata-bearing records (session_meta and the
-# first turn_context) so model/effort/version/cwd can be captured accurately.
-# The script also copies bytes and stats the file (size / line count / sha256).
-# Transcripts can be huge, so the agent must not cat/open them; this script does
-# everything mechanical.
+# It NEVER reads transcript *contents* into the agent. For Codex and Claude, a
+# companion parser streams the raw JSONL in a subprocess so model/version/cwd,
+# session span, turn counts, model list, and token totals can be captured
+# accurately without surfacing transcript bytes to the agent. The script also
+# copies bytes and stats the file (size / line count / sha256). Transcripts can
+# be huge, so the agent must not cat/open them; this script does everything
+# mechanical.
 #
 # Usage:
 #   bash export-raw-transcript.sh --detect [--tool SLUG]
@@ -449,10 +450,18 @@ if [ -n "$DETECT_ONLY" ]; then
   [ -n "$effort" ] && printf 'effort:        %s\n' "$effort"
   [ -n "$session_id" ] && printf 'session id:    %s\n' "$session_id"
   [ -n "$session_cwd" ] && printf 'session cwd:   %s\n' "$session_cwd"
-  [ -n "${claude_models:-}" ] && printf 'models:        %s\n' "$claude_models"
-  [ -n "${claude_records:-}" ] && printf 'records:       %s total (%s user / %s assistant)\n' "$claude_records" "${claude_user_records:-?}" "${claude_assistant_records:-?}"
-  [ -n "${claude_user_turns:-}" ] && printf 'turns:         %s input / %s agent\n' "$claude_user_turns" "${claude_assistant_turns:-?}"
-  [ -n "${claude_started_at:-}" ] && printf 'span:          %s .. %s\n' "$claude_started_at" "${claude_ended_at:-?}"
+  detect_models="${claude_models:-${codex_models:-}}"
+  detect_records="${claude_records:-${codex_records:-}}"
+  detect_user_records="${claude_user_records:-${codex_user_records:-?}}"
+  detect_assistant_records="${claude_assistant_records:-${codex_assistant_records:-?}}"
+  detect_user_turns="${claude_user_turns:-${codex_user_turns:-}}"
+  detect_assistant_turns="${claude_assistant_turns:-${codex_assistant_turns:-?}}"
+  detect_started="${claude_started_at:-${codex_started_at:-}}"
+  detect_ended="${claude_ended_at:-${codex_ended_at:-?}}"
+  [ -n "$detect_models" ] && printf 'models:        %s\n' "$detect_models"
+  [ -n "$detect_records" ] && printf 'records:       %s total (%s user / %s assistant)\n' "$detect_records" "$detect_user_records" "$detect_assistant_records"
+  [ -n "$detect_user_turns" ] && printf 'turns:         %s input / %s agent\n' "$detect_user_turns" "$detect_assistant_turns"
+  [ -n "$detect_started" ] && printf 'span:          %s .. %s\n' "$detect_started" "$detect_ended"
   printf 'source:        %s\n' "$SRC"
   printf 'format/ext:    %s\n' "${ext:-<none>}"
   printf 'size:          %s bytes\n' "${src_bytes:-?}"
@@ -542,6 +551,11 @@ fi
 if { [ -z "$repo_ref" ] || [ "$repo_ref" = "HEAD" ]; } \
   && [ -n "${claude_git_branch:-}" ] && [ "${claude_git_branch}" != "HEAD" ]; then
   repo_ref="$claude_git_branch"
+fi
+[ -z "$repo_commit" ] && [ -n "${codex_git_commit:-}" ] && repo_commit="$codex_git_commit"
+[ -z "$repo_remote" ] && [ -n "${codex_git_remote:-}" ] && repo_remote="$codex_git_remote"
+if [ -z "$repo_vcs" ] && { [ -n "$repo_commit" ] || [ -n "$repo_remote" ]; }; then
+  repo_vcs="git"
 fi
 author_name="$(cd "$repo_probe_dir" && git config user.name 2>/dev/null)"
 author_email="$(cd "$repo_probe_dir" && git config user.email 2>/dev/null)"
@@ -717,22 +731,22 @@ sys.stdout.write(json.dumps(out, ensure_ascii=False, separators=(", ", ": ")))
 PYEOF
 }
 
-# Session-level facts from the transcript parser (currently Claude Code; empty
-# for agents without a parser). The record count falls back to the copied file's
-# line count so it is always present.
-sess_started="${claude_started_at:-}"
-sess_ended="${claude_ended_at:-}"
-sess_records="${claude_records:-$src_lines}"
-sess_user_turns="${claude_user_turns:-}"
-sess_assistant_turns="${claude_assistant_turns:-}"
-sess_user_records="${claude_user_records:-}"
-sess_assistant_records="${claude_assistant_records:-}"
-sess_models_csv="${claude_models:-}"
-sess_tok_in="${claude_input_tokens:-}"
-sess_tok_out="${claude_output_tokens:-}"
-sess_tok_cache_read="${claude_cache_read_tokens:-}"
-sess_tok_cache_creation="${claude_cache_creation_tokens:-}"
-sess_tok_total="${claude_total_tokens:-}"
+# Session-level facts from the transcript parser (Claude Code and Codex today;
+# empty for agents without a parser). The record count falls back to the copied
+# file's line count so it is always present.
+sess_started="${claude_started_at:-${codex_started_at:-}}"
+sess_ended="${claude_ended_at:-${codex_ended_at:-}}"
+sess_records="${claude_records:-${codex_records:-$src_lines}}"
+sess_user_turns="${claude_user_turns:-${codex_user_turns:-}}"
+sess_assistant_turns="${claude_assistant_turns:-${codex_assistant_turns:-}}"
+sess_user_records="${claude_user_records:-${codex_user_records:-}}"
+sess_assistant_records="${claude_assistant_records:-${codex_assistant_records:-}}"
+sess_models_csv="${claude_models:-${codex_models:-}}"
+sess_tok_in="${claude_input_tokens:-${codex_input_tokens:-}}"
+sess_tok_out="${claude_output_tokens:-${codex_output_tokens:-}}"
+sess_tok_cache_read="${claude_cache_read_tokens:-${codex_cache_read_tokens:-}}"
+sess_tok_cache_creation="${claude_cache_creation_tokens:-${codex_cache_creation_tokens:-}}"
+sess_tok_total="${claude_total_tokens:-${codex_total_tokens:-}}"
 sess_title="${claude_custom_title:-}"; [ -n "$sess_title" ] || sess_title="${claude_ai_title:-}"
 sess_agent_name="${claude_agent_name:-}"
 sess_bridge_id="${claude_bridge_session_id:-}"
