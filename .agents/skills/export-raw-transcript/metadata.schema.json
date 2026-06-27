@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:coding-agent-skills:export-raw-transcript:metadata:1",
+  "title": "Export Raw Transcript Metadata",
+  "description": "Metadata sidecar written by export-raw-transcript.sh.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "title",
+    "short_name",
+    "summary",
+    "exported_at_utc",
+    "exported_at_unix",
+    "exported_at_local",
+    "timezone",
+    "agent",
+    "os",
+    "repo",
+    "author",
+    "source",
+    "export"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "title": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "short_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "summary": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "exported_at_utc": {
+      "$ref": "#/$defs/utcDateTime"
+    },
+    "exported_at_unix": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "exported_at_local": {
+      "$ref": "#/$defs/nullableLocalDateTime"
+    },
+    "timezone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "abbreviation", "utc_offset"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "abbreviation": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "utc_offset": {
+          "$ref": "#/$defs/nullableUtcOffset"
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vendor",
+        "tool",
+        "tool_version",
+        "model",
+        "effort",
+        "entrypoint",
+        "session_id",
+        "detected_via"
+      ],
+      "properties": {
+        "vendor": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "tool": {
+          "type": "string",
+          "enum": [
+            "claude-code",
+            "codex-cli",
+            "cursor-agent",
+            "antigravity",
+            "gemini-cli"
+          ]
+        },
+        "tool_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "model": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "effort": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "entrypoint": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "session_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "detected_via": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kernel", "platform", "arch", "hostname"],
+      "properties": {
+        "kernel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "arch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hostname": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "vcs", "ref", "commit", "remote"],
+      "properties": {
+        "root": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vcs": {
+          "type": ["string", "null"],
+          "enum": ["git", "jujutsu", null]
+        },
+        "ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "commit": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "remote": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "email"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "email": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "filename",
+        "format",
+        "extension",
+        "bytes",
+        "lines",
+        "sha256",
+        "modified_utc"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "extension": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "modified_utc": {
+          "$ref": "#/$defs/nullableUtcDateTime"
+        }
+      }
+    },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transcript_file", "metadata_file", "dest_dir"],
+      "properties": {
+        "transcript_file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metadata_file": {
+          "type": "string",
+          "pattern": "-metadata\\.json$"
+        },
+        "dest_dir": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "utcDateTime": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "nullableUtcDateTime": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "nullableLocalDateTime": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+    },
+    "nullableUtcOffset": {
+      "type": ["string", "null"],
+      "pattern": "^[+-][0-9]{2}:[0-9]{2}$"
+    }
+  }
+}

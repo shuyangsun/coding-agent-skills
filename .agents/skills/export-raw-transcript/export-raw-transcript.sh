@@ -114,6 +114,7 @@ host="$(uname -n 2>/dev/null || echo '')"
 # Portable helpers (BSD / macOS and GNU / Linux; bash 3.2 safe)
 # ---------------------------------------------------------------------------
 shopt -s nullglob
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 file_mtime_epoch() {
   if [ "$kernel" = "Darwin" ]; then
@@ -349,7 +350,6 @@ case "$TOOL" in
     vendor="openai"; tool_name="codex-cli"
     # rollout-<timestamp>-<uuid>.jsonl -> trailing uuid
     session_id="$(printf '%s' "$src_base" | sed -E 's/\.jsonl$//; s/.*-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/\1/')"
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
     codex_parser="$script_dir/parse-codex-transcript.sh"
     if [ -f "$codex_parser" ]; then
       codex_meta="$(bash "$codex_parser" --shell "$SRC" 2>/dev/null || true)"
@@ -487,7 +487,7 @@ if [ -z "$author_email" ] && command -v jj >/dev/null 2>&1; then author_email="$
 # Default a human title from the slug when the agent didn't pass one.
 [ -n "$TITLE" ] || TITLE="$(printf '%s' "$SHORT_NAME" | tr '-' ' ')"
 
-# JSON helpers (no jq/python dependency).
+# JSON helpers (no jq dependency).
 json_escape() {
   local s="$1"
   s="${s//\\/\\\\}"
@@ -558,6 +558,17 @@ cat >"$meta_path" <<EOF
   }
 }
 EOF
+
+schema_path="$script_dir/metadata.schema.json"
+validator_path="$script_dir/validate-metadata.py"
+[ -f "$schema_path" ] || die "metadata schema not found: $schema_path"
+[ -f "$validator_path" ] || die "metadata validator not found: $validator_path"
+if command -v python3 >/dev/null 2>&1; then
+  python_cmd="python3"
+else
+  die "python3 is required to validate metadata JSON against $schema_path"
+fi
+"$python_cmd" "$validator_path" "$schema_path" "$meta_path" || die "metadata JSON failed schema validation: $meta_path"
 
 msg "exported $tool_name session ($DETECTED_VIA)"
 printf '  transcript: %s  (%s bytes)\n' "$out_path" "${src_bytes:-?}"

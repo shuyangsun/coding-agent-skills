@@ -63,7 +63,8 @@ shareable, redacted, readable version use `export-transcript` instead.
 ## Locating the bundled script
 
 `export-raw-transcript.sh` lives next to this `SKILL.md`, with
-`parse-codex-transcript.sh` beside it. Run the exporter from **this skill's own
+`parse-codex-transcript.sh`, `metadata.schema.json`, and
+`validate-metadata.py` beside it. Run the exporter from **this skill's own
 directory** — the path the runtime gave you when it loaded the skill (e.g.
 `.agents/skills/export-raw-transcript/`, `.claude/skills/export-raw-transcript/`,
 or wherever the skill directory was symlinked). Below this is written as
@@ -101,11 +102,12 @@ its own, so it works from any agent and any working directory.
      <short-name>
    ```
 
-   The script copies the raw file and writes the metadata JSON, then prints both
-   destination paths. For Codex, transcript-parsed `model` and `effort` take
-   precedence over `--model`; `--model` is only a fallback if the parser cannot
-   find those fields. Add `--tool <slug>` if step 1 needed it, or `--out-root
-   <dir>` to target a different root.
+   The script copies the raw file, writes the metadata JSON, validates it against
+   the bundled Draft 2020-12 JSON Schema, then prints both destination paths. For
+   Codex, transcript-parsed `model` and `effort` take precedence over `--model`;
+   `--model` is only a fallback if the parser cannot find those fields. Add
+   `--tool <slug>` if step 1 needed it, or `--out-root <dir>` to target a
+   different root.
 
 4. **Report.** Relay the two output paths (transcript + metadata) the script
    printed. That's the whole task — do not open either file.
@@ -117,13 +119,13 @@ then falls back to the most-recently-written transcript across all known stores
 (reliable because the live session is the file being appended to right now). You
 can always override with `--tool`.
 
-| Agent (`--tool`)            | Current-session signal                         | Raw transcript location                                                             |
-| --------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`                               |
+| Agent (`--tool`)            | Current-session signal                         | Raw transcript location                                                                                                        |
+| --------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`                                                                          |
 | Codex CLI (`codex`)         | newest mtime (no session env var)              | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta` and first `turn_context` |
-| Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                          |
-| Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl` |
-| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`                                 |
+| Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                     |
+| Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                            |
+| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`                                                                            |
 
 **Claude Code is the primary, fully-verified path.** The others are derived from
 each tool's published storage layout; tools change paths between versions, so use
@@ -176,5 +178,6 @@ proactively.
   no marker (Codex, Antigravity), it uses newest-mtime — pass `--tool` if that
   guesses wrong.
 - The scripts are portable across macOS (BSD) and Linux (GNU) and need no `jq` or
-  `python`; they shell out only to standard tools (`uname`, `stat`, `date`, `cp`,
-  `find`, `sed`, `shasum`/`sha256sum`).
+  npm dependencies. Metadata validation uses the bundled Python 3 script
+  `validate-metadata.py`; export fails if Python is unavailable or the generated
+  sidecar does not match `metadata.schema.json`.
