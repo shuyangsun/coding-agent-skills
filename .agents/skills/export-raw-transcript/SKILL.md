@@ -35,11 +35,16 @@ source uses (usually `.jsonl`). The script creates the dated folder if missing.
 
 Raw transcripts are large. **Never `cat`, `Read`, open, or otherwise pull the
 transcript file into your context.** The bundled script does the mechanical work
-(detect, locate, copy, checksum, write metadata). For Codex transcripts only, it
-also delegates to `parse-codex-transcript.sh`, which reads the small metadata
-records (`session_meta` and the first `turn_context`) directly in bash so the
-model, effort, CLI version, session id, entrypoint, and cwd come from the raw
-log without being shown to the agent.
+(detect, locate, copy, checksum, write metadata). For Codex and Claude Code
+transcripts it also delegates to a companion parser — `parse-codex-transcript.sh`
+or `parse-claude-transcript.sh` — that reads the raw records in a subprocess so
+the model, CLI version, session id, entrypoint, cwd, and (for Claude) the session
+span, turn counts, models, and token totals come from the log itself without the
+transcript bytes ever entering the agent's context. The Codex parser reads only
+its small metadata records (`session_meta` and the first `turn_context`) in bash;
+the Claude parser makes a full streaming pass with python3 (already required for
+schema validation) because Claude records have an unstable key order and the
+aggregates need every record.
 
 Your only job is to hand it a few short descriptive strings you already know
 from the live conversation — a name, a title, and a one-line summary. A
@@ -121,7 +126,7 @@ can always override with `--tool`.
 
 | Agent (`--tool`)            | Current-session signal                         | Raw transcript location                                                                                                        |
 | --------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`                                                                          |
+| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`; metadata is parsed from the JSONL records (version, model, span, turn counts, tokens) |
 | Codex CLI (`codex`)         | newest mtime (no session env var)              | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta` and first `turn_context` |
 | Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                     |
 | Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                            |
@@ -138,8 +143,10 @@ rather than copying a partial/torn DB.
 ## What the metadata sidecar captures
 
 The `*-metadata.json` is the YAML-header idea from `export-transcript`, but richer
-and machine-readable. The script fills everything automatically except `title`,
-`summary`, and `model`, which you pass in. Top-level keys:
+and machine-readable. The script fills everything automatically except `summary`
+(always yours to write) and `title`/`model`, which you pass in — though for Claude
+both now fall back to values read from the transcript (its own session title and
+the model id) when you omit them. Top-level keys:
 
 - `title`, `short_name`, `summary`, `schema_version`
 - `exported_at_utc` / `exported_at_unix` / `exported_at_local`
@@ -154,6 +161,11 @@ and machine-readable. The script fills everything automatically except `title`,
 - `author`: `name`, `email` (from the repo's VCS config)
 - `source`: `path`, `filename`, `format`, `extension`, `bytes`, `lines`,
   `sha256`, `modified_utc` (the checksum lets you verify the copy later)
+- `session`: `started_utc`, `ended_utc`, `records`, `user_turns`,
+  `assistant_turns`, `models` (array), `tokens` (`input`, `output`, `cache_read`,
+  `cache_creation`, `total`), `title`, `agent_name`, `bridge_session_id` —
+  populated from the transcript for Claude; for other agents only `records`
+  (the copied file's line count) is set and the rest are `null`/`[]`
 - `export`: `transcript_file`, `metadata_file`, `dest_dir`
 
 For Codex transcripts, the parser can currently extract these additional raw
@@ -164,6 +176,26 @@ metadata signals for more accurate sidecars: `session_id`, `cli_version`,
 `personality`, `collaboration_mode.mode`, `reasoning_effort`,
 `multi_agent_version`, `realtime_active`, `effort`, and transcript `summary`.
 The exporter uses the subset that maps to the current schema.
+
+For Claude Code transcripts, `parse-claude-transcript.sh` extracts: `session_id`,
+`version` (the real CLI version, e.g. `2.1.195`), `git_branch`, `cwd`,
+`entrypoint`, `user_type`, `permission_mode`, `bridge_session_id`, `custom_title`,
+`ai_title`, `agent_name`, `records`, `user_turns`, `assistant_turns`,
+`system_turns`, `sidechain_turns`, the primary `model` and the full `models` list
+(distinct assistant model ids, excluding synthetic/error messages), `started_at`
+and `ended_at` (min/max record timestamp), and summed assistant token usage
+(`input`, `output`, `cache_read`, `cache_creation`, `total`). The exporter maps
+these onto `agent.*` and the `session` block; the transcript values are
+authoritative, with env vars and `--model`/`--title` as fallbacks. `gitBranch`
+also backstops `repo.ref` when the live VCS probe is uninformative (e.g. a
+detached `HEAD`, or an archived transcript whose repo path no longer exists).
+
+Some metadata is **not** in a Claude transcript and therefore cannot come from
+the `.jsonl`: `agent.effort` (from `$CLAUDE_EFFORT`), `os.arch` / `os.hostname`
+(from `uname`), and `repo.commit` / `repo.remote` (from `git`/`jj`). The script
+fills these from the live environment at export time, so they are populated for a
+normal live export but stay `null` when metadata is reconstructed from a transcript
+alone (or when re-exported on a machine where the recorded `cwd` repo is gone).
 
 ## When to run this skill
 

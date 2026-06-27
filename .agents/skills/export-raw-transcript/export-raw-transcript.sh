@@ -345,6 +345,23 @@ case "$TOOL" in
     effort="${CLAUDE_EFFORT:-}"
     session_id="${CLAUDE_CODE_SESSION_ID:-}"
     if [ -n "${CLAUDE_CODE_EXECPATH:-}" ]; then tool_version="$(basename "$CLAUDE_CODE_EXECPATH")"; fi
+    # Read authoritative metadata straight from the transcript records (the real
+    # CLI version, session id, entrypoint, models, span, turn counts, tokens).
+    # The transcript is the source of truth; env vars are only the fallback.
+    claude_parser="$script_dir/parse-claude-transcript.sh"
+    if [ -f "$claude_parser" ]; then
+      claude_meta="$(bash "$claude_parser" --shell "$SRC" 2>/dev/null || true)"
+      if [ -n "$claude_meta" ]; then
+        eval "$claude_meta"
+        [ -n "${claude_version:-}" ] && tool_version="$claude_version"
+        [ -n "${claude_session_id:-}" ] && session_id="$claude_session_id"
+        [ -n "${claude_entrypoint:-}" ] && entrypoint="$claude_entrypoint"
+        [ -n "${claude_cwd:-}" ] && session_cwd="$claude_cwd"
+        # --model (a human label like "Claude Opus 4.8 (1M context)") wins; the
+        # transcript's raw model id is only a fallback when none was passed.
+        [ -z "$MODEL" ] && [ -n "${claude_model:-}" ] && MODEL="$claude_model"
+      fi
+    fi
     ;;
   codex)
     vendor="openai"; tool_name="codex-cli"
@@ -404,6 +421,9 @@ if [ -n "$DETECT_ONLY" ]; then
   [ -n "$effort" ] && printf 'effort:        %s\n' "$effort"
   [ -n "$session_id" ] && printf 'session id:    %s\n' "$session_id"
   [ -n "$session_cwd" ] && printf 'session cwd:   %s\n' "$session_cwd"
+  [ -n "${claude_models:-}" ] && printf 'models:        %s\n' "$claude_models"
+  [ -n "${claude_records:-}" ] && printf 'records:       %s (user %s / assistant %s)\n' "$claude_records" "${claude_user_turns:-?}" "${claude_assistant_turns:-?}"
+  [ -n "${claude_started_at:-}" ] && printf 'span:          %s .. %s\n' "$claude_started_at" "${claude_ended_at:-?}"
   printf 'source:        %s\n' "$SRC"
   printf 'format/ext:    %s\n' "${ext:-<none>}"
   printf 'size:          %s bytes\n' "${src_bytes:-?}"
@@ -479,12 +499,24 @@ if command -v jj >/dev/null 2>&1 && (cd "$repo_probe_dir" && jj root >/dev/null 
 elif [ -n "$repo_root" ]; then
   repo_vcs="git"
 fi
+# Fall back to the branch the transcript itself recorded (parsed from the JSONL)
+# when the live probe yields nothing useful — e.g. a detached HEAD reports as
+# "HEAD", but the log kept the real branch name. Also recovers a ref when the
+# original repo path no longer exists to probe (archived/cleaned-up worktrees).
+if { [ -z "$repo_ref" ] || [ "$repo_ref" = "HEAD" ]; } \
+  && [ -n "${claude_git_branch:-}" ] && [ "${claude_git_branch}" != "HEAD" ]; then
+  repo_ref="$claude_git_branch"
+fi
 author_name="$(cd "$repo_probe_dir" && git config user.name 2>/dev/null)"
 author_email="$(cd "$repo_probe_dir" && git config user.email 2>/dev/null)"
 if [ -z "$author_name" ] && command -v jj >/dev/null 2>&1; then author_name="$(cd "$repo_probe_dir" && jj config get user.name 2>/dev/null)"; fi
 if [ -z "$author_email" ] && command -v jj >/dev/null 2>&1; then author_email="$(cd "$repo_probe_dir" && jj config get user.email 2>/dev/null)"; fi
 
-# Default a human title from the slug when the agent didn't pass one.
+# Title precedence: an explicit --title, then a title the agent recorded in the
+# transcript (Claude's user-set custom title, else its auto-generated one), then
+# a slug-derived default.
+[ -n "$TITLE" ] || TITLE="${claude_custom_title:-}"
+[ -n "$TITLE" ] || TITLE="${claude_ai_title:-}"
 [ -n "$TITLE" ] || TITLE="$(printf '%s' "$SHORT_NAME" | tr '-' ' ')"
 
 # JSON helpers (no jq dependency).
@@ -499,6 +531,35 @@ json_escape() {
 }
 jstr() { if [ -z "${1:-}" ]; then printf 'null'; else printf '"%s"' "$(json_escape "$1")"; fi; }
 jnum() { if [ -z "${1:-}" ]; then printf 'null'; else printf '%s' "$1"; fi; }
+# Render a comma-separated list as a JSON array of strings ([] when empty).
+jarr() {
+  local csv="${1:-}" out="" first=1 item IFS=','
+  [ -n "$csv" ] || { printf '[]'; return; }
+  for item in $csv; do
+    [ -n "$item" ] || continue
+    if [ "$first" = 1 ]; then first=0; else out="$out, "; fi
+    out="$out$(jstr "$item")"
+  done
+  printf '[%s]' "$out"
+}
+
+# Session-level facts from the transcript parser (currently Claude Code; empty
+# for agents without a parser). The record count falls back to the copied file's
+# line count so it is always present.
+sess_started="${claude_started_at:-}"
+sess_ended="${claude_ended_at:-}"
+sess_records="${claude_records:-$src_lines}"
+sess_user_turns="${claude_user_turns:-}"
+sess_assistant_turns="${claude_assistant_turns:-}"
+sess_models_csv="${claude_models:-}"
+sess_tok_in="${claude_input_tokens:-}"
+sess_tok_out="${claude_output_tokens:-}"
+sess_tok_cache_read="${claude_cache_read_tokens:-}"
+sess_tok_cache_creation="${claude_cache_creation_tokens:-}"
+sess_tok_total="${claude_total_tokens:-}"
+sess_title="${claude_custom_title:-}"; [ -n "$sess_title" ] || sess_title="${claude_ai_title:-}"
+sess_agent_name="${claude_agent_name:-}"
+sess_bridge_id="${claude_bridge_session_id:-}"
 
 cat >"$meta_path" <<EOF
 {
@@ -550,6 +611,24 @@ cat >"$meta_path" <<EOF
     "lines": $(jnum "$src_lines"),
     "sha256": $(jstr "$src_sha"),
     "modified_utc": $(jstr "$src_mtime_iso")
+  },
+  "session": {
+    "started_utc": $(jstr "$sess_started"),
+    "ended_utc": $(jstr "$sess_ended"),
+    "records": $(jnum "$sess_records"),
+    "user_turns": $(jnum "$sess_user_turns"),
+    "assistant_turns": $(jnum "$sess_assistant_turns"),
+    "models": $(jarr "$sess_models_csv"),
+    "tokens": {
+      "input": $(jnum "$sess_tok_in"),
+      "output": $(jnum "$sess_tok_out"),
+      "cache_read": $(jnum "$sess_tok_cache_read"),
+      "cache_creation": $(jnum "$sess_tok_cache_creation"),
+      "total": $(jnum "$sess_tok_total")
+    },
+    "title": $(jstr "$sess_title"),
+    "agent_name": $(jstr "$sess_agent_name"),
+    "bridge_session_id": $(jstr "$sess_bridge_id")
   },
   "export": {
     "transcript_file": $(jstr "$out_base"),

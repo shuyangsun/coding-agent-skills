@@ -214,6 +214,82 @@
         }
       }
     },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_utc",
+        "ended_utc",
+        "records",
+        "user_turns",
+        "assistant_turns",
+        "models",
+        "tokens",
+        "title",
+        "agent_name",
+        "bridge_session_id"
+      ],
+      "properties": {
+        "started_utc": {
+          "$ref": "#/$defs/nullableUtcDateTimeMs"
+        },
+        "ended_utc": {
+          "$ref": "#/$defs/nullableUtcDateTimeMs"
+        },
+        "records": {
+          "$ref": "#/$defs/nullableNonNegInt"
+        },
+        "user_turns": {
+          "$ref": "#/$defs/nullableNonNegInt"
+        },
+        "assistant_turns": {
+          "$ref": "#/$defs/nullableNonNegInt"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input",
+            "output",
+            "cache_read",
+            "cache_creation",
+            "total"
+          ],
+          "properties": {
+            "input": {
+              "$ref": "#/$defs/nullableNonNegInt"
+            },
+            "output": {
+              "$ref": "#/$defs/nullableNonNegInt"
+            },
+            "cache_read": {
+              "$ref": "#/$defs/nullableNonNegInt"
+            },
+            "cache_creation": {
+              "$ref": "#/$defs/nullableNonNegInt"
+            },
+            "total": {
+              "$ref": "#/$defs/nullableNonNegInt"
+            }
+          }
+        },
+        "title": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "agent_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "bridge_session_id": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
     "export": {
       "type": "object",
       "additionalProperties": false,
@@ -245,6 +321,14 @@
     "nullableUtcDateTime": {
       "type": ["string", "null"],
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "nullableUtcDateTimeMs": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "nullableNonNegInt": {
+      "type": ["integer", "null"],
+      "minimum": 0
     },
     "nullableLocalDateTime": {
       "type": ["string", "null"],
