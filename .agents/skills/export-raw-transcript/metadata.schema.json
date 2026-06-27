@@ -19,11 +19,12 @@
     "repo",
     "author",
     "source",
+    "session",
     "export"
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "title": {
       "$ref": "#/$defs/nullableString"
@@ -125,8 +126,7 @@
           "minLength": 1
         },
         "arch": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/$defs/nullableString"
         },
         "hostname": {
           "$ref": "#/$defs/nullableString"
@@ -223,6 +223,8 @@
         "records",
         "user_turns",
         "assistant_turns",
+        "user_records",
+        "assistant_records",
         "models",
         "tokens",
         "title",
@@ -237,12 +239,23 @@
           "$ref": "#/$defs/nullableUtcDateTimeMs"
         },
         "records": {
+          "description": "Total JSONL records in the transcript (all record types).",
           "$ref": "#/$defs/nullableNonNegInt"
         },
         "user_turns": {
+          "description": "Human input turns: messages the user actually sent (typed messages and slash commands). Excludes tool-result records, injected meta/compact-summary records, and sub-agent traffic. Changed meaning in schema_version 2; in v1 this field held the raw type=user record count (now reported as user_records).",
           "$ref": "#/$defs/nullableNonNegInt"
         },
         "assistant_turns": {
+          "description": "Main-agent turn count: distinct assistant message ids, excluding sub-agent (sidechain) and synthetic messages. One API response logged across several records (a text block plus per-tool_use records) counts once. Changed meaning in schema_version 2; in v1 this field held the raw type=assistant record count (now reported as assistant_records).",
+          "$ref": "#/$defs/nullableNonNegInt"
+        },
+        "user_records": {
+          "description": "Raw count of type=user JSONL records, including tool results and injected records. This is the number v1 reported as user_turns.",
+          "$ref": "#/$defs/nullableNonNegInt"
+        },
+        "assistant_records": {
+          "description": "Raw count of type=assistant JSONL records; streaming/tool-use splits make this larger than assistant_turns. This is the number v1 reported as assistant_turns.",
           "$ref": "#/$defs/nullableNonNegInt"
         },
         "models": {

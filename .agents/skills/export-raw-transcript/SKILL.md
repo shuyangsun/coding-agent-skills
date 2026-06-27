@@ -161,11 +161,17 @@ the model id) when you omit them. Top-level keys:
 - `author`: `name`, `email` (from the repo's VCS config)
 - `source`: `path`, `filename`, `format`, `extension`, `bytes`, `lines`,
   `sha256`, `modified_utc` (the checksum lets you verify the copy later)
-- `session`: `started_utc`, `ended_utc`, `records`, `user_turns`,
-  `assistant_turns`, `models` (array), `tokens` (`input`, `output`, `cache_read`,
-  `cache_creation`, `total`), `title`, `agent_name`, `bridge_session_id` —
-  populated from the transcript for Claude; for other agents only `records`
-  (the copied file's line count) is set and the rest are `null`/`[]`
+- `session`: `started_utc`, `ended_utc`, `records` (total JSONL records),
+  `user_turns` (human **input** turns — messages the user actually sent, not the
+  tool-result records the transcript also stores as `user`), `assistant_turns`
+  (main-agent turn count — distinct assistant message ids, excluding sub-agents
+  and streaming/tool-use record splits), `user_records` / `assistant_records`
+  (the raw `type=user` / `type=assistant` record counts — the larger
+  pre-collapse numbers, kept for debugging), `models` (array), `tokens` (`input`,
+  `output`, `cache_read`, `cache_creation`, `total`), `title`, `agent_name`,
+  `bridge_session_id` — populated from the transcript for Claude; for other agents
+  only `records` (the copied file's line count) is set and the rest are `null`/`[]`.
+  The block is always written (the schema requires it)
 - `export`: `transcript_file`, `metadata_file`, `dest_dir`
 
 For Codex transcripts, the parser can currently extract these additional raw
@@ -181,12 +187,17 @@ For Claude Code transcripts, `parse-claude-transcript.sh` extracts: `session_id`
 `version` (the real CLI version, e.g. `2.1.195`), `git_branch`, `cwd`,
 `entrypoint`, `user_type`, `permission_mode`, `bridge_session_id`, `custom_title`,
 `ai_title`, `agent_name`, `records`, `user_turns`, `assistant_turns`,
-`system_turns`, `sidechain_turns`, the primary `model` and the full `models` list
-(distinct assistant model ids, excluding synthetic/error messages), `started_at`
-and `ended_at` (min/max record timestamp), and summed assistant token usage
-(`input`, `output`, `cache_read`, `cache_creation`, `total`). The exporter maps
-these onto `agent.*` and the `session` block; the transcript values are
-authoritative, with env vars and `--model`/`--title` as fallbacks. `gitBranch`
+`user_records`, `assistant_records`, `system_turns`, `sidechain_turns`, the
+primary `model` and the full `models` list (distinct assistant model ids,
+excluding synthetic/error messages), `started_at` and `ended_at` (min/max record
+timestamp), and summed assistant token usage (`input`, `output`, `cache_read`,
+`cache_creation`, `total`). `user_turns` and `assistant_turns` are real turns —
+human messages sent, and distinct main-agent assistant message ids — not raw
+record counts: the transcript stores every tool result as a `user` record and
+splits one assistant response across several records, so the raw counts
+(`user_records` / `assistant_records`) run far higher. The exporter maps these
+onto `agent.*` and the `session` block; the transcript values are authoritative,
+with env vars and `--model`/`--title` as fallbacks. `gitBranch`
 also backstops `repo.ref` when the live VCS probe is uninformative (e.g. a
 detached `HEAD`, or an archived transcript whose repo path no longer exists).
 

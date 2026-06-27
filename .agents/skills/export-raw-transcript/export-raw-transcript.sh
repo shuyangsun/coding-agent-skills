@@ -422,7 +422,8 @@ if [ -n "$DETECT_ONLY" ]; then
   [ -n "$session_id" ] && printf 'session id:    %s\n' "$session_id"
   [ -n "$session_cwd" ] && printf 'session cwd:   %s\n' "$session_cwd"
   [ -n "${claude_models:-}" ] && printf 'models:        %s\n' "$claude_models"
-  [ -n "${claude_records:-}" ] && printf 'records:       %s (user %s / assistant %s)\n' "$claude_records" "${claude_user_turns:-?}" "${claude_assistant_turns:-?}"
+  [ -n "${claude_records:-}" ] && printf 'records:       %s total (%s user / %s assistant)\n' "$claude_records" "${claude_user_records:-?}" "${claude_assistant_records:-?}"
+  [ -n "${claude_user_turns:-}" ] && printf 'turns:         %s input / %s agent\n' "$claude_user_turns" "${claude_assistant_turns:-?}"
   [ -n "${claude_started_at:-}" ] && printf 'span:          %s .. %s\n' "$claude_started_at" "${claude_ended_at:-?}"
   printf 'source:        %s\n' "$SRC"
   printf 'format/ext:    %s\n' "${ext:-<none>}"
@@ -551,6 +552,8 @@ sess_ended="${claude_ended_at:-}"
 sess_records="${claude_records:-$src_lines}"
 sess_user_turns="${claude_user_turns:-}"
 sess_assistant_turns="${claude_assistant_turns:-}"
+sess_user_records="${claude_user_records:-}"
+sess_assistant_records="${claude_assistant_records:-}"
 sess_models_csv="${claude_models:-}"
 sess_tok_in="${claude_input_tokens:-}"
 sess_tok_out="${claude_output_tokens:-}"
@@ -563,7 +566,7 @@ sess_bridge_id="${claude_bridge_session_id:-}"
 
 cat >"$meta_path" <<EOF
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "title": $(jstr "$TITLE"),
   "short_name": $(jstr "$SHORT_NAME"),
   "summary": $(jstr "$SUMMARY"),
@@ -618,6 +621,8 @@ cat >"$meta_path" <<EOF
     "records": $(jnum "$sess_records"),
     "user_turns": $(jnum "$sess_user_turns"),
     "assistant_turns": $(jnum "$sess_assistant_turns"),
+    "user_records": $(jnum "$sess_user_records"),
+    "assistant_records": $(jnum "$sess_assistant_records"),
     "models": $(jarr "$sess_models_csv"),
     "tokens": {
       "input": $(jnum "$sess_tok_in"),

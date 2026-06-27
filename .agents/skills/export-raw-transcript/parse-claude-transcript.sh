@@ -38,11 +38,21 @@ JSONL transcript:
   session scalars: session_id, version (CLI version), git_branch, cwd,
                    entrypoint, user_type, permission_mode, bridge_session_id,
                    custom_title, ai_title, agent_name
-  aggregates:      records, parse_errors, user_turns, assistant_turns,
-                   system_turns, summary_turns, sidechain_turns, model (primary),
-                   models (csv), models_count, started_at, ended_at, and
-                   assistant token totals: input_tokens, output_tokens,
-                   cache_read_tokens, cache_creation_tokens, total_tokens
+  aggregates:      records (total JSONL records),
+                   user_turns (human INPUT turns — messages the person actually
+                     sent: excludes tool results, injected meta/compact-summary
+                     records, and sub-agent traffic),
+                   assistant_turns (main-agent turn count — distinct assistant
+                     message ids, excluding sub-agent (sidechain) and synthetic
+                     messages; one API response logged as several records counts
+                     once),
+                   user_records / assistant_records (raw type=user / type=assistant
+                     record counts — the pre-collapse numbers),
+                   parse_errors, system_turns, summary_turns, sidechain_turns,
+                   model (primary), models (csv), models_count, started_at,
+                   ended_at, and assistant token totals: input_tokens,
+                   output_tokens, cache_read_tokens, cache_creation_tokens,
+                   total_tokens
 EOF
 }
 
@@ -121,6 +131,8 @@ def main():
     parse_errors = 0
     counts = {}
     sidechain = 0
+    user_input_turns = 0  # real human messages (not tool results / injected / sub-agent)
+    main_turn_keys = set()  # distinct main-agent assistant message ids = real turns
     models = {}
     started = started_key = None
     ended = ended_key = None
@@ -182,14 +194,46 @@ def main():
                 if ended_key is None or k > ended_key:
                     ended, ended_key = ts, k
 
-            if t == "assistant":
+            if t == "user":
+                # A human input turn is a message the person actually sent. The
+                # transcript records tool results as type=user too, and injects
+                # meta/compact-summary records and sub-agent (sidechain) traffic;
+                # none of those are turns. What remains — a typed message or a
+                # slash command — is one input turn.
+                if (rec.get("isSidechain") is not True
+                        and rec.get("isMeta") is not True
+                        and rec.get("isCompactSummary") is not True
+                        and rec.get("isVisibleInTranscript") is not False):
+                    msg = rec.get("message")
+                    is_tool_result = False
+                    if isinstance(msg, dict):
+                        content = msg.get("content")
+                        if isinstance(content, list):
+                            for block in content:
+                                if (isinstance(block, dict)
+                                        and block.get("type") == "tool_result"):
+                                    is_tool_result = True
+                                    break
+                        if not is_tool_result:
+                            user_input_turns += 1
+            elif t == "assistant":
                 msg = rec.get("message")
                 if isinstance(msg, dict):
                     m = msg.get("model")
                     # "<synthetic>" marks harness-injected (e.g. API-error)
                     # messages, not a model the user actually ran.
-                    if isinstance(m, str) and m and m != "<synthetic>":
+                    synthetic = m == "<synthetic>"
+                    if isinstance(m, str) and m and not synthetic:
                         models[m] = models.get(m, 0) + 1
+                    # One assistant API response (one message id) is logged as
+                    # several records — a text block, then a record per tool_use —
+                    # so collapse by id to count real main-agent turns; drop
+                    # sub-agent (sidechain) and synthetic records. A record with no
+                    # id falls back to a per-record key so it still counts once.
+                    if rec.get("isSidechain") is not True and not synthetic:
+                        mid = msg.get("id")
+                        key = mid if isinstance(mid, str) and mid else "\0rec:%d" % records
+                        main_turn_keys.add(key)
                     u = msg.get("usage")
                     if isinstance(u, dict):
                         tok["input"] += as_int(u.get("input_tokens"))
@@ -215,8 +259,10 @@ def main():
     emit("records", records)
     if parse_errors:
         emit("parse_errors", parse_errors)
-    emit("user_turns", counts.get("user", 0))
-    emit("assistant_turns", counts.get("assistant", 0))
+    emit("user_turns", user_input_turns)
+    emit("assistant_turns", len(main_turn_keys))
+    emit("user_records", counts.get("user", 0))
+    emit("assistant_records", counts.get("assistant", 0))
     emit("system_turns", counts.get("system", 0))
     if counts.get("summary", 0):
         emit("summary_turns", counts.get("summary", 0))
