@@ -10,6 +10,9 @@
     "title",
     "short_name",
     "summary",
+    "tags",
+    "issues",
+    "changes",
     "exported_at_utc",
     "exported_at_unix",
     "exported_at_local",
@@ -24,10 +27,12 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 2
+      "const": 3
     },
     "title": {
-      "$ref": "#/$defs/nullableString"
+      "description": "Concise human headline for the gem card — kept short so it fits one line. The exporter trims to this length at a word boundary.",
+      "type": ["string", "null"],
+      "maxLength": 70
     },
     "short_name": {
       "type": "string",
@@ -36,7 +41,32 @@
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
     "summary": {
-      "$ref": "#/$defs/nullableString"
+      "description": "One- or two-sentence teaser shown (line-clamped) on the gem card. The exporter trims to this length at a word boundary.",
+      "type": ["string", "null"],
+      "maxLength": 160
+    },
+    "tags": {
+      "description": "Short, content-derived topic tags for the gem card. Agent-supplied, normalized (trimmed, de-duplicated case-insensitively).",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      }
+    },
+    "issues": {
+      "description": "Issues/bugs the session referenced (a session may touch several). Identity only; live status is enriched downstream.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issueRef"
+      }
+    },
+    "changes": {
+      "description": "Pull requests / merge requests / changelists the session referenced (a session may touch several). Identity only; live state, additions and deletions are enriched downstream.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/changeRef"
+      }
     },
     "exported_at_utc": {
       "$ref": "#/$defs/utcDateTime"
@@ -136,7 +166,7 @@
     "repo": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["root", "vcs", "ref", "commit", "remote"],
+      "required": ["root", "vcs", "ref", "commit", "rev", "remote"],
       "properties": {
         "root": {
           "$ref": "#/$defs/nullableString"
@@ -149,7 +179,13 @@
           "$ref": "#/$defs/nullableString"
         },
         "commit": {
+          "description": "Underlying commit id (Git SHA, including for Jujutsu's Git-backed working copy).",
           "$ref": "#/$defs/nullableString"
+        },
+        "rev": {
+          "description": "Jujutsu change id of the working-copy revision — the stable lower-case-letter id (k-z alphabet) that survives rewrites. Null when the repo is not a jj workspace.",
+          "type": ["string", "null"],
+          "pattern": "^[k-z]+$"
         },
         "remote": {
           "$ref": "#/$defs/nullableString"
@@ -326,6 +362,54 @@
   "$defs": {
     "nullableString": {
       "type": ["string", "null"]
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "url", "tracker"],
+      "properties": {
+        "key": {
+          "description": "Display key, e.g. \"GEM-142\", \"#45\", or \"b/12345\". Parsed from the URL when possible.",
+          "$ref": "#/$defs/nullableString"
+        },
+        "title": {
+          "type": ["string", "null"],
+          "maxLength": 120
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "tracker": {
+          "type": ["string", "null"],
+          "enum": ["github", "gitlab", "jira", "linear", "buganizer", null]
+        }
+      }
+    },
+    "changeRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "title", "url", "host", "repo"],
+      "properties": {
+        "number": {
+          "description": "Change number (GitHub/GitLab/Gerrit). Parsed from the URL when possible.",
+          "$ref": "#/$defs/nullableNonNegInt"
+        },
+        "title": {
+          "type": ["string", "null"],
+          "maxLength": 120
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "host": {
+          "type": ["string", "null"],
+          "enum": ["github", "gitlab", "gerrit", null]
+        },
+        "repo": {
+          "description": "Owner/repo slug, e.g. \"acme/identity\". Parsed from the URL when possible.",
+          "$ref": "#/$defs/nullableString"
+        }
+      }
     },
     "utcDateTime": {
       "type": "string",

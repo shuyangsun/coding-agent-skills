@@ -130,6 +130,12 @@ def validate(instance: Any, schema_node: dict[str, Any], root: dict[str, Any], p
             if key in properties:
                 validate(value, properties[key], root, f"{path}.{key}")
 
+    if isinstance(instance, list):
+        items_schema = schema_node.get("items")
+        if isinstance(items_schema, dict):
+            for index, element in enumerate(instance):
+                validate(element, items_schema, root, f"{path}[{index}]")
+
     if isinstance(instance, str):
         min_length = schema_node.get("minLength")
         if isinstance(min_length, int) and len(instance) < min_length:

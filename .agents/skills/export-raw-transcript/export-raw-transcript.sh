@@ -33,11 +33,21 @@
 #   --tool <slug>     Force the agent: claude | codex | cursor | antigravity |
 #                     gemini. Default: auto-detect (env markers, then newest
 #                     transcript across all known stores).
-#   --title <str>     Human-readable session title for the metadata.
-#   --summary <str>   One-line summary of the session for the metadata.
+#   --title <str>     Concise session title for the metadata (kept short for the
+#                     gem card; trimmed to 70 chars at a word boundary).
+#   --summary <str>   Concise one/two-sentence summary (trimmed to 160 chars at a
+#                     word boundary so it fits the card's clamped summary).
 #   --model <str>     Exact model + variant the agent ran, e.g.
 #                     "Claude Opus 4.8 (1M context)". The running agent knows
 #                     this even though the environment usually doesn't.
+#   --issue <ref>     An issue/bug the session referenced, as "<url> [title...]".
+#                     Repeatable. The URL is parsed for key/tracker (GitHub,
+#                     GitLab, Jira, Linear, Buganizer).
+#   --change <ref>    A PR/MR/CL the session referenced, as "<url> [title...]".
+#                     Repeatable. The URL is parsed for number/host/repo (GitHub,
+#                     GitLab, Gerrit).
+#   --tag <str>       A short topic tag for the gem card. Repeatable. --tags
+#                     <a,b,c> adds several comma-separated tags at once.
 #   --out-root <dir>  Destination root. Default: ~/Downloads/transcripts
 #   -h, --help        Show this help.
 #
@@ -67,6 +77,16 @@ SUMMARY=""
 MODEL=""
 OUT_ROOT="${HOME}/Downloads/transcripts"
 SHORT_NAME_RAW=""
+# Repeatable reference/tag inputs, accumulated as newline-delimited strings so the
+# script stays bash-3.2 safe (no `"${arr[@]}"` expansion of an empty array under
+# `set -u`). Each --issue/--change value is "<url> [optional title words...]".
+ISSUE_SPECS=""
+CHANGE_SPECS=""
+TAGS_RAW=""
+
+# Append one newline-delimited record to a variable (blank leading line is fine;
+# the python normalizers skip empty lines).
+add_line() { printf '%s\n%s' "$1" "$2"; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -79,6 +99,14 @@ while [ $# -gt 0 ]; do
     --summary=*) SUMMARY="${1#*=}" ;;
     --model) MODEL="${2:-}"; shift ;;
     --model=*) MODEL="${1#*=}" ;;
+    --issue) ISSUE_SPECS="$(add_line "$ISSUE_SPECS" "${2:-}")"; shift ;;
+    --issue=*) ISSUE_SPECS="$(add_line "$ISSUE_SPECS" "${1#*=}")" ;;
+    --change) CHANGE_SPECS="$(add_line "$CHANGE_SPECS" "${2:-}")"; shift ;;
+    --change=*) CHANGE_SPECS="$(add_line "$CHANGE_SPECS" "${1#*=}")" ;;
+    --tag) TAGS_RAW="$(add_line "$TAGS_RAW" "${2:-}")"; shift ;;
+    --tag=*) TAGS_RAW="$(add_line "$TAGS_RAW" "${1#*=}")" ;;
+    --tags) TAGS_RAW="$(add_line "$TAGS_RAW" "${2:-}")"; shift ;;
+    --tags=*) TAGS_RAW="$(add_line "$TAGS_RAW" "${1#*=}")" ;;
     --out-root) OUT_ROOT="${2:-}"; shift ;;
     --out-root=*) OUT_ROOT="${1#*=}" ;;
     -h | --help) usage; exit 0 ;;
@@ -478,7 +506,7 @@ fmt="$ext"
 [ "$ext" = "vscdb" ] && fmt="sqlite"
 
 # Repo / author context (best-effort; from the directory the agent ran in).
-repo_root=""; repo_vcs=""; repo_ref=""; repo_commit=""; repo_remote=""
+repo_root=""; repo_vcs=""; repo_ref=""; repo_commit=""; repo_rev=""; repo_remote=""
 author_name=""; author_email=""
 repo_probe_dir="$PWD"
 if ! (cd "$repo_probe_dir" && { git rev-parse --show-toplevel >/dev/null 2>&1 || { command -v jj >/dev/null 2>&1 && jj root >/dev/null 2>&1; }; }); then
@@ -497,6 +525,13 @@ if command -v jj >/dev/null 2>&1 && (cd "$repo_probe_dir" && jj root >/dev/null 
   # git couldn't: the working-copy commit id and the nearest ancestor bookmark.
   [ -z "$repo_commit" ] && repo_commit="$(cd "$repo_probe_dir" && jj log -r @ -n1 --no-graph --no-pager -T 'commit_id' 2>/dev/null | tr -d '\n')"
   [ -z "$repo_ref" ] && repo_ref="$(cd "$repo_probe_dir" && jj log -r '::@ & bookmarks()' -n1 --no-graph --no-pager -T 'bookmarks' 2>/dev/null | tr -d '\n' | sed 's/  */ /g; s/^ //; s/ *$//')"
+  # Jujutsu's stable change id (the lower-case k-z alphabet) — distinct from the
+  # Git commit id above, and preserved across rewrites. Guard the output so only a
+  # real change id (never a stray git hash or error text) reaches repo.rev.
+  repo_rev="$(cd "$repo_probe_dir" && jj log -r @ -n1 --no-graph --no-pager -T 'change_id' 2>/dev/null | tr -d '[:space:]')"
+  case "$repo_rev" in
+    *[!k-z]* | '') repo_rev="" ;;
+  esac
 elif [ -n "$repo_root" ]; then
   repo_vcs="git"
 fi
@@ -544,6 +579,144 @@ jarr() {
   printf '[%s]' "$out"
 }
 
+# clip_text <text> <max-chars> — collapse whitespace to single spaces and trim to
+# <max-chars> code points at a word boundary (a … is appended when trimmed). Uses
+# python3 (already required) so multibyte text is measured by code point and never
+# cut mid-glyph. Empty input yields empty output (rendered as JSON null upstream).
+clip_text() {
+  [ -n "${1:-}" ] || { printf ''; return; }
+  python3 - "$1" "$2" <<'PYEOF'
+import sys
+text = " ".join(sys.argv[1].split())
+limit = int(sys.argv[2])
+if len(text) > limit:
+    cut = text[: limit - 1].rstrip()
+    space = cut.rfind(" ")
+    if space >= int(limit * 0.6):
+        cut = cut[:space].rstrip()
+    text = cut + "…"
+sys.stdout.write(text)
+PYEOF
+}
+
+# refs_to_json <issue|change> — read one reference per line on stdin, formatted
+# "<url> [optional title words...]", and print a JSON array of normalized objects.
+# The URL is parsed for the structured fields the gem card shows: for issues the
+# tracker + display key (GitHub, GitLab, Jira, Linear, Buganizer); for changes the
+# host, number and owner/repo (GitHub, GitLab, Gerrit). Unrecognized URLs still
+# record the url and title with null structure. Live status/state is intentionally
+# NOT captured here — it is enriched by the downstream processing job.
+refs_to_json() {
+  python3 - "$1" "${2:-}" <<'PYEOF'
+import sys, json, re
+
+kind = sys.argv[1]
+blob = sys.argv[2] if len(sys.argv) > 2 else ""
+
+
+def clip(s, n=120):
+    if s is None:
+        return None
+    s = " ".join(s.split())
+    if not s:
+        return None
+    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+
+def looks_url(s):
+    return bool(re.match(r"[a-z][a-z0-9+.-]*://", s, re.I)) or bool(re.match(r"b/\d+$", s))
+
+
+def parse_change(url):
+    m = re.match(r"https?://github\.com/([^/\s]+/[^/\s]+?)/pull/(\d+)", url, re.I)
+    if m:
+        return "github", int(m.group(2)), m.group(1)
+    m = re.match(r"https?://[^/\s]+/(.+?)/-/merge_requests/(\d+)", url, re.I)
+    if m:
+        return "gitlab", int(m.group(2)), m.group(1)
+    m = re.match(r"https?://[^/\s]+/c/(.+?)/\+/(\d+)", url, re.I)  # modern Gerrit
+    if m:
+        return "gerrit", int(m.group(2)), m.group(1)
+    m = re.match(r"https?://[^/\s]+/(?:#/)?c/(\d+)", url, re.I)    # legacy Gerrit
+    if m:
+        return "gerrit", int(m.group(1)), None
+    return None, None, None
+
+
+def parse_issue(url):
+    m = re.match(r"https?://github\.com/([^/\s]+/[^/\s]+?)/issues/(\d+)", url, re.I)
+    if m:
+        return "github", "#" + m.group(2)
+    m = re.match(r"https?://[^/\s]+/.+?/-/issues/(\d+)", url, re.I)
+    if m:
+        return "gitlab", "#" + m.group(1)
+    m = re.match(r"https?://[^/\s]+\.atlassian\.net/browse/([A-Za-z][A-Za-z0-9]+-\d+)", url, re.I)
+    if m:
+        return "jira", m.group(1).upper()
+    m = re.match(r"https?://linear\.app/[^/\s]+/issue/([A-Za-z0-9]+-\d+)", url, re.I)
+    if m:
+        return "linear", m.group(1).upper()
+    m = re.match(r"https?://(?:issuetracker\.google\.com|b\.corp\.google\.com|buganizer\.corp\.google\.com)/issues/(\d+)", url, re.I)
+    if m:
+        return "buganizer", "b/" + m.group(1)
+    m = re.match(r"b/(\d+)$", url)
+    if m:
+        return "buganizer", "b/" + m.group(1)
+    return None, None
+
+
+out, seen = [], set()
+for line in blob.splitlines():
+    line = line.strip()
+    if not line:
+        continue
+    parts = line.split(None, 1)
+    first = parts[0]
+    rest = parts[1] if len(parts) > 1 else None
+    if looks_url(first):
+        url, title = first, clip(rest)
+    else:
+        url, title = None, clip(line)
+    if url is not None and url in seen:
+        continue
+    if url is not None:
+        seen.add(url)
+    if kind == "issue":
+        tracker, key = parse_issue(url) if url else (None, None)
+        out.append({"key": key, "title": title, "url": url, "tracker": tracker})
+    else:
+        host, number, repo = parse_change(url) if url else (None, None, None)
+        out.append({"number": number, "title": title, "url": url, "host": host, "repo": repo})
+
+sys.stdout.write(json.dumps(out, ensure_ascii=False, separators=(", ", ": ")))
+PYEOF
+}
+
+# tags_to_json — read tags on stdin (one per line; each line may itself be a
+# comma-separated list) and print a JSON array: trimmed, de-duplicated
+# case-insensitively (first spelling wins), each clipped to 32 chars.
+tags_to_json() {
+  python3 - "${1:-}" <<'PYEOF'
+import sys, json
+
+blob = sys.argv[1] if len(sys.argv) > 1 else ""
+seen, out = set(), []
+for line in blob.splitlines():
+    for raw in line.split(","):
+        tag = " ".join(raw.split())
+        if not tag:
+            continue
+        if len(tag) > 32:
+            tag = tag[:32].rstrip()
+        key = tag.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(tag)
+sys.stdout.write(json.dumps(out, ensure_ascii=False, separators=(", ", ": ")))
+PYEOF
+}
+
 # Session-level facts from the transcript parser (currently Claude Code; empty
 # for agents without a parser). The record count falls back to the copied file's
 # line count so it is always present.
@@ -564,12 +737,26 @@ sess_title="${claude_custom_title:-}"; [ -n "$sess_title" ] || sess_title="${cla
 sess_agent_name="${claude_agent_name:-}"
 sess_bridge_id="${claude_bridge_session_id:-}"
 
+# Keep the card-facing strings concise and single-line, and bound auto/fallback
+# titles, by trimming to the schema's limits at a word boundary.
+TITLE="$(clip_text "$TITLE" 70)"
+[ -n "$SUMMARY" ] && SUMMARY="$(clip_text "$SUMMARY" 160)"
+
+# Card content the agent supplied: tags, plus the issues/bugs and PR/MR/CL refs
+# the session touched ([] when none were passed). A session may reference several.
+tags_json="$(tags_to_json "$TAGS_RAW")"; [ -n "$tags_json" ] || tags_json="[]"
+issues_json="$(refs_to_json issue "$ISSUE_SPECS")"; [ -n "$issues_json" ] || issues_json="[]"
+changes_json="$(refs_to_json change "$CHANGE_SPECS")"; [ -n "$changes_json" ] || changes_json="[]"
+
 cat >"$meta_path" <<EOF
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "title": $(jstr "$TITLE"),
   "short_name": $(jstr "$SHORT_NAME"),
   "summary": $(jstr "$SUMMARY"),
+  "tags": $tags_json,
+  "issues": $issues_json,
+  "changes": $changes_json,
   "exported_at_utc": $(jstr "$now_iso"),
   "exported_at_unix": $(jnum "$now_epoch"),
   "exported_at_local": $(jstr "$now_local"),
@@ -599,6 +786,7 @@ cat >"$meta_path" <<EOF
     "vcs": $(jstr "$repo_vcs"),
     "ref": $(jstr "$repo_ref"),
     "commit": $(jstr "$repo_commit"),
+    "rev": $(jstr "$repo_rev"),
     "remote": $(jstr "$repo_remote")
   },
   "author": {

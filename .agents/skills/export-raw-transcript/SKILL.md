@@ -93,9 +93,30 @@ its own, so it works from any agent and any working directory.
 2. **Name the session.** Choose a concise kebab-case `short-name` describing the
    topic (the script lowercases and sanitizes it anyway). Also prepare, from what
    you already know — **never by reading the transcript into context** — a human
-   `--title` and a one-line `--summary`. For Codex, the exporter reads `model`
-   and `effort` from `turn_context`; for other agents, pass your exact `--model`
+   `--title` and `--summary`. Keep both **concise**: they headline a compact card,
+   so aim for a title of ≤ ~8 words and a summary of one or two short sentences.
+   The exporter trims them (at a word boundary, with an ellipsis) to the schema's
+   limits — 70 chars for the title, 160 for the summary — but write them short
+   rather than relying on the trim. For Codex, the exporter reads `model` and
+   `effort` from `turn_context`; for other agents, pass your exact `--model`
    string when known (e.g. `"Claude Opus 4.8 (1M context)"`).
+
+   From the same live knowledge, also pass the session's **references and tags**
+   (all optional, all repeatable) so the card can show them:
+
+   - `--issue "<url> [short title]"` — an issue or bug the session worked on. A
+     session may reference several; repeat the flag for each. The exporter parses
+     the URL for the tracker and display key (GitHub, GitLab, Jira, Linear,
+     Buganizer).
+   - `--change "<url> [short title]"` — a PR / MR / Gerrit CL the session produced
+     or touched. Repeatable. The URL is parsed for the host, number and
+     owner/repo (GitHub, GitLab, Gerrit).
+   - `--tag <topic>` — a short topic tag (repeatable); or `--tags a,b,c` for
+     several at once. They are trimmed and de-duplicated for you.
+
+   Pass the URL as the first token; everything after the first space is an
+   optional human title. Live status/state (open, merged, …) is intentionally not
+   captured here — the downstream processing job enriches that.
 
 3. **Export.** Run:
 
@@ -104,15 +125,19 @@ its own, so it works from any agent and any working directory.
      --title "Short human title" \
      --summary "One sentence on what this session did." \
      --model "Claude Opus 4.8 (1M context)" \
+     --change "https://github.com/acme/identity/pull/318 Make token refresh deterministic" \
+     --issue "https://acme.atlassian.net/browse/GEM-142 Auth suite flakes on CI" \
+     --tag auth --tag testing \
      <short-name>
    ```
 
    The script copies the raw file, writes the metadata JSON, validates it against
-   the bundled Draft 2020-12 JSON Schema, then prints both destination paths. For
-   Codex, transcript-parsed `model` and `effort` take precedence over `--model`;
-   `--model` is only a fallback if the parser cannot find those fields. Add
-   `--tool <slug>` if step 1 needed it, or `--out-root <dir>` to target a
-   different root.
+   the bundled Draft 2020-12 JSON Schema, then prints both destination paths. The
+   `--change` / `--issue` / `--tag` flags are optional and repeatable (omit them
+   when the session had no refs). For Codex, transcript-parsed `model` and
+   `effort` take precedence over `--model`; `--model` is only a fallback if the
+   parser cannot find those fields. Add `--tool <slug>` if step 1 needed it, or
+   `--out-root <dir>` to target a different root.
 
 4. **Report.** Relay the two output paths (transcript + metadata) the script
    printed. That's the whole task — do not open either file.
@@ -144,11 +169,22 @@ rather than copying a partial/torn DB.
 
 The `*-metadata.json` is the YAML-header idea from `export-transcript`, but richer
 and machine-readable. The script fills everything automatically except `summary`
-(always yours to write) and `title`/`model`, which you pass in — though for Claude
-both now fall back to values read from the transcript (its own session title and
-the model id) when you omit them. Top-level keys:
+(always yours to write), `title`/`model` (which you pass in), and the optional
+`tags`/`issues`/`changes` you supply with the flags above — though for Claude both
+`title` and `model` fall back to values read from the transcript (its own session
+title and the model id) when you omit them. The current `schema_version` is `3`.
+Top-level keys:
 
-- `title`, `short_name`, `summary`, `schema_version`
+- `title`, `short_name`, `summary`, `schema_version` — `title` and `summary` are
+  length-bounded (70 / 160 chars) and trimmed at a word boundary so they fit the
+  gem card
+- `tags`: array of short topic strings (normalized, de-duplicated) for the card
+- `issues`: array of the issues/bugs the session referenced — each `{ key, title,
+  url, tracker }` (`tracker` ∈ github/gitlab/jira/linear/buganizer). A session may
+  reference several; identity only, live status is enriched downstream
+- `changes`: array of the PRs/MRs/CLs the session referenced — each `{ number,
+  title, url, host, repo }` (`host` ∈ github/gitlab/gerrit). Identity only; live
+  state, additions and deletions are enriched downstream
 - `exported_at_utc` / `exported_at_unix` / `exported_at_local`
 - `timezone`: `name` (IANA, e.g. `America/New_York`), `abbreviation` (e.g.
   `EDT`), `utc_offset` (e.g. `-04:00`) — lets a UTC stamp be read back as local
@@ -156,8 +192,10 @@ the model id) when you omit them. Top-level keys:
 - `agent`: `vendor`, `tool`, `tool_version`, `model`, `effort`, `entrypoint`,
   `session_id`, `detected_via`
 - `os`: `kernel`, `platform`, `arch`, `hostname`
-- `repo`: `root`, `vcs`, `ref`, `commit`, `remote` (from Git, with a Jujutsu
-  fallback)
+- `repo`: `root`, `vcs`, `ref`, `commit`, `rev`, `remote` (from Git, with a
+  Jujutsu fallback). `commit` is the Git SHA; `rev` is the Jujutsu change id — the
+  stable lower-case-letter id that survives rewrites — set only in a `jj` workspace
+  and `null` otherwise
 - `author`: `name`, `email` (from the repo's VCS config)
 - `source`: `path`, `filename`, `format`, `extension`, `bytes`, `lines`,
   `sha256`, `modified_utc` (the checksum lets you verify the copy later)
