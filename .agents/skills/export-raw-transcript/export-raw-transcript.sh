@@ -10,9 +10,12 @@
 # resolves the working repo on its own, and creates the destination directory if
 # missing.
 #
-# It NEVER reads transcript *contents* into the agent — it only copies bytes and
-# stats the file (size / line count / sha256). Transcripts can be huge, so the
-# agent must not cat/open them; this script does everything mechanical.
+# It NEVER reads transcript *contents* into the agent. For Codex, a companion
+# parser reads only the small metadata-bearing records (session_meta and the
+# first turn_context) so model/effort/version/cwd can be captured accurately.
+# The script also copies bytes and stats the file (size / line count / sha256).
+# Transcripts can be huge, so the agent must not cat/open them; this script does
+# everything mechanical.
 #
 # Usage:
 #   bash export-raw-transcript.sh --detect [--tool SLUG]
@@ -332,7 +335,7 @@ cursor-agent CLI to produce a JSONL transcript, or export markdown instead."
   die "could not locate a current transcript for '$TOOL'. Pass --tool / --out-root, or check the agent is the one running this."
 fi
 
-vendor=""; tool_name=""; tool_version=""; effort=""; entrypoint=""; session_id=""
+vendor=""; tool_name=""; tool_version=""; effort=""; entrypoint=""; session_id=""; session_cwd=""
 src_base="$(basename "$SRC")"
 case "$TOOL" in
   claude)
@@ -346,6 +349,23 @@ case "$TOOL" in
     vendor="openai"; tool_name="codex-cli"
     # rollout-<timestamp>-<uuid>.jsonl -> trailing uuid
     session_id="$(printf '%s' "$src_base" | sed -E 's/\.jsonl$//; s/.*-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/\1/')"
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+    codex_parser="$script_dir/parse-codex-transcript.sh"
+    if [ -f "$codex_parser" ]; then
+      codex_meta="$(bash "$codex_parser" --shell "$SRC" 2>/dev/null || true)"
+      if [ -n "$codex_meta" ]; then
+        eval "$codex_meta"
+        [ -n "${codex_model_provider:-}" ] && vendor="$codex_model_provider"
+        [ -n "${codex_cli_version:-}" ] && tool_version="$codex_cli_version"
+        [ -n "${codex_originator:-}" ] && entrypoint="$codex_originator"
+        [ -n "${codex_session_id:-}" ] && session_id="$codex_session_id"
+        [ -n "${codex_model:-}" ] && MODEL="$codex_model"
+        [ -n "${codex_effort:-}" ] && effort="$codex_effort"
+        [ -z "$effort" ] && [ -n "${codex_reasoning_effort:-}" ] && effort="$codex_reasoning_effort"
+        [ -n "${codex_turn_cwd:-}" ] && session_cwd="$codex_turn_cwd"
+        [ -z "$session_cwd" ] && [ -n "${codex_cwd:-}" ] && session_cwd="$codex_cwd"
+      fi
+    fi
     ;;
   cursor)
     vendor="anysphere"; tool_name="cursor-agent"
@@ -379,7 +399,11 @@ if [ -n "$DETECT_ONLY" ]; then
   printf 'os:            %s (%s, %s)\n' "$platform" "$kernel" "$arch"
   printf 'agent:         %s  [%s]\n' "$tool_name" "$DETECTED_VIA"
   [ -n "$tool_version" ] && printf 'agent version: %s\n' "$tool_version"
+  [ -n "$entrypoint" ] && printf 'entrypoint:    %s\n' "$entrypoint"
+  [ -n "$MODEL" ] && printf 'model:         %s\n' "$MODEL"
+  [ -n "$effort" ] && printf 'effort:        %s\n' "$effort"
   [ -n "$session_id" ] && printf 'session id:    %s\n' "$session_id"
+  [ -n "$session_cwd" ] && printf 'session cwd:   %s\n' "$session_cwd"
   printf 'source:        %s\n' "$SRC"
   printf 'format/ext:    %s\n' "${ext:-<none>}"
   printf 'size:          %s bytes\n' "${src_bytes:-?}"
@@ -435,26 +459,30 @@ fmt="$ext"
 # Repo / author context (best-effort; from the directory the agent ran in).
 repo_root=""; repo_vcs=""; repo_ref=""; repo_commit=""; repo_remote=""
 author_name=""; author_email=""
-if git rev-parse --show-toplevel >/dev/null 2>&1; then
-  repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
-  repo_ref="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
-  repo_commit="$(git rev-parse HEAD 2>/dev/null)"
-  repo_remote="$(git config --get remote.origin.url 2>/dev/null)"
+repo_probe_dir="$PWD"
+if ! (cd "$repo_probe_dir" && { git rev-parse --show-toplevel >/dev/null 2>&1 || { command -v jj >/dev/null 2>&1 && jj root >/dev/null 2>&1; }; }); then
+  if [ -n "$session_cwd" ] && [ -d "$session_cwd" ]; then repo_probe_dir="$session_cwd"; fi
 fi
-if command -v jj >/dev/null 2>&1 && jj root >/dev/null 2>&1; then
+if (cd "$repo_probe_dir" && git rev-parse --show-toplevel >/dev/null 2>&1); then
+  repo_root="$(cd "$repo_probe_dir" && git rev-parse --show-toplevel 2>/dev/null)"
+  repo_ref="$(cd "$repo_probe_dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  repo_commit="$(cd "$repo_probe_dir" && git rev-parse HEAD 2>/dev/null)"
+  repo_remote="$(cd "$repo_probe_dir" && git config --get remote.origin.url 2>/dev/null)"
+fi
+if command -v jj >/dev/null 2>&1 && (cd "$repo_probe_dir" && jj root >/dev/null 2>&1); then
   repo_vcs="jujutsu"
-  [ -z "$repo_root" ] && repo_root="$(jj root 2>/dev/null)"
+  [ -z "$repo_root" ] && repo_root="$(cd "$repo_probe_dir" && jj root 2>/dev/null)"
   # jj workspaces aren't always colocated git working trees, so fill the bits
   # git couldn't: the working-copy commit id and the nearest ancestor bookmark.
-  [ -z "$repo_commit" ] && repo_commit="$(jj log -r @ -n1 --no-graph --no-pager -T 'commit_id' 2>/dev/null | tr -d '\n')"
-  [ -z "$repo_ref" ] && repo_ref="$(jj log -r '::@ & bookmarks()' -n1 --no-graph --no-pager -T 'bookmarks' 2>/dev/null | tr -d '\n' | sed 's/  */ /g; s/^ //; s/ *$//')"
+  [ -z "$repo_commit" ] && repo_commit="$(cd "$repo_probe_dir" && jj log -r @ -n1 --no-graph --no-pager -T 'commit_id' 2>/dev/null | tr -d '\n')"
+  [ -z "$repo_ref" ] && repo_ref="$(cd "$repo_probe_dir" && jj log -r '::@ & bookmarks()' -n1 --no-graph --no-pager -T 'bookmarks' 2>/dev/null | tr -d '\n' | sed 's/  */ /g; s/^ //; s/ *$//')"
 elif [ -n "$repo_root" ]; then
   repo_vcs="git"
 fi
-author_name="$(git config user.name 2>/dev/null)"
-author_email="$(git config user.email 2>/dev/null)"
-if [ -z "$author_name" ] && command -v jj >/dev/null 2>&1; then author_name="$(jj config get user.name 2>/dev/null)"; fi
-if [ -z "$author_email" ] && command -v jj >/dev/null 2>&1; then author_email="$(jj config get user.email 2>/dev/null)"; fi
+author_name="$(cd "$repo_probe_dir" && git config user.name 2>/dev/null)"
+author_email="$(cd "$repo_probe_dir" && git config user.email 2>/dev/null)"
+if [ -z "$author_name" ] && command -v jj >/dev/null 2>&1; then author_name="$(cd "$repo_probe_dir" && jj config get user.name 2>/dev/null)"; fi
+if [ -z "$author_email" ] && command -v jj >/dev/null 2>&1; then author_email="$(cd "$repo_probe_dir" && jj config get user.email 2>/dev/null)"; fi
 
 # Default a human title from the slug when the agent didn't pass one.
 [ -n "$TITLE" ] || TITLE="$(printf '%s' "$SHORT_NAME" | tr '-' ' ')"
