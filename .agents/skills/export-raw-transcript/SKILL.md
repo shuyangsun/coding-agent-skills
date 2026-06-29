@@ -31,6 +31,12 @@ The export is two files that share one prefix:
 same instant in UTC, so a file always matches its folder. `<ext>` is whatever the
 source uses (usually `.jsonl`). The script creates the dated folder if missing.
 
+If the session has **attached images or files**, the exporter also writes them to
+a sibling `<utc-ts>-<short-name>-assets/` directory (same prefix), automatically
+when the transcript exposes enough evidence. See **[ASSETS.md](ASSETS.md)** for
+how assets are detected, classified, laid out, and for the `--asset-original`
+flag. Text-only sessions create no such directory.
+
 ## Do NOT read the transcript into model context
 
 Raw transcripts are large. **Never `cat`, `Read`, open, or otherwise pull the
@@ -67,9 +73,10 @@ shareable, redacted, readable version use `export-transcript` instead.
 ## Locating the bundled script
 
 `export-raw-transcript.sh` lives next to this `SKILL.md`, with
-`parse-codex-transcript.sh`, `metadata.schema.json`, and
-`validate-metadata.py` beside it. Run the exporter from **this skill's own
-directory** — the path the runtime gave you when it loaded the skill (e.g.
+`parse-codex-transcript.sh`, `parse-claude-transcript.sh`,
+`extract-codex-assets.py`, `extract-claude-assets.py`,
+`metadata.schema.json`, and `validate-metadata.py` beside it. Run the exporter
+from **this skill's own directory** — the path the runtime gave you when it loaded the skill (e.g.
 `.agents/skills/export-raw-transcript/`, `.claude/skills/export-raw-transcript/`,
 or wherever the skill directory was symlinked). Below this is written as
 `<skill-dir>/`; substitute the actual path. The script detects the OS, detects
@@ -116,6 +123,11 @@ its own, so it works from any agent and any working directory.
    optional human title. Live status/state (open, merged, …) is intentionally not
    captured here — the downstream processing job enriches that.
 
+   If the session includes an attached file whose original absolute path is known
+   but not visible in the transcript, pass `--asset-original <path>` (repeatable).
+   Claude verifies the path by hash against embedded bytes; Codex copies the file
+   if it exists because Codex usually stores only local disk references.
+
 3. **Export.** Run:
 
    ```sh
@@ -137,8 +149,9 @@ its own, so it works from any agent and any working directory.
    parser cannot find those fields. Add `--tool <slug>` if step 1 needed it, or
    `--out-root <dir>` to target a different root.
 
-4. **Report.** Relay the two output paths (transcript + metadata) the script
-   printed. That's the whole task — do not open either file.
+4. **Report.** Relay the output paths the script printed — transcript, metadata,
+   and the `…-assets/` directory if the session had attachments. That's the whole
+   task — do not open any of them.
 
 ## How detection works (per agent)
 

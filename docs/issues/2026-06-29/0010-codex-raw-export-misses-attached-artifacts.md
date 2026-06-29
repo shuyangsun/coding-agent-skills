@@ -1,6 +1,8 @@
 # Codex raw transcript export misses attached artifacts from Codex Desktop
 
-- **Status:** Open
+- **Status:** Fixed (implemented 2026-06-29) — Codex and Claude raw exports now
+  write sibling asset directories when the transcript exposes attached or
+  referenced local files.
 - **Area:** `export-raw-transcript` skill and Codex raw-session archival; artifact
   export parity with Claude Code.
 - **Severity:** Medium — the raw transcript backup succeeds, but the archive is
@@ -98,6 +100,23 @@ mirroring the Claude asset export layout:
    clearly versioned metadata extension for raw transcript assets.
 5. Keep the existing no-redaction caveat: raw assets are unredacted and should
    remain outside the repo unless explicitly scrubbed.
+
+## Resolution
+
+Implemented in `export-raw-transcript`:
+
+- Restored the Claude Code asset-export path with `extract-claude-assets.py` and
+  `ASSETS.md`, preserving embedded image/document blobs into
+  `<prefix>-assets/_manifest.json`.
+- Added `extract-codex-assets.py` for Codex Desktop sessions. It copies existing
+  local files from structured Codex attachment fields, explicit
+  `--asset-original` hints, and absolute file paths mentioned in human input,
+  while skipping ordinary path mentions under the session cwd/workspace roots.
+- Wired `export-raw-transcript.sh --detect` and export mode to preview and write
+  assets for both `--tool claude` and `--tool codex`.
+- Documented Codex provenance via `source_kind` (`attachment`, `path_mention`, or
+  `original_hint`) plus `original_path`, `source_refs`, byte count, mtime, and
+  SHA-256 in the asset manifest.
 
 ## Notes
 

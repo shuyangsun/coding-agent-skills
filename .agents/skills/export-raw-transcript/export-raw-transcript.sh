@@ -49,6 +49,13 @@
 #                     GitLab, Gerrit).
 #   --tag <str>       A short topic tag for the gem card. Repeatable. --tags
 #                     <a,b,c> adds several comma-separated tags at once.
+#   --asset-original <path>
+#                     A known original absolute path for an asset attached in the
+#                     session (repeatable). Claude verifies it against embedded
+#                     bytes before mirroring that path; Codex copies it when the
+#                     file exists because Codex usually stores only disk refs.
+#                     Attachments are auto-extracted even without this when the
+#                     transcript exposes enough local-file evidence. See ASSETS.md.
 #   --out-root <dir>  Destination root. Default: ~/Downloads/transcripts
 #   -h, --help        Show this help.
 #
@@ -84,6 +91,9 @@ SHORT_NAME_RAW=""
 ISSUE_SPECS=""
 CHANGE_SPECS=""
 TAGS_RAW=""
+# Known original absolute paths for attached assets (newline-delimited, like the
+# specs above). See ASSETS.md for per-agent behavior.
+ASSET_ORIGINALS=""
 
 # Append one newline-delimited record to a variable (blank leading line is fine;
 # the python normalizers skip empty lines).
@@ -108,6 +118,8 @@ while [ $# -gt 0 ]; do
     --tag=*) TAGS_RAW="$(add_line "$TAGS_RAW" "${1#*=}")" ;;
     --tags) TAGS_RAW="$(add_line "$TAGS_RAW" "${2:-}")"; shift ;;
     --tags=*) TAGS_RAW="$(add_line "$TAGS_RAW" "${1#*=}")" ;;
+    --asset-original) ASSET_ORIGINALS="$(add_line "$ASSET_ORIGINALS" "${2:-}")"; shift ;;
+    --asset-original=*) ASSET_ORIGINALS="$(add_line "$ASSET_ORIGINALS" "${1#*=}")" ;;
     --out-root) OUT_ROOT="${2:-}"; shift ;;
     --out-root=*) OUT_ROOT="${1#*=}" ;;
     -h | --help) usage; exit 0 ;;
@@ -465,6 +477,17 @@ if [ -n "$DETECT_ONLY" ]; then
   printf 'source:        %s\n' "$SRC"
   printf 'format/ext:    %s\n' "${ext:-<none>}"
   printf 'size:          %s bytes\n' "${src_bytes:-?}"
+  if command -v python3 >/dev/null 2>&1; then
+    detect_extractor=""
+    case "$TOOL" in
+      claude) detect_extractor="$script_dir/extract-claude-assets.py" ;;
+      codex) detect_extractor="$script_dir/extract-codex-assets.py" ;;
+    esac
+    if [ -n "$detect_extractor" ] && [ -f "$detect_extractor" ]; then
+      detect_inv="$(python3 "$detect_extractor" --emit inventory "$SRC" 2>/dev/null | head -1 || true)"
+      [ -n "$detect_inv" ] && printf '%s\n' "$detect_inv"
+    fi
+  fi
   printf '\nReady. Re-run with a short-name to export, e.g.:\n'
   printf '  bash %s --tool %s --title "..." --summary "..." --model "..." <short-name>\n' "${BASH_SOURCE[0]}" "$TOOL"
   exit 0
@@ -856,6 +879,40 @@ else
 fi
 "$python_cmd" "$validator_path" "$schema_path" "$meta_path" || die "metadata JSON failed schema validation: $meta_path"
 
+# ---------------------------------------------------------------------------
+# Assets: extract any files/images attached in the session into a sibling
+# "<prefix>-assets/" directory carrying its own _manifest.json. Decoupled from the
+# metadata sidecar (the dir is discovered by the shared <prefix>); extraction runs
+# against the copied snapshot so re-exports are reproducible. See ASSETS.md.
+# ---------------------------------------------------------------------------
+assets_base="$ts-$SHORT_NAME-assets"
+assets_dir="$dest_dir/$assets_base"
+assets_line=""
+extractor=""
+case "$TOOL" in
+  claude) extractor="$script_dir/extract-claude-assets.py" ;;
+  codex) extractor="$script_dir/extract-codex-assets.py" ;;
+esac
+if [ -n "$extractor" ] && [ -f "$extractor" ]; then
+  orig_file=""
+  if [ -n "$ASSET_ORIGINALS" ]; then
+    orig_file="$(mktemp 2>/dev/null || printf '%s' "${TMPDIR:-/tmp}/era-orig.$$")"
+    # Drop the leading blank line add_line() leaves; keep paths verbatim.
+    printf '%s' "$ASSET_ORIGINALS" | sed '/^$/d' >"$orig_file"
+  fi
+  # Non-fatal: the transcript + metadata (the critical outputs) are already
+  # written, so a failed extraction must not abort the export — but let the
+  # extractor's warnings reach stderr rather than swallowing them.
+  assets_line="$("$python_cmd" "$extractor" --emit inventory --manifest \
+    --out-dir "$assets_dir" --dir-name "$assets_base" \
+    ${orig_file:+--originals-file "$orig_file"} "$out_path" || true)"
+  [ -n "$orig_file" ] && rm -f "$orig_file"
+fi
+
 msg "exported $tool_name session ($DETECTED_VIA)"
 printf '  transcript: %s  (%s bytes)\n' "$out_path" "${src_bytes:-?}"
 printf '  metadata:   %s\n' "$meta_path"
+if [ -d "$assets_dir" ]; then
+  printf '  assets:     %s/\n' "$assets_dir"
+  [ -n "$assets_line" ] && printf '%s\n' "$assets_line" | sed 's/^/    /'
+fi
