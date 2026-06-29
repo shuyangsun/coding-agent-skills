@@ -1,11 +1,12 @@
 # issues/
 
-Documented failure modes observed while coding agents drove version control through
-the `vcs` skill — mostly Jujutsu multi-workspace lifecycle traps (stale `default`
-workspace, agents not isolating, degenerate empty merges, cross-agent work bleed,
-orphaned side-heads, guard-hook cwd drift). Each issue grounds a fix in `vcs` or a
-gate in `improving-vcs-skill`; several are cross-linked to the [plans](../plans/OVERVIEW.md)
-and [benchmarks](../benchmarks/OVERVIEW.md) that act on them.
+Documented failure modes observed while coding agents use skills, tools, and
+version control. The early set focuses on Jujutsu multi-workspace lifecycle traps
+(stale `default` workspace, agents not isolating, degenerate empty merges,
+cross-agent work bleed, orphaned side-heads, guard-hook cwd drift); newer issues
+also cover transcript and artifact export gaps. Each issue grounds a later fix or
+gate, and several are cross-linked to the [plans](../plans/OVERVIEW.md) and
+[benchmarks](../benchmarks/OVERVIEW.md) that act on them.
 
 Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `issues/` tree.
 
@@ -28,3 +29,7 @@ Naming: `YYYY-MM-DD/NNNN-slug.md`, `NNNN` unique across the whole `issues/` tree
 ### 2026-06-09
 
 - [`0009` — vcs hook refuses read-only Bash after Claude Code resets cwd to shared workspace](2026-06-09/0009-vcs-hook-refuses-read-only-bash-after-claude-cwd-reset.md)
+
+### 2026-06-29
+
+- [`0010` — Codex raw transcript export misses attached artifacts from Codex Desktop](2026-06-29/0010-codex-raw-export-misses-attached-artifacts.md)
