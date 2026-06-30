@@ -10,7 +10,7 @@
 # resolves the working repo on its own, and creates the destination directory if
 # missing.
 #
-# It NEVER reads transcript *contents* into the agent. For Codex and Claude, a
+# It NEVER reads transcript *contents* into the agent. For Codex, Claude, and Cursor, a
 # companion parser streams the raw JSONL in a subprocess so model/version/cwd,
 # session span, turn counts, model list, and token totals can be captured
 # accurately without surfacing transcript bytes to the agent. The script also
@@ -428,6 +428,21 @@ case "$TOOL" in
   cursor)
     vendor="anysphere"; tool_name="cursor-agent"
     session_id="$(printf '%s' "$src_base" | sed -E 's/\.[^.]*$//')"
+    cursor_parser="$script_dir/parse-cursor-transcript.sh"
+    if [ -f "$cursor_parser" ]; then
+      cursor_meta="$(bash "$cursor_parser" --shell "$SRC" 2>/dev/null || true)"
+      if [ -n "$cursor_meta" ]; then
+        eval "$cursor_meta"
+        [ -n "${cursor_tool_name:-}" ] && tool_name="$cursor_tool_name"
+        [ -n "${cursor_tool_version:-}" ] && tool_version="$cursor_tool_version"
+        [ -z "$tool_version" ] && [ -n "${cursor_version:-}" ] && tool_version="$cursor_version"
+        [ -n "${cursor_entrypoint:-}" ] && entrypoint="$cursor_entrypoint"
+        [ -n "${cursor_session_id:-}" ] && session_id="$cursor_session_id"
+        [ -n "${cursor_model:-}" ] && MODEL="$cursor_model"
+        [ -n "${cursor_effort:-}" ] && effort="$cursor_effort"
+        [ -n "${cursor_cwd:-}" ] && session_cwd="$cursor_cwd"
+      fi
+    fi
     ;;
   antigravity)
     vendor="google"; tool_name="antigravity"
@@ -462,14 +477,14 @@ if [ -n "$DETECT_ONLY" ]; then
   [ -n "$effort" ] && printf 'effort:        %s\n' "$effort"
   [ -n "$session_id" ] && printf 'session id:    %s\n' "$session_id"
   [ -n "$session_cwd" ] && printf 'session cwd:   %s\n' "$session_cwd"
-  detect_models="${claude_models:-${codex_models:-}}"
-  detect_records="${claude_records:-${codex_records:-}}"
-  detect_user_records="${claude_user_records:-${codex_user_records:-?}}"
-  detect_assistant_records="${claude_assistant_records:-${codex_assistant_records:-?}}"
-  detect_user_turns="${claude_user_turns:-${codex_user_turns:-}}"
-  detect_assistant_turns="${claude_assistant_turns:-${codex_assistant_turns:-?}}"
-  detect_started="${claude_started_at:-${codex_started_at:-}}"
-  detect_ended="${claude_ended_at:-${codex_ended_at:-?}}"
+  detect_models="${claude_models:-${codex_models:-${cursor_models:-}}}"
+  detect_records="${claude_records:-${codex_records:-${cursor_records:-}}}"
+  detect_user_records="${claude_user_records:-${codex_user_records:-${cursor_user_records:-?}}}"
+  detect_assistant_records="${claude_assistant_records:-${codex_assistant_records:-${cursor_assistant_records:-?}}}"
+  detect_user_turns="${claude_user_turns:-${codex_user_turns:-${cursor_user_turns:-}}}"
+  detect_assistant_turns="${claude_assistant_turns:-${codex_assistant_turns:-${cursor_assistant_turns:-?}}}"
+  detect_started="${claude_started_at:-${codex_started_at:-${cursor_started_at:-}}}"
+  detect_ended="${claude_ended_at:-${codex_ended_at:-${cursor_ended_at:-?}}}"
   [ -n "$detect_models" ] && printf 'models:        %s\n' "$detect_models"
   [ -n "$detect_records" ] && printf 'records:       %s total (%s user / %s assistant)\n' "$detect_records" "$detect_user_records" "$detect_assistant_records"
   [ -n "$detect_user_turns" ] && printf 'turns:         %s input / %s agent\n' "$detect_user_turns" "$detect_assistant_turns"
@@ -482,6 +497,7 @@ if [ -n "$DETECT_ONLY" ]; then
     case "$TOOL" in
       claude) detect_extractor="$script_dir/extract-claude-assets.py" ;;
       codex) detect_extractor="$script_dir/extract-codex-assets.py" ;;
+      cursor) detect_extractor="$script_dir/extract-cursor-assets.py" ;;
     esac
     if [ -n "$detect_extractor" ] && [ -f "$detect_extractor" ]; then
       detect_inv="$(python3 "$detect_extractor" --emit inventory "$SRC" 2>/dev/null | head -1 || true)"
@@ -590,6 +606,7 @@ if [ -z "$author_email" ] && command -v jj >/dev/null 2>&1; then author_email="$
 # a slug-derived default.
 [ -n "$TITLE" ] || TITLE="${claude_custom_title:-}"
 [ -n "$TITLE" ] || TITLE="${claude_ai_title:-}"
+[ -n "$TITLE" ] || TITLE="${cursor_title:-}"
 [ -n "$TITLE" ] || TITLE="$(printf '%s' "$SHORT_NAME" | tr '-' ' ')"
 
 # JSON helpers (no jq dependency).
@@ -754,25 +771,26 @@ sys.stdout.write(json.dumps(out, ensure_ascii=False, separators=(", ", ": ")))
 PYEOF
 }
 
-# Session-level facts from the transcript parser (Claude Code and Codex today;
+# Session-level facts from the transcript parser (Claude Code, Codex, and Cursor;
 # empty for agents without a parser). The record count falls back to the copied
 # file's line count so it is always present.
-sess_started="${claude_started_at:-${codex_started_at:-}}"
-sess_ended="${claude_ended_at:-${codex_ended_at:-}}"
-sess_records="${claude_records:-${codex_records:-$src_lines}}"
-sess_user_turns="${claude_user_turns:-${codex_user_turns:-}}"
-sess_assistant_turns="${claude_assistant_turns:-${codex_assistant_turns:-}}"
-sess_user_records="${claude_user_records:-${codex_user_records:-}}"
-sess_assistant_records="${claude_assistant_records:-${codex_assistant_records:-}}"
-sess_models_csv="${claude_models:-${codex_models:-}}"
-sess_tok_in="${claude_input_tokens:-${codex_input_tokens:-}}"
-sess_tok_out="${claude_output_tokens:-${codex_output_tokens:-}}"
-sess_tok_cache_read="${claude_cache_read_tokens:-${codex_cache_read_tokens:-}}"
-sess_tok_cache_creation="${claude_cache_creation_tokens:-${codex_cache_creation_tokens:-}}"
-sess_tok_total="${claude_total_tokens:-${codex_total_tokens:-}}"
+sess_started="${claude_started_at:-${codex_started_at:-${cursor_started_at:-}}}"
+sess_ended="${claude_ended_at:-${codex_ended_at:-${cursor_ended_at:-}}}"
+sess_records="${claude_records:-${codex_records:-${cursor_records:-$src_lines}}}"
+sess_user_turns="${claude_user_turns:-${codex_user_turns:-${cursor_user_turns:-}}}"
+sess_assistant_turns="${claude_assistant_turns:-${codex_assistant_turns:-${cursor_assistant_turns:-}}}"
+sess_user_records="${claude_user_records:-${codex_user_records:-${cursor_user_records:-}}}"
+sess_assistant_records="${claude_assistant_records:-${codex_assistant_records:-${cursor_assistant_records:-}}}"
+sess_models_csv="${claude_models:-${codex_models:-${cursor_models:-}}}"
+sess_tok_in="${claude_input_tokens:-${codex_input_tokens:-${cursor_input_tokens:-}}}"
+sess_tok_out="${claude_output_tokens:-${codex_output_tokens:-${cursor_output_tokens:-}}}"
+sess_tok_cache_read="${claude_cache_read_tokens:-${codex_cache_read_tokens:-${cursor_cache_read_tokens:-}}}"
+sess_tok_cache_creation="${claude_cache_creation_tokens:-${codex_cache_creation_tokens:-${cursor_cache_creation_tokens:-}}}"
+sess_tok_total="${claude_total_tokens:-${codex_total_tokens:-${cursor_total_tokens:-}}}"
 sess_title="${claude_custom_title:-}"; [ -n "$sess_title" ] || sess_title="${claude_ai_title:-}"
-sess_agent_name="${claude_agent_name:-}"
-sess_bridge_id="${claude_bridge_session_id:-}"
+[ -n "$sess_title" ] || sess_title="${cursor_title:-}"
+sess_agent_name="${claude_agent_name:-${cursor_agent_name:-}}"
+sess_bridge_id="${claude_bridge_session_id:-${cursor_bridge_session_id:-}}"
 
 # Keep the card-facing strings concise and single-line, and bound auto/fallback
 # titles, by trimming to the schema's limits at a word boundary.
@@ -892,6 +910,7 @@ extractor=""
 case "$TOOL" in
   claude) extractor="$script_dir/extract-claude-assets.py" ;;
   codex) extractor="$script_dir/extract-codex-assets.py" ;;
+  cursor) extractor="$script_dir/extract-cursor-assets.py" ;;
 esac
 if [ -n "$extractor" ] && [ -f "$extractor" ]; then
   orig_file=""

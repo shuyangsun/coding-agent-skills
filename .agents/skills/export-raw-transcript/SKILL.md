@@ -41,15 +41,17 @@ flag. Text-only sessions create no such directory.
 
 Raw transcripts are large. **Never `cat`, `Read`, open, or otherwise pull the
 transcript file into your context.** The bundled script does the mechanical work
-(detect, locate, copy, checksum, write metadata). For Codex and Claude Code
-transcripts it also delegates to a companion parser — `parse-codex-transcript.sh`
-or `parse-claude-transcript.sh` — that reads the raw records in a subprocess so
-the model, CLI version, session id, entrypoint, cwd, session span, turn counts,
+(detect, locate, copy, checksum, write metadata). For Claude Code, Codex, and
+Cursor transcripts it also delegates to a companion parser —
+`parse-claude-transcript.sh`, `parse-codex-transcript.sh`, or
+`parse-cursor-transcript.sh` — that reads the raw records in a subprocess so the
+model, CLI version, session id, entrypoint, cwd, session span, turn counts,
 models, and token totals come from the log itself without the transcript bytes
-ever entering the agent's context. Both parsers make a streaming pass with
-python3 (already required for schema validation): Claude needs a JSON parser
-because record key order is unstable, and Codex needs a full pass because session
-aggregates live across `event_msg`, `response_item`, and `token_count` records.
+ever entering the agent's context. The parsers make a streaming pass with python3
+(already required for schema validation): Claude needs a JSON parser because
+record key order is unstable, Codex needs a full pass because session aggregates
+live across `event_msg`, `response_item`, and `token_count` records, and Cursor's
+shape is intentionally sparse so missing fields stay `null`.
 
 Your only job is to hand it a few short descriptive strings you already know
 from the live conversation — a name, a title, and a one-line summary. A
@@ -74,7 +76,8 @@ shareable, redacted, readable version use `export-transcript` instead.
 
 `export-raw-transcript.sh` lives next to this `SKILL.md`, with
 `parse-codex-transcript.sh`, `parse-claude-transcript.sh`,
-`extract-codex-assets.py`, `extract-claude-assets.py`,
+`parse-cursor-transcript.sh`, `extract-codex-assets.py`,
+`extract-claude-assets.py`, `extract-cursor-assets.py`,
 `metadata.schema.json`, and `validate-metadata.py` beside it. Run the exporter
 from **this skill's own directory** — the path the runtime gave you when it loaded the skill (e.g.
 `.agents/skills/export-raw-transcript/`, `.claude/skills/export-raw-transcript/`,
@@ -104,8 +107,9 @@ its own, so it works from any agent and any working directory.
    The exporter trims them (at a word boundary, with an ellipsis) to the schema's
    limits — 70 chars for the title, 160 for the summary — but write them short
    rather than relying on the trim. For Codex, the exporter reads `model` and
-   `effort` from `turn_context`; for other agents, pass your exact `--model`
-   string when known (e.g. `"Claude Opus 4.8 (1M context)"`).
+   `effort` from `turn_context`; for Cursor, it uses model/effort fields only
+   when a transcript version records them. For other agents, pass your exact
+   `--model` string when known (e.g. `"Claude Opus 4.8 (1M context)"`).
 
    From the same live knowledge, also pass the session's **references and tags**
    (all optional, all repeatable) so the card can show them:
@@ -144,10 +148,10 @@ its own, so it works from any agent and any working directory.
    The script copies the raw file, writes the metadata JSON, validates it against
    the bundled Draft 2020-12 JSON Schema, then prints both destination paths. The
    `--change` / `--issue` / `--tag` flags are optional and repeatable (omit them
-   when the session had no refs). For Codex, transcript-parsed `model` and
-   `effort` take precedence over `--model`; `--model` is only a fallback if the
-   parser cannot find those fields. Add `--tool <slug>` if step 1 needed it, or
-   `--out-root <dir>` to target a different root.
+   when the session had no refs). For Codex and Cursor, transcript-parsed `model`
+   and `effort` take precedence over `--model`; `--model` is only a fallback if
+   the parser cannot find those fields. Add `--tool <slug>` if step 1 needed it,
+   or `--out-root <dir>` to target a different root.
 
 4. **Report.** Relay the output paths the script printed — transcript, metadata,
    and the `…-assets/` directory if the session had attachments. That's the whole
@@ -166,7 +170,7 @@ can always override with `--tool`.
 | Codex CLI (`codex`)         | newest mtime (no session env var)              | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta`, `turn_context`, `event_msg`, `response_item`, and `token_count` |
 | Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                                                             |
 | Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                                                                    |
-| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`                                                                                                                    |
+| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`; metadata is parsed from sparse `role`/`message` records when present                                             |
 
 **Claude Code is the primary, fully-verified path.** The others are derived from
 each tool's published storage layout; tools change paths between versions, so use
@@ -216,12 +220,14 @@ Top-level keys:
   (the raw `type=user` / `type=assistant` record counts — the larger
   pre-collapse numbers, kept for debugging), `models` (array), `tokens` (`input`,
   `output`, `cache_read`, `cache_creation`, `total`), `title`, `agent_name`,
-  `bridge_session_id` — populated from the transcript for Claude and Codex when
-  the source log contains the corresponding signal. Codex does not currently
-  expose a session title, agent name, or bridge session id, so those stay `null`
-  for Codex. For agents without a parser, only `records` (the copied file's line
-  count) is set and the rest are `null`/`[]`. The block is always written (the
-  schema requires it)
+  `bridge_session_id` — populated from the transcript for Claude, Codex, and
+  Cursor when the source log contains the corresponding signal. Codex does not
+  currently expose a session title, agent name, or bridge session id, so those
+  stay `null` for Codex. Cursor transcripts observed so far also omit timestamps,
+  model ids, and token totals; the parser fills counts and leaves absent fields
+  `null`/`[]`. For agents without a parser, only `records` (the copied file's
+  line count) is set and the rest are `null`/`[]`. The block is always written
+  (the schema requires it)
 - `export`: `transcript_file`, `metadata_file`, `dest_dir`
 
 For Codex transcripts, `parse-codex-transcript.sh` extracts: `session_id`,
@@ -257,6 +263,17 @@ onto `agent.*` and the `session` block; the transcript values are authoritative,
 with env vars and `--model`/`--title` as fallbacks. `gitBranch`
 also backstops `repo.ref` when the live VCS probe is uninformative (e.g. a
 detached `HEAD`, or an archived transcript whose repo path no longer exists).
+
+For Cursor transcripts, `parse-cursor-transcript.sh` extracts: `session_id`
+(falling back to the transcript filename/parent directory), any recorded
+conversation or bridge session identifiers, version/tool info, `cwd`/entrypoint,
+title, agent name, model/effort, `records`, `user_turns`, `assistant_turns`,
+`user_records`, `assistant_records`, raw role/type count summaries, model list,
+started/ended timestamps, and token totals when those fields are present. Current
+Cursor agent JSONL files observed in this repo mostly contain top-level `role`
+records with `message.content` blocks plus `turn_ended` status records, so the
+parser treats `turn_ended` as the best assistant-turn count when no message ids
+exist and leaves unavailable metadata empty.
 
 Some metadata is **not** in a Claude transcript and therefore cannot come from
 the `.jsonl`: `agent.effort` (from `$CLAUDE_EFFORT`), `os.arch` / `os.hostname`

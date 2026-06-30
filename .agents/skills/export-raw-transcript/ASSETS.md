@@ -7,7 +7,7 @@ automatically.
 
 ## What An Asset Is
 
-The exporter supports two agent-specific asset sources today:
+The exporter supports three agent-specific asset sources today:
 
 - **Claude Code embedded assets.** Claude embeds attached images and documents
   directly in the transcript as base64 inside `image` / `document` content
@@ -23,8 +23,16 @@ The exporter supports two agent-specific asset sources today:
   output or assistant text. Plain path mentions under the session cwd or
   workspace roots are skipped by default so ordinary repo references do not turn
   into asset archives; explicit `--asset-original` paths are still copied.
+- **Cursor agent local assets.** Cursor transcripts observed so far do not embed
+  file bytes and do not expose a dedicated attachment container. `extract-cursor-assets.py`
+  therefore copies only explicit `--asset-original` paths and still-existing
+  local files referenced by human input text or future structured user content
+  blocks. It does not copy assistant text, tool output, or tool input paths as
+  assets. Tool input paths are used only to infer repo/workspace roots so plain
+  human path mentions inside the repo are skipped by default; explicit
+  `--asset-original` paths are still copied.
 
-Both extractors run in a subprocess and stream the transcript. As with the raw
+All extractors run in a subprocess and stream the transcript. As with the raw
 transcript copy itself, **the bytes never enter the model's context**; only
 counts, sizes, media types, sha256s, and paths are surfaced.
 
@@ -54,9 +62,10 @@ Each asset has a `kind`:
   records have not been observed to carry durable local-file bytes or attachment
   paths.
 
-Codex manifests also include `source_kind`:
+Codex and Cursor manifests also include `source_kind`:
 
-- `attachment` - a path found in a structured Codex attachment container.
+- `attachment` - a path found in a structured Codex attachment container or a
+  future structured Cursor user content block.
 - `path_mention` - an existing absolute file path found in human input text.
 - `original_hint` - an explicit `--asset-original <path>` value supplied to the
   exporter.
@@ -77,8 +86,8 @@ The exported transcript is never rewritten to point at the new files.
   Different source directories give different subtrees, so same-named files do
   not collide and the original absolute path is readable from the layout. Claude
   uses this only when the on-disk path exists and sha256-matches the embedded
-  blob. Codex uses it for copied local files because those transcripts generally
-  point at disk instead of embedding bytes.
+  blob. Codex and Cursor use it for copied local files because those transcripts
+  generally point at disk instead of embedding bytes.
 
 - **`origin: "transcript"` - Claude embedded-only fallback.** When a Claude blob
   has no verified on-disk source, it is stored under a reserved subtree keyed by
@@ -119,8 +128,8 @@ extractors; Codex adds source-path provenance fields when available.
 
 `path` is relative to the assets directory; `source_ref` pins the transcript
 record and field that led to the copy; `sha256` verifies the copied bytes later.
-Codex entries also include `source_refs` when multiple transcript coordinates
-pointed at the same file.
+Codex and Cursor entries also include `source_refs` when multiple transcript
+coordinates pointed at the same file.
 
 ## Driving It
 
@@ -137,13 +146,13 @@ bash <skill-dir>/export-raw-transcript.sh \
 ```
 
 Repeat `--asset-original` per file. Claude verifies each hint by hash before it
-uses the path. Codex has no embedded hash to compare, so it copies the explicit
-hint when the file exists.
+uses the path. Codex and Cursor have no embedded hash to compare, so they copy
+the explicit hint when the file exists.
 
 For macOS screenshots, copy paths verbatim. Screenshot filenames may contain a
 NARROW NO-BREAK SPACE (U+202F, not an ASCII space) before `AM`/`PM`; retyping the
-space can make Claude hash verification fail and can make Codex fail to find the
-file.
+space can make Claude hash verification fail and can make Codex/Cursor fail to
+find the file.
 
 ## Re-Exporting Assets From An Archived Transcript
 
@@ -160,13 +169,13 @@ python3 <skill-dir>/extract-claude-assets.py \
   "<dest>/<prefix>.jsonl"
 ```
 
-For Codex, use `extract-codex-assets.py` with the same flags. Use
-`--emit inventory` and omit `--out-dir` first for a dry preview that writes
-nothing.
+For Codex or Cursor, use `extract-codex-assets.py` or `extract-cursor-assets.py`
+with the same flags. Use `--emit inventory` and omit `--out-dir` first for a dry
+preview that writes nothing.
 
 ## Scope
 
-Claude Code and Codex Desktop have dedicated extractors. Other agents skip asset
-extraction until each gets its own `extract-<tool>-assets` companion. The
-exporter's main flow degrades cleanly: no extractor for the detected tool means
-no assets directory.
+Claude Code, Codex Desktop, and Cursor agent have dedicated extractors. Other
+agents skip asset extraction until each gets its own `extract-<tool>-assets`
+companion. The exporter's main flow degrades cleanly: no extractor for the
+detected tool means no assets directory.
