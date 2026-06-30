@@ -10,10 +10,6 @@
       "Bash(git show *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(bash .agents/skills/vcs/scripts/isolate.sh *)",
-      "Bash(bash .agents/skills/vcs/scripts/integrate.sh *)",
-      "Bash(bash .agents/skills/vcs/scripts/session-start.sh *)",
-      "Bash(bash .agents/skills/vcs/scripts/rename-work.sh *)",
       "Bash(jj root *)",
       "Bash(jj status *)",
       "Bash(jj log *)",
@@ -40,59 +36,6 @@
       "Read(**/id_rsa*)",
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)"
-    ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.agents/skills/vcs/scripts/session-start.sh",
-            "args": ["--hook", "claude", "--ide", "claude"],
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.agents/skills/vcs/scripts/vcs-check.sh",
-            "args": ["hook", "--agent", "claude"],
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.agents/skills/vcs/scripts/vcs-check.sh",
-            "args": ["hook", "--agent", "claude"],
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "CwdChanged": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.agents/skills/vcs/scripts/vcs-check.sh",
-            "args": ["hook", "--agent", "claude"],
-            "timeout": 30
-          }
-        ]
-      }
     ]
   }
 }

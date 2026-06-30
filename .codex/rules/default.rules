@@ -55,7 +55,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["jj", "workspace", "forget"],
     decision = "allow",
-    justification = "Allow guarded cleanup of the session's own jj workspace.",
+    justification = "Allow jj workspace cleanup.",
 )
 
 prefix_rule(
@@ -67,31 +67,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["jj", "bookmark", "delete"],
     decision = "allow",
-    justification = "Allow guarded cleanup of the session's own jj bookmark.",
-)
-
-prefix_rule(
-    pattern = ["bash", ".agents/skills/vcs/scripts/isolate.sh"],
-    decision = "allow",
-    justification = "Allow the vetted vcs isolation helper.",
-)
-
-prefix_rule(
-    pattern = ["bash", ".agents/skills/vcs/scripts/integrate.sh"],
-    decision = "allow",
-    justification = "Allow the vetted vcs integration helper.",
-)
-
-prefix_rule(
-    pattern = ["bash", ".agents/skills/vcs/scripts/session-start.sh"],
-    decision = "allow",
-    justification = "Allow the vetted vcs session-start helper.",
-)
-
-prefix_rule(
-    pattern = ["bash", ".agents/skills/vcs/scripts/rename-work.sh"],
-    decision = "allow",
-    justification = "Allow the vetted vcs work rename helper.",
+    justification = "Allow jj bookmark cleanup.",
 )
 
 prefix_rule(
@@ -109,37 +85,37 @@ prefix_rule(
 prefix_rule(
     pattern = ["jj", "git", "export"],
     decision = "allow",
-    justification = "Allow guarded jj-to-Git ref synchronization after cleanup.",
+    justification = "Allow jj-to-Git ref synchronization after cleanup.",
 )
 
 prefix_rule(
     pattern = ["jj", "describe"],
     decision = "prompt",
-    justification = "Direct jj commit mutation must be guarded by workspace ownership.",
+    justification = "Prompt before direct jj commit mutation.",
 )
 
 prefix_rule(
     pattern = ["jj", "commit"],
     decision = "prompt",
-    justification = "Direct jj commit mutation must be guarded by workspace ownership.",
+    justification = "Prompt before direct jj commit mutation.",
 )
 
 prefix_rule(
     pattern = ["jj", "new"],
     decision = "prompt",
-    justification = "Direct jj working-copy movement must be guarded by workspace ownership.",
+    justification = "Prompt before direct jj working-copy movement.",
 )
 
 prefix_rule(
     pattern = ["jj", "bookmark", ["set", "create", "move", "rename"]],
     decision = "prompt",
-    justification = "Direct jj bookmark mutation must be guarded by workspace ownership.",
+    justification = "Prompt before direct jj bookmark mutation.",
 )
 
 prefix_rule(
     pattern = ["jj", "workspace", ["add", "rename"]],
     decision = "prompt",
-    justification = "Use the vetted vcs helpers for workspace lifecycle changes.",
+    justification = "Prompt before direct jj workspace lifecycle changes.",
 )
 
 prefix_rule(
@@ -151,17 +127,17 @@ prefix_rule(
 prefix_rule(
     pattern = ["jj", "git", "import"],
     decision = "prompt",
-    justification = "Direct Git-to-jj synchronization must be guarded by workspace ownership.",
+    justification = "Prompt before direct Git-to-jj synchronization.",
 )
 
 prefix_rule(
     pattern = ["git", ["reset", "checkout", "switch"]],
     decision = "prompt",
-    justification = "Direct Git working-copy movement must be guarded by workspace ownership.",
+    justification = "Prompt before direct Git working-copy movement.",
 )
 
 prefix_rule(
     pattern = ["git", "branch", ["-D", "-d"]],
     decision = "prompt",
-    justification = "Direct branch deletion must be guarded by workspace ownership.",
+    justification = "Prompt before direct branch deletion.",
 )

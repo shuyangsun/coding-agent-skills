@@ -17,9 +17,9 @@ the same time —
   route to the best retrieval available (cloud → local → navigate the structure by
   hand) and retrieve well within whichever tier is reachable.
 
-It is the [`improving-vcs-skill`](../improving-vcs-skill/SKILL.md) pattern applied to
-docs+retrieval. You run rounds; each round produces numbers; you keep the revisions
-that move the numbers and revert the ones that don't.
+It uses a measurement-driven loop for docs+retrieval. You run rounds; each round
+produces numbers; you keep the revisions that move the numbers and revert the ones
+that don't.
 
 > **Scope — authoring only.** Use this skill _only_ when authoring or changing
 > `updating-docs`, `setting-up-rag`, or `retrieving-context`. It is never loaded
@@ -51,9 +51,9 @@ consumer outcomes without regressing either mode or either factorial marginal.
 
 ## The keystone: no oracle, so three deterministic surrogates
 
-`vcs` works because the correct merge is _computable_. Doc/retrieval quality has
-**no such oracle** — an LLM authors the corpus, the `setting-up-rag` skill chooses the
-config, and a consumer driven by `retrieving-context` does the querying.
+Doc/retrieval quality has no perfect oracle — an LLM authors the corpus, the
+`setting-up-rag` skill chooses the config, and a consumer driven by
+`retrieving-context` does the querying.
 [`scripts/gold.py`](scripts/gold.py) (the `scenario.py` analog — it emits the labels
 **and** runs the scorers so they can't drift) replaces the oracle with three
 deterministic surrogates:
@@ -220,7 +220,7 @@ marginal effect** (negative coupling) is flagged and reverted.
 Run from this skill's own directory (`<skill-dir>/scripts/`). All sandboxes live
 under `$CONTEXT_RETRIEVAL_HARNESS_DIR` (default `$TMPDIR/context-retrieval-harness`);
 only `metrics.tsv` persists. They require `python3`; Phase 0 needs **no** services
-and **no** eval-time LLM (match the `vcs` harness's restraint).
+and **no** eval-time LLM.
 
 | Script                                                    | Role                                                                                                                                                                                                                            |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,9 +1,8 @@
 # LOOP — one round of the context-retrieval harness
 
-Mirrors `improving-vcs-skill/LOOP.md`, over the 2×2 factorial. Run rounds; keep
-revisions that move the numbers; revert the rest. One small, attributable change
-to **one** skill per round (`updating-docs`, `setting-up-rag`, or
-`retrieving-context`).
+Run rounds over the 2×2 factorial; keep revisions that move the numbers; revert the
+rest. Make one small, attributable change to **one** skill per round
+(`updating-docs`, `setting-up-rag`, or `retrieving-context`).
 
 ## Phase-0 quick start (no services, no LLM)
 

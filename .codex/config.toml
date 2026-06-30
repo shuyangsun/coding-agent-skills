@@ -5,7 +5,7 @@
 # ask you to trust the folder; until then these settings are ignored.
 # Docs: https://developers.openai.com/codex/config-advanced
 #
-# Posture: this repo relies on command rules and VCS hooks for Codex guardrails.
+# Posture: this repo relies on command rules for Codex guardrails.
 # The Linux bubblewrap sandbox is intentionally not selected here because this repo
 # is often launched inside agent/container environments where user namespaces are
 # unavailable, which makes Codex print a startup warning and fail harmless commands.
@@ -20,30 +20,3 @@ approval_policy = "on-request"
 # bubblewrap/user-namespace support from the host.
 # Values: read-only | workspace-write | danger-full-access.
 sandbox_mode = "danger-full-access"
-
-[[hooks.SessionStart]]
-matcher = "^startup$"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = 'repo="$(jj root 2>/dev/null || git rev-parse --show-toplevel)" && bash "$repo/.agents/skills/vcs/scripts/session-start.sh" --hook codex --ide codex'
-timeout = 30
-statusMessage = "Preparing isolated vcs workspace"
-
-[[hooks.PreToolUse]]
-matcher = "^(Bash|apply_patch|Edit|Write)$"
-
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = 'repo="$(jj root 2>/dev/null || git rev-parse --show-toplevel)" && bash "$repo/.agents/skills/vcs/scripts/vcs-check.sh" hook --agent codex'
-timeout = 30
-statusMessage = "Checking vcs workspace ownership"
-
-[[hooks.SubagentStart]]
-matcher = ".*"
-
-[[hooks.SubagentStart.hooks]]
-type = "command"
-command = 'repo="$(jj root 2>/dev/null || git rev-parse --show-toplevel)" && bash "$repo/.agents/skills/vcs/scripts/vcs-check.sh" hook --agent codex'
-timeout = 30
-statusMessage = "Checking subagent vcs workspace"

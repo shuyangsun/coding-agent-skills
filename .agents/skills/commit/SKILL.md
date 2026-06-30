@@ -3,8 +3,7 @@ name: commit
 description: Load BEFORE you write or edit a commit message — in any version-control
   system (Git, Jujutsu, …) and for every commit you author, including merge commits
   and rewrites — so the subject, body, and Author / Co-Authored-By trailers follow
-  this project's format. The `vcs` skill defers to this skill for message format.
-  Repo-agnostic.
+  this project's format. Repo-agnostic.
 ---
 
 # Commit messages
