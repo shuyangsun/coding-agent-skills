@@ -107,9 +107,12 @@ its own, so it works from any agent and any working directory.
    The exporter trims them (at a word boundary, with an ellipsis) to the schema's
    limits — 70 chars for the title, 160 for the summary — but write them short
    rather than relying on the trim. For Codex, the exporter reads `model` and
-   `effort` from `turn_context`; for Cursor, it uses model/effort fields only
-   when a transcript version records them. For other agents, pass your exact
-   `--model` string when known (e.g. `"Claude Opus 4.8 (1M context)"`).
+   `effort` from `turn_context`. For Cursor, it enriches from the local composer
+   store (`state.vscdb`) — title, model id, effort, cwd, session span — when the
+   sparse JSONL omits them; pass a human `--model` label when you want one
+   (e.g. `"Grok 4.5"`), and the raw composer id still lands in `session.models`.
+   For other agents, pass your exact `--model` string when known
+   (e.g. `"Claude Opus 4.8 (1M context)"`).
 
    From the same live knowledge, also pass the session's **references and tags**
    (all optional, all repeatable) so the card can show them:
@@ -148,10 +151,12 @@ its own, so it works from any agent and any working directory.
    The script copies the raw file, writes the metadata JSON, validates it against
    the bundled Draft 2020-12 JSON Schema, then prints both destination paths. The
    `--change` / `--issue` / `--tag` flags are optional and repeatable (omit them
-   when the session had no refs). For Codex and Cursor, transcript-parsed `model`
-   and `effort` take precedence over `--model`; `--model` is only a fallback if
-   the parser cannot find those fields. Add `--tool <slug>` if step 1 needed it,
-   or `--out-root <dir>` to target a different root.
+   when the session had no refs). For Codex, transcript-parsed `model` and
+   `effort` take precedence over `--model`. For Cursor, parsed `effort` /
+   `session.models` come from the composer store (or JSONL when present); an
+   explicit `--model` human label wins for `agent.model`, with the raw id as
+   fallback. Add `--tool <slug>` if step 1 needed it, or `--out-root <dir>` to
+   target a different root.
 
 4. **Report.** Relay the output paths the script printed — transcript, metadata,
    and the `…-assets/` directory if the session had attachments. That's the whole
@@ -164,21 +169,20 @@ then falls back to the most-recently-written transcript across all known stores
 (reliable because the live session is the file being appended to right now). You
 can always override with `--tool`.
 
-| Agent (`--tool`)            | Current-session signal                         | Raw transcript location                                                                                                                                                |
-| --------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl` | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`; metadata is parsed from the JSONL records (version, model, span, turn counts, tokens)                           |
-| Codex CLI (`codex`)         | newest mtime (no session env var)              | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta`, `turn_context`, `event_msg`, `response_item`, and `token_count` |
-| Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime      | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                                                             |
-| Antigravity (`antigravity`) | newest mtime (no session env var)              | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                                                                    |
-| Cursor agent CLI (`cursor`) | `$CURSOR_AGENT`, then newest mtime             | `~/.cursor/projects/*/agent-transcripts/**/*.jsonl`; metadata is parsed from sparse `role`/`message` records when present                                             |
+| Agent (`--tool`)            | Current-session signal                                                                   | Raw transcript location                                                                                                                                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code (`claude`)      | `$CLAUDE_CODE_SESSION_ID` → exact `<id>.jsonl`                                           | `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`; metadata is parsed from the JSONL records (version, model, span, turn counts, tokens)                                                                              |
+| Codex CLI (`codex`)         | newest mtime (no session env var)                                                        | `${CODEX_HOME:-~/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`; metadata is parsed from `session_meta`, `turn_context`, `event_msg`, `response_item`, and `token_count`                                                    |
+| Gemini CLI (`gemini`)       | `$GEMINI_CLI=1` marker, then newest mtime                                                | `${GEMINI_CLI_HOME:-~}/.gemini/tmp/<hash>/chats/*.json[l]`                                                                                                                                                                |
+| Antigravity (`antigravity`) | newest mtime (no session env var)                                                        | `~/.gemini/antigravity{-cli,}/brain/*/.system_generated/logs/transcript_full.jsonl`                                                                                                                                       |
+| Cursor (`cursor`)           | `$CURSOR_CONVERSATION_ID` → exact `<id>/<id>.jsonl`, else `$CURSOR_AGENT` + newest mtime | `~/.cursor/projects/*/agent-transcripts/<id>/<id>.jsonl` (IDE and CLI). Metadata is parsed from sparse JSONL plus the local composer store in `state.vscdb` (`composerData:<id>`) for title, model, effort, cwd, and span |
 
 **Claude Code is the primary, fully-verified path.** The others are derived from
 each tool's published storage layout; tools change paths between versions, so use
-`--detect` to confirm and `--tool` to correct. **Cursor caveat:** only the
-`cursor-agent` CLI writes a single-file JSONL transcript. The Cursor IDE keeps
-chat in a live SQLite DB (`…/User/globalStorage/state.vscdb`), which is not a
-faithful single-file per-session transcript — the script reports this and stops
-rather than copying a partial/torn DB.
+`--detect` to confirm and `--tool` to correct. **Cursor note:** the raw export is
+always the per-session JSONL under `agent-transcripts/`. The IDE's live SQLite
+composer store (`…/User/globalStorage/state.vscdb`) is read only to enrich the
+metadata sidecar — it is never copied as the transcript.
 
 ## What the metadata sidecar captures
 
@@ -221,11 +225,14 @@ Top-level keys:
   pre-collapse numbers, kept for debugging), `models` (array), `tokens` (`input`,
   `output`, `cache_read`, `cache_creation`, `total`), `title`, `agent_name`,
   `bridge_session_id` — populated from the transcript for Claude, Codex, and
-  Cursor when the source log contains the corresponding signal. Codex does not
-  currently expose a session title, agent name, or bridge session id, so those
-  stay `null` for Codex. Cursor transcripts observed so far also omit timestamps,
-  model ids, and token totals; the parser fills counts and leaves absent fields
-  `null`/`[]`. For agents without a parser, only `records` (the copied file's
+  Cursor when the source log or Cursor composer store contains the corresponding
+  signal. Codex does not currently expose a session title, agent name, or bridge
+  session id, so those stay `null` for Codex. Cursor JSONL is sparse (counts and
+  embedded `<timestamp>` tags); title, model, effort, cwd, and span are filled
+  from `composerData` when the local `state.vscdb` still has that session.
+  Cursor does not currently expose Claude-style cumulative input/output/cache
+  token totals, so `session.tokens.*` stay `null` unless a future transcript
+  records them. For agents without a parser, only `records` (the copied file's
   line count) is set and the rest are `null`/`[]`. The block is always written
   (the schema requires it)
 - `export`: `transcript_file`, `metadata_file`, `dest_dir`
@@ -264,16 +271,18 @@ with env vars and `--model`/`--title` as fallbacks. `gitBranch`
 also backstops `repo.ref` when the live VCS probe is uninformative (e.g. a
 detached `HEAD`, or an archived transcript whose repo path no longer exists).
 
-For Cursor transcripts, `parse-cursor-transcript.sh` extracts: `session_id`
-(falling back to the transcript filename/parent directory), any recorded
-conversation or bridge session identifiers, version/tool info, `cwd`/entrypoint,
-title, agent name, model/effort, `records`, `user_turns`, `assistant_turns`,
-`user_records`, `assistant_records`, raw role/type count summaries, model list,
-started/ended timestamps, and token totals when those fields are present. Current
-Cursor agent JSONL files observed in this repo mostly contain top-level `role`
-records with `message.content` blocks plus `turn_ended` status records, so the
-parser treats `turn_ended` as the best assistant-turn count when no message ids
-exist and leaves unavailable metadata empty.
+For Cursor transcripts, `parse-cursor-transcript.sh` extracts from JSONL:
+`session_id` (filename/parent directory fallback), turn/record counts,
+`turn_ended`-based assistant turns, embedded `<timestamp>` span stamps, and any
+inline model/token fields when present. It then enriches missing scalars from
+the local Cursor composer store (`composerData:<session_id>` in `state.vscdb`):
+session `title`/`name`, `modelConfig.modelName` + effort parameter, workspace
+`cwd`, bubble/header timestamps for `started_at`/`ended_at`, and `entrypoint`
+(`ide` when the composer row exists or `$CURSOR_AGENT` is set). Tool version
+falls back to the installed Cursor app `package.json` version when the
+transcript does not record one. Cumulative token totals stay empty unless the
+JSONL itself carries usage blocks — Cursor's `contextTokensUsed` is a context-
+window gauge, not a session total, so it is intentionally not mapped.
 
 Some metadata is **not** in a Claude transcript and therefore cannot come from
 the `.jsonl`: `agent.effort` (from `$CLAUDE_EFFORT`), `os.arch` / `os.hostname`

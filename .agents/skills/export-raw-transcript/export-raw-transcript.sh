@@ -264,10 +264,20 @@ locate_codex() {
 }
 
 locate_cursor() {
-  # cursor-agent CLI per-session JSONL transcripts are the true raw transcript.
-  # (The Cursor IDE keeps chat in a live SQLite state.vscdb, not a single-file
-  # per-session transcript — handled with a clear message at the call site.)
-  newest_from_find "$HOME/.cursor/projects" -path '*/agent-transcripts/*' -name '*.jsonl'
+  # Cursor IDE and cursor-agent both write per-session JSONL under
+  # ~/.cursor/projects/<project>/agent-transcripts/<id>/<id>.jsonl. Prefer the
+  # live conversation id when the agent injects it; otherwise newest parent
+  # transcript (never a subagent sidecar).
+  local id="${CURSOR_CONVERSATION_ID:-}" hit
+  if [ -n "$id" ]; then
+    hit="$(newest_from_find "$HOME/.cursor/projects" \
+      -path "*/agent-transcripts/$id/$id.jsonl")"
+    if [ -n "$hit" ]; then printf '%s' "$hit"; return; fi
+  fi
+  newest_from_find "$HOME/.cursor/projects" \
+    -path '*/agent-transcripts/*/*.jsonl' \
+    ! -path '*/subagents/*' \
+    -name '*.jsonl'
 }
 
 locate_antigravity() {
@@ -367,12 +377,11 @@ fi
 
 if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
   if [ "$TOOL" = "cursor" ]; then
-    die "no cursor-agent CLI transcript found under ~/.cursor/projects/*/agent-transcripts/.
-The Cursor IDE stores chat in a live SQLite DB instead
-(~/Library/Application Support/Cursor/User/globalStorage/state.vscdb on macOS,
-~/.config/Cursor/User/globalStorage/state.vscdb on Linux), which is not a
-single-file per-session transcript this skill can copy faithfully. Use the
-cursor-agent CLI to produce a JSONL transcript, or export markdown instead."
+    die "no Cursor agent transcript found under ~/.cursor/projects/*/agent-transcripts/<id>/<id>.jsonl.
+The IDE also keeps a live composer store in state.vscdb (used only to enrich
+metadata — title, model, effort, cwd, span); the raw export still needs the
+per-session JSONL. Confirm this chat has an agent-transcripts file, or pass
+--tool cursor after the first agent turn has flushed one."
   fi
   die "could not locate a current transcript for '$TOOL'. Pass --tool / --out-root, or check the agent is the one running this."
 fi
@@ -427,7 +436,11 @@ case "$TOOL" in
     ;;
   cursor)
     vendor="anysphere"; tool_name="cursor-agent"
-    session_id="$(printf '%s' "$src_base" | sed -E 's/\.[^.]*$//')"
+    session_id="${CURSOR_CONVERSATION_ID:-}"
+    [ -n "$session_id" ] || session_id="$(printf '%s' "$src_base" | sed -E 's/\.[^.]*$//')"
+    # IDE agent shells set CURSOR_AGENT=1; treat that as the entrypoint when the
+    # transcript/composer store do not record one (CLI runs usually omit it).
+    [ -n "${CURSOR_AGENT:-}" ] && entrypoint="ide"
     cursor_parser="$script_dir/parse-cursor-transcript.sh"
     if [ -f "$cursor_parser" ]; then
       cursor_meta="$(bash "$cursor_parser" --shell "$SRC" 2>/dev/null || true)"
@@ -438,7 +451,10 @@ case "$TOOL" in
         [ -z "$tool_version" ] && [ -n "${cursor_version:-}" ] && tool_version="$cursor_version"
         [ -n "${cursor_entrypoint:-}" ] && entrypoint="$cursor_entrypoint"
         [ -n "${cursor_session_id:-}" ] && session_id="$cursor_session_id"
-        [ -n "${cursor_model:-}" ] && MODEL="$cursor_model"
+        [ -n "${cursor_conversation_id:-}" ] && [ -z "$session_id" ] && session_id="$cursor_conversation_id"
+        # Prefer an explicit --model human label (e.g. "Grok 4.5"); the
+        # composer/transcript model id still lands in session.models.
+        [ -z "$MODEL" ] && [ -n "${cursor_model:-}" ] && MODEL="$cursor_model"
         [ -n "${cursor_effort:-}" ] && effort="$cursor_effort"
         [ -n "${cursor_cwd:-}" ] && session_cwd="$cursor_cwd"
       fi

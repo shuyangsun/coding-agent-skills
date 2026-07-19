@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
-# Parse metadata from a Cursor agent JSONL transcript.
+# Parse metadata from a Cursor agent JSONL transcript, enriched from Cursor's
+# local composer store when available.
 #
-# Cursor transcripts observed under ~/.cursor/projects/*/agent-transcripts keep a
-# compact stream of records such as {"role":"user","message":...},
-# {"role":"assistant","message":...}, and {"type":"turn_ended","status":...}.
-# Newer/older builds may add richer top-level metadata, so this parser is
-# deliberately conservative: it streams each JSONL record with python3, records
-# only scalar metadata and aggregate counts, and tolerates missing fields.
+# Cursor agent-transcripts JSONL is intentionally sparse: typically
+# {"role":"user"|"assistant","message":...} plus {"type":"turn_ended",...}.
+# User turns often embed a wall-clock stamp as <timestamp>...</timestamp> in
+# the text. Richer session scalars (title, model, effort, cwd, span) live in
+# Cursor's local SQLite composer store (state.vscdb → composerData:<id>).
+# This parser streams the JSONL with python3, then best-effort reads that
+# store by session id — never dumping bubble bodies into the agent context.
 #
 # Output (default --shell): shell-safe cursor_* assignments, matching the
 # parse-claude-transcript.sh / parse-codex-transcript.sh contract so
@@ -24,23 +26,32 @@ die() {
 usage() {
   cat <<'EOF'
 Usage:
-  bash parse-cursor-transcript.sh [--shell] <cursor-transcript.jsonl>
+  bash parse-cursor-transcript.sh [--shell] [--session-id <uuid>] <cursor-transcript.jsonl>
 
 Outputs shell-safe cursor_* assignments for metadata found in Cursor JSONL
-records:
+records and, when present, the local Cursor composer store (state.vscdb):
   session scalars: session_id, version/tool info, cwd/entrypoint, title,
-                   agent name, bridge/session identifiers when present
+                   agent name, bridge/session identifiers, model, effort
   aggregates:      records, user_turns, assistant_turns, user_records,
-                   assistant_records, raw role counts, parse_errors, model,
-                   models, started_at, ended_at, and token totals when present
+                   assistant_records, raw role counts, parse_errors, models,
+                   started_at, ended_at, and token totals when present
+
+--session-id overrides the session id inferred from the transcript path. Use it
+when parsing a renamed export copy so composer-store enrichment still works.
 EOF
 }
 
 MODE="shell"
 TRANSCRIPT=""
+SESSION_ID_OVERRIDE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --shell) MODE="shell" ;;
+    --session-id)
+      shift
+      [ $# -gt 0 ] || die "--session-id requires a value"
+      SESSION_ID_OVERRIDE="$1"
+      ;;
     -h | --help) usage; exit 0 ;;
     --*) die "unknown option: $1" ;;
     *)
@@ -56,13 +67,39 @@ done
 [ -f "$TRANSCRIPT" ] || die "not a file: $TRANSCRIPT"
 command -v python3 >/dev/null 2>&1 || die "python3 is required to parse Cursor transcripts"
 
-# The transcript path is passed as argv so nothing from the transcript is
-# interpolated into the heredoc. The program streams json.loads one record at a
-# time and emits only metadata/aggregate assignments.
-python3 - "$TRANSCRIPT" <<'PYEOF'
+# Paths/ids are passed as argv so nothing from the transcript is interpolated
+# into the heredoc. The program streams json.loads one record at a time, then
+# optionally opens the local composer DB read-only for missing fields.
+python3 - "$TRANSCRIPT" "$SESSION_ID_OVERRIDE" <<'PYEOF'
 import json
 import os
+import re
+import sqlite3
 import sys
+from datetime import datetime, timedelta, timezone
+
+
+MONTHS = {
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
+}
+
+TIMESTAMP_TAG_RE = re.compile(r"<timestamp>\s*(.*?)\s*</timestamp>", re.I | re.S)
+CURSOR_WALL_RE = re.compile(
+    r"^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4}),\s+"
+    r"(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)\s*\(UTC([+-]\d{1,2})(?::?(\d{2}))?\)$",
+    re.I,
+)
 
 
 def ts_key(value):
@@ -137,17 +174,242 @@ def iter_dicts(node):
             yield from iter_dicts(value)
 
 
+def ms_to_utc(ms):
+    ms = as_int(ms)
+    if ms is None:
+        return None
+    # Cursor stores composer created/updated as unix milliseconds.
+    dt = datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{int(ms % 1000):03d}Z"
+
+
+def parse_cursor_wall_clock(text):
+    """Parse Cursor's embedded wall-clock stamp into an ISO UTC string."""
+    text = as_str(text)
+    if text is None:
+        return None
+    text = " ".join(text.split())
+    match = CURSOR_WALL_RE.match(text)
+    if not match:
+        return None
+    mon_s, day_s, year_s, hour_s, minute_s, second_s, ampm, off_h, off_m = match.groups()
+    month = MONTHS.get(mon_s[:3].lower())
+    if month is None:
+        return None
+    hour = int(hour_s)
+    minute = int(minute_s)
+    second = int(second_s or "0")
+    ampm = ampm.upper()
+    if ampm == "PM" and hour != 12:
+        hour += 12
+    elif ampm == "AM" and hour == 12:
+        hour = 0
+    offset = timedelta(hours=int(off_h), minutes=int(off_m or "0"))
+    local = datetime(int(year_s), month, int(day_s), hour, minute, second, tzinfo=timezone(offset))
+    return local.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def extract_embedded_timestamps(text):
+    text = as_str(text)
+    if text is None:
+        return
+    for match in TIMESTAMP_TAG_RE.finditer(text):
+        iso = parse_cursor_wall_clock(match.group(1))
+        if iso is not None:
+            yield iso
+
+
+def candidate_state_db_paths():
+    home = os.path.expanduser("~")
+    return [
+        os.path.join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "state.vscdb"),
+        os.path.join(home, ".config", "Cursor", "User", "globalStorage", "state.vscdb"),
+        os.path.join(home, ".cursor", "User", "globalStorage", "state.vscdb"),
+    ]
+
+
+def candidate_app_package_paths():
+    home = os.path.expanduser("~")
+    return [
+        "/Applications/Cursor.app/Contents/Resources/app/package.json",
+        os.path.join(home, "Applications", "Cursor.app", "Contents", "Resources", "app", "package.json"),
+        "/usr/share/cursor/resources/app/package.json",
+        os.path.join(home, ".local", "share", "cursor", "resources", "app", "package.json"),
+    ]
+
+
+def read_cursor_app_version():
+    for path in candidate_app_package_paths():
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, ValueError, TypeError):
+            continue
+        version = as_str(data.get("version")) if isinstance(data, dict) else None
+        if version is not None:
+            return version
+    return None
+
+
+def open_state_db():
+    for path in candidate_state_db_paths():
+        if not os.path.isfile(path):
+            continue
+        try:
+            # Read-only URI so a live Cursor IDE lock cannot block export.
+            return sqlite3.connect(f"file:{path}?mode=ro", uri=True), path
+        except sqlite3.Error:
+            continue
+    return None, None
+
+
+def load_json_blob(raw):
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8", errors="replace")
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def effort_from_model_config(model_config):
+    model_config = as_dict(model_config)
+    for selected in as_list(model_config.get("selectedModels")):
+        selected = as_dict(selected)
+        for param in as_list(selected.get("parameters")):
+            param = as_dict(param)
+            if as_str(param.get("id")) == "effort":
+                value = param.get("value")
+                if isinstance(value, bool):
+                    continue
+                text = as_str(value) if not isinstance(value, (int, float)) else str(value)
+                if text is not None:
+                    return text
+    return first_string(model_config.get("effort"), model_config.get("reasoningEffort"))
+
+
+def enrich_from_composer(session_id, fields, add_model, update_span):
+    """Fill missing scalars from Cursor's composerData / composerHeaders."""
+    if not session_id:
+        return False
+    con, _path = open_state_db()
+    if con is None:
+        return False
+    found = False
+    try:
+        cur = con.cursor()
+        row = cur.execute(
+            "SELECT value FROM cursorDiskKV WHERE key = ?",
+            ("composerData:%s" % session_id,),
+        ).fetchone()
+        data = load_json_blob(row[0]) if row else None
+        if data is None:
+            header = cur.execute(
+                "SELECT createdAt, lastUpdatedAt, value FROM composerHeaders WHERE composerId = ?",
+                (session_id,),
+            ).fetchone()
+            if header is None:
+                return False
+            data = load_json_blob(header[2]) or {}
+            if fields["title"] is None:
+                fields["title"] = first_string(data.get("name"), data.get("title"))
+            update_span(ms_to_utc(header[0]))
+            update_span(ms_to_utc(header[1]))
+            cwd = first_string(
+                get_path(data, "workspaceIdentifier", "uri", "fsPath"),
+                get_path(data, "workspaceIdentifier", "uri", "path"),
+            )
+            if fields["cwd"] is None and cwd is not None:
+                fields["cwd"] = cwd
+            found = True
+        else:
+            found = True
+            if fields["title"] is None:
+                fields["title"] = first_string(data.get("name"), data.get("title"))
+            model_config = as_dict(data.get("modelConfig"))
+            add_model(first_string(model_config.get("modelName"), model_config.get("modelId")))
+            for selected in as_list(model_config.get("selectedModels")):
+                add_model(as_dict(selected).get("modelId"))
+            if fields["effort"] is None:
+                fields["effort"] = effort_from_model_config(model_config)
+            cwd = first_string(
+                get_path(data, "workspaceIdentifier", "uri", "fsPath"),
+                get_path(data, "workspaceIdentifier", "uri", "path"),
+            )
+            if fields["cwd"] is None and cwd is not None:
+                fields["cwd"] = cwd
+            if fields["entrypoint"] is None:
+                # Composer rows only exist for the IDE/agent UI path.
+                fields["entrypoint"] = "ide"
+            update_span(ms_to_utc(data.get("createdAt")))
+            update_span(ms_to_utc(data.get("lastUpdatedAt")))
+            for header in as_list(data.get("fullConversationHeadersOnly")):
+                header = as_dict(header)
+                update_span(header.get("createdAt"))
+
+        # conversation-search title is a useful fallback when composer name is empty.
+        if fields["title"] is None:
+            for search_db in (
+                os.path.join(os.path.dirname(p), "conversation-search.db")
+                for p in candidate_state_db_paths()
+            ):
+                if not os.path.isfile(search_db):
+                    continue
+                try:
+                    scon = sqlite3.connect(f"file:{search_db}?mode=ro", uri=True)
+                except sqlite3.Error:
+                    continue
+                try:
+                    srow = scon.execute(
+                        "SELECT title FROM conversations WHERE id = ?",
+                        (session_id,),
+                    ).fetchone()
+                finally:
+                    scon.close()
+                if srow and as_str(srow[0]):
+                    fields["title"] = as_str(srow[0])
+                    break
+    finally:
+        con.close()
+    return found
+
+
+def looks_like_uuid(value):
+    value = as_str(value)
+    if value is None:
+        return False
+    parts = value.split("-")
+    if len(parts) != 5:
+        return False
+    return all(all(c in "0123456789abcdefABCDEF" for c in part) for part in parts) and \
+        [len(p) for p in parts] == [8, 4, 4, 4, 12]
+
+
 def main():
     if len(sys.argv) < 2:
         sys.stderr.write("parse-cursor-transcript: missing transcript path\n")
         return 2
     path = sys.argv[1]
+    session_id_override = as_str(sys.argv[2]) if len(sys.argv) > 2 else None
 
     # Filename and parent folder are both stable session-id candidates in Cursor's
-    # current transcript layout: agent-transcripts/<id>/<id>.jsonl.
+    # current transcript layout: agent-transcripts/<id>/<id>.jsonl. Renamed export
+    # copies need --session-id (or a UUID parent folder) to hit the composer store.
     filename_id = os.path.splitext(os.path.basename(path))[0]
     parent_id = os.path.basename(os.path.dirname(path))
-    session_id_fallback = filename_id or parent_id
+    if session_id_override:
+        session_id_fallback = session_id_override
+    elif looks_like_uuid(filename_id):
+        session_id_fallback = filename_id
+    elif looks_like_uuid(parent_id):
+        session_id_fallback = parent_id
+    else:
+        session_id_fallback = filename_id or parent_id
 
     fields = {
         "session_id": session_id_fallback,
@@ -184,6 +446,8 @@ def main():
     seen_models = set()
     started = started_key = None
     ended = ended_key = None
+    embedded_started = embedded_started_key = None
+    embedded_ended = embedded_ended_key = None
     tokens = {
         "input": 0,
         "output": 0,
@@ -210,6 +474,18 @@ def main():
             started, started_key = value, key
         if ended_key is None or key > ended_key:
             ended, ended_key = value, key
+
+    def update_embedded_span(value):
+        # Minute-rounded wall-clock stamps from <timestamp> tags are a fallback
+        # only — composer/JSONL ISO stamps with seconds win when present.
+        nonlocal embedded_started, embedded_started_key, embedded_ended, embedded_ended_key
+        key = ts_key(value)
+        if key is None:
+            return
+        if embedded_started_key is None or key < embedded_started_key:
+            embedded_started, embedded_started_key = value, key
+        if embedded_ended_key is None or key > embedded_ended_key:
+            embedded_ended, embedded_ended_key = value, key
 
     def add_usage(node):
         nonlocal have_tokens
@@ -331,6 +607,10 @@ def main():
                     # shell tool calls carry their working directory. Treat that
                     # as a best-effort fallback only when no explicit cwd exists.
                     setfirst("cwd", tool_input.get("working_directory"))
+                text = block.get("text")
+                if isinstance(text, str) and text:
+                    for iso in extract_embedded_timestamps(text):
+                        update_embedded_span(iso)
 
             for candidate in iter_dicts(rec):
                 if "usage" in candidate and isinstance(candidate.get("usage"), dict):
@@ -339,6 +619,22 @@ def main():
                     add_usage(candidate.get("token_usage"))
                 if "tokenUsage" in candidate and isinstance(candidate.get("tokenUsage"), dict):
                     add_usage(candidate.get("tokenUsage"))
+
+    # Composer store fills the scalars JSONL omits (title/model/effort/cwd/span).
+    enrich_from_composer(fields["session_id"], fields, add_model, update_span)
+    if started is None:
+        update_span(embedded_started)
+    if ended is None:
+        update_span(embedded_ended)
+
+    if fields["tool_version"] is None and fields["version"] is None:
+        app_version = read_cursor_app_version()
+        if app_version is not None:
+            fields["tool_version"] = app_version
+            fields["version"] = app_version
+
+    if fields["entrypoint"] is None and os.environ.get("CURSOR_AGENT"):
+        fields["entrypoint"] = "ide"
 
     user_turns = len(user_turn_keys) or user_records
     assistant_turns = turn_ended or len(assistant_turn_keys) or assistant_records
